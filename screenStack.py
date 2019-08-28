@@ -88,7 +88,7 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 
 
 class ScreenObject:
-	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse,isInverted=False,data=[],tags={}):
+	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags={}):
 		"""
 		If onclickInside == None, then the stack will keep searching for another object under this one. 
 		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the object.
