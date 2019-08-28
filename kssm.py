@@ -127,8 +127,10 @@ class ScreenObject:
 		mode = bool(self.isInverted)
 		self.setInverted(not self.isInverted)
 		self.printObj()
-		threading.Timer(invertDuration,self.setInverted,[mode]).start()
-		threading.Timer(invertDuration,self.printObj).start()
+		if invertDuration and invertDuration>0:
+			#Then, we start a timer to set it back to a non inverted state
+			threading.Timer(invertDuration,self.setInverted,[mode]).start()
+			threading.Timer(invertDuration,self.printObj).start()
 
 	def updateImg(self,newImg,xy1,xy2):
 		"""
