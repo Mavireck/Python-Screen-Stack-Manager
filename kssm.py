@@ -287,17 +287,17 @@ class ScreenStackManager:
 
 	def startListenerThread(self):
 		self.isInputThreadStarted = True
-		threading.Thread(target=self.listenForTouch).start()
+		threading.Thread(target=self.listenForTouch,args=[True]).start()
 
 
-	def listenForTouch(self):
+	def listenForTouch(self,isThread=False):
 		print("lets do this")
 		while True:
 			try:
 				(x, y, err) = self.inputObject.getInput()
 			except:
 				continue
-			if not self.isInputThreadStarted:
+			if isThread and not self.isInputThreadStarted:
 				break
 			if self.inputObject.debounceAllow(x,y):
 				n = len(self.stack)
