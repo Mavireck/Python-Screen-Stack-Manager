@@ -186,7 +186,6 @@ class ScreenStackManager:
 		"""
 		Adds object to the stack and prints it
 		"""
-		#TODO : distinguish between update and force print
 		for obj in self.stack:
 			if obj == screenObj:
 				self.updateObj(screenObj)
