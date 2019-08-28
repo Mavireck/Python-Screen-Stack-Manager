@@ -302,7 +302,7 @@ class ScreenStackManager:
 				continue
 			if not self.isInputThreadStarted:
 				break
-			if t.debounceAllow(x,y):
+			if self.inputObject.debounceAllow(x,y):
 				n = len(self.stack)
 				for i in range(n):
 					j = n-1-i
