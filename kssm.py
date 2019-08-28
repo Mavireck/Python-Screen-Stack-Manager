@@ -74,7 +74,7 @@ def getRectanglesIntersection(area1,area2):
 	else:
 		return None
 
-def returnFalse(a=False,b=False,c=False):
+def returnFalse(a=False):
 	return False
 
 def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags={}):
@@ -306,10 +306,10 @@ class ScreenStackManager:
 					obj = self.stack[j]
 					if coordsInArea(x,y,[obj.xy1,obj.xy2]):
 						if obj.onclickInside != None:
-							obj.onclickInside(x,y,obj.data)
+							obj.onclickInside(obj)
 							break 		# we quit the for loop
 					elif obj.onclickOutside != None:
-						obj.onclickOutside(x,y,obj.data)
+						obj.onclickOutside(obj)
 						break 			# we quit the for loop
 
 
