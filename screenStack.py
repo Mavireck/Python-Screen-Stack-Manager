@@ -142,7 +142,7 @@ class ScreenObject:
 
 
 class ScreenStackManager:
-	def __init__(self,inputObject,name="screen",stack=[],isInverted=False):
+	def __init__(self,inputObject=None,name="screen",stack=[],isInverted=False):
 		self.inputObject = inputObject
 		self.name = name
 		self.stack = stack
