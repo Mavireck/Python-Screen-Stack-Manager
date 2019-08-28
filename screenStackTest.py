@@ -12,8 +12,8 @@ import KIP
 # Import screenStack
 import kssm
 
-def printObjData(x,y,data):
-	print(x,y,data)
+def printObjData(obj):
+	print(obj.data)
 
 img1 = Image.new('L', (200,800), color=255)
 drawImg = ImageDraw.Draw(img1, 'L')
