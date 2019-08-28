@@ -29,7 +29,14 @@ drawImg.rectangle([(0,0),(100,400)],fill=100,outline=50)
 obj3 = screenStack.pillowImgToScreenObject(img3,20,20,"middleObj")
 
 
-screen = screenStack.ScreenStackManager('Main')
+
+##################################################################
+touchPath = "/dev/input/event1"
+touch = KIP.inputObject(touchPath, 1080, 1440)
+
+
+
+screen = screenStack.ScreenStackManager(touch,'Main')
 screen.clear()
 screen.refresh()
 

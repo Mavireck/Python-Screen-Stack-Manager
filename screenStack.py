@@ -76,7 +76,7 @@ def getRectanglesIntersection(area1,area2):
 	else:
 		return None
 
-def returnFalse():
+def returnFalse(a=False,b=False,c=False):
 	return False
 
 def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse):
@@ -87,10 +87,11 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 
 
 class ScreenObject:
-	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse,isInverted=False):
+	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse,isInverted=False,data=[]):
 		"""
 		If onclickInside == None, then the stack will keep searching for another object under this one. 
 		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the object.
+		OnclickInside and onclickOutside will be given as argument : x,y,data
 		"""
 		self.imgData = imgData
 		self.name = name
@@ -105,6 +106,7 @@ class ScreenObject:
 		self.onclickInside = onclickInside
 		self.onclickOutside = onclickOutside
 		self.isInverted = isInverted
+		self.data = data
 
 	def printObj(self):
 		"""
@@ -140,10 +142,12 @@ class ScreenObject:
 
 
 class ScreenStackManager:
-	def __init__(self,name="screen",stack=[],isInverted=False):
+	def __init__(self,inputObject,name="screen",stack=[],isInverted=False):
+		self.inputObject = inputObject
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
+		self.isInputThreadStarted = False
 
 	def printStack(self,skipObj=None,areaFromObject=None):
 		"""
@@ -256,20 +260,37 @@ class ScreenStackManager:
 		self.addObj(background)
 		return True
 
-	def startListenerThread():
-		#TODO
-		print("Still TODO")
-		return True
+	def startListenerThread(self):
+		self.isInputThreadStarted = True
+		threading.Thread(target=self.listenForTouch).start()
 
-	def listenForTouch():
-		#TODO
-		print("Still TODO")
-		return True
 
-	def stopListenerThread():
-		#TODO
-		print("Still TODO")
-		return True
+	def listenForTouch(self):
+		print("lets do this")
+		while True:
+			try:
+				(x, y, err) = self.inputObject.getInput()
+			except:
+				continue
+			if not self.isInputThreadStarted:
+				break
+			if t.debounceAllow(x,y):
+				n = len(self.stack)
+				for i in range(n):
+					j = n-1-i
+					obj = self.stack[j]
+					if coordsInArea(x,y,[obj.xy1,obj.xy2]):
+						if obj.onclickInside != None:
+							obj.onclickInside(x,y,obj.data)
+							break 		# we quit the for loop
+					elif obj.onclickOutside != None:
+						obj.onclickOutside(x,y,obj.data)
+						break 			# we quit the for loop
+
+
+	def stopListenerThread(self):
+		self.isInputThreadStarted = False
+		print("input thread stopped")
 
 
 
