@@ -87,7 +87,7 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 
 
 class ScreenObject:
-	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse,isInverted=False,data=[]):
+	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse,isInverted=False,data=[],tags={}):
 		"""
 		If onclickInside == None, then the stack will keep searching for another object under this one. 
 		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the object.
@@ -107,6 +107,13 @@ class ScreenObject:
 		self.onclickOutside = onclickOutside
 		self.isInverted = isInverted
 		self.data = data
+		self.tags=tags
+
+	def addTag(self,tag):
+		self.tags.add(tag)
+
+	def removeTag(self,tag):
+		self.tags.discard(tag)
 
 	def printObj(self):
 		"""
@@ -215,6 +222,23 @@ class ScreenStackManager:
 		# We print the stack, but only the area where screenObj was
 		self.printStack(screenObj,screenObj)
 		self.stack.remove(screenObj)
+
+	def getTagList(self):
+		"""
+		Returns the set of all tags from all objects in the stack
+		"""
+		tags={}
+		for obj in self.stack:
+			tags.update(obj.tags)
+		return tags
+
+	def removeAllWithTag(self,tag):
+		"""
+		Removes every object from the stack which have the specified tag
+		"""
+		for obj in self.stack:
+			if tag in obj.tags:
+				self.removeObj(obj)
 
 	def getStackLevel(self,screenObj):
 		return self.stack.index(screenObject)
