@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont
 sys.path.append('../Kobo-Input-Python')
 import KIP
 # Import screenStack
-import screenStack
+import kssm
 
 def printObjData(x,y,data):
 	print(x,y,data)
