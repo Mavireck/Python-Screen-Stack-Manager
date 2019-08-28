@@ -187,8 +187,13 @@ class ScreenStackManager:
 		Adds object to the stack and prints it
 		"""
 		#TODO : distinguish between update and force print
-		print("Still TODO : distinguish between update and force print")
-		self.forceAddObj(screenObj)
+		for obj in self.stack:
+			if obj == screenObj:
+				self.updateObj(screenObj)
+				break	#The object is already in the stack
+		else:
+			# the object is not already in the stack
+			self.forceAddObj(screenObj)
 
 	def forceAddObj(self,screenObj):
 		"""
@@ -197,15 +202,12 @@ class ScreenStackManager:
 		self.stack.append(screenObj)
 		screenObj.printObj()
 
-	def updateObj(self,screenObj,newImg,xy1,xy2):
+	def updateObj(self,screenObj):
 		"""
 		Updates the object : updates the stack and prints the object and all the stack above it
 		while keeping the stack position
 		"""
-		screenObj.updateImg(newImg,xy1,xy2)
-		#Then we print the stack, but only the area where screenObj was
 		self.printStack(areaFromObject=screenObj)
-		return True
 
 	def removeObj(self,screenObj):
 		"""
