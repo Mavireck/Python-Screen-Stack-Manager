@@ -53,3 +53,8 @@ You get this:
 
 
 There are a lot more features(like handling the screen inversion and partial inversion, attaching touch events etc...), I will let you dive into the source code for more information.
+
+IMPORTANT NOTE : 
+The stack list holds the objecs themselves and not a copy.
+Which means that if you update an object, it is updated on the stack at the same time
+Which means it is easy to use ;).

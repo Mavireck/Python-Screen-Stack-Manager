@@ -316,23 +316,3 @@ class ScreenStackManager:
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
 		print("input thread stopped")
-
-
-
-
-
-
-
-
-## USAGE : 
-# screen = ScreenStackManager('Main')
-# screen.addObj(obj)
-# screen.invertObj(obj,5)
-# screen.setStackLevel(obj,-1)
-# screen.removeObj(obj)
-
-
-# IMPORTANT NOTE : 
-# The stack list holds the objecs themselves and not a copy.
-# Which means that if you update an object, it is updated on the stack at the same time
-# Which means it will work well.
