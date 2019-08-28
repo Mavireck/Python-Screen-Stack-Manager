@@ -22,7 +22,8 @@ First, create a stackManager object:
 
 Then, create your screen object: (I am using pillow here).
 (You can also create your own ScreenObject without Pillow)
-`img1 = Image.new('L', (200,800), color=255)
+```python
+img1 = Image.new('L', (200,800), color=255)
 drawImg = ImageDraw.Draw(img1, 'L')
 drawImg.rectangle([(0,0),(200,800)],fill=0,outline=50)
 obj1 = pillowImgToScreenObject(img1,0,0,"highObj")
@@ -30,14 +31,17 @@ obj1 = pillowImgToScreenObject(img1,0,0,"highObj")
 img2 = Image.new('L', (800,200), color=255)
 drawImg = ImageDraw.Draw(img2, 'L')
 drawImg.rectangle([(0,0),(800,200)],fill=200,outline=50)
-obj2 = screenStack.pillowImgToScreenObject(img2,0,0,"wideObj")`
+obj2 = screenStack.pillowImgToScreenObject(img2,0,0,"wideObj")
+```
 
 Then, you can display these objects (and a white canvas for instance)
-`screen.clear()  # Not necessary
+```python
+screen.clear()  # Not necessary
 screen.refresh()
 screen.createCanvas()
 screen.addObj(obj1)
-screen.addObj(obj2)`
+screen.addObj(obj2)
+```
 The output will look like that :
 ![KSSM1](DOCS/KSSM1.png)
 Then, the magic comes in.
