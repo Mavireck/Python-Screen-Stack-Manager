@@ -12,21 +12,23 @@ import KIP
 # Import screenStack
 import screenStack
 
+def printObjData(x,y,data):
+	print(x,y,data)
 
 img1 = Image.new('L', (200,800), color=255)
 drawImg = ImageDraw.Draw(img1, 'L')
 drawImg.rectangle([(0,0),(200,800)],fill=0,outline=50)
-obj1 = screenStack.pillowImgToScreenObject(img1,0,0,"highObj")
+obj1 = screenStack.pillowImgToScreenObject(img1,0,0,"highObj",onclickInside=printObjData,data="highObj")
 
 img2 = Image.new('L', (800,200), color=255)
 drawImg = ImageDraw.Draw(img2, 'L')
 drawImg.rectangle([(0,0),(800,200)],fill=200,outline=50)
-obj2 = screenStack.pillowImgToScreenObject(img2,0,0,"wideObj")
+obj2 = screenStack.pillowImgToScreenObject(img2,0,0,"wideObj",onclickInside=printObjData,data="wideObj")
 
 img3 = Image.new('L', (100,400), color=255)
 drawImg = ImageDraw.Draw(img3, 'L')
 drawImg.rectangle([(0,0),(100,400)],fill=100,outline=50)
-obj3 = screenStack.pillowImgToScreenObject(img3,20,20,"middleObj")
+obj3 = screenStack.pillowImgToScreenObject(img3,20,20,"middleObj",onclickInside=printObjData,data="middleObj")
 
 
 ##################################################################
@@ -36,6 +38,7 @@ touch = KIP.inputObject(touchPath, 1080, 1440)
 
 
 screen = screenStack.ScreenStackManager(touch,'Main')
+screen.startListenerThread()
 screen.clear()
 screen.refresh()
 
@@ -55,7 +58,7 @@ print("Just added middleObj")
 time.sleep(5)
 
 screen.invertObj(obj2,5)
-print("Just inverted wideObj")
+print("Just inverted wideObj for 5 seconds")
 time.sleep(10)
 
 screen.removeObj(obj1)
