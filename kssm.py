@@ -153,6 +153,8 @@ class ScreenStackManager:
 		self.stack = stack
 		self.isInverted = isInverted
 		self.isInputThreadStarted = False
+		self.lastX = -1
+		self.lastY = -1
 
 	def printStack(self,skipObj=None,areaFromObject=None):
 		"""
@@ -306,9 +308,13 @@ class ScreenStackManager:
 					obj = self.stack[j]
 					if coordsInArea(x,y,[obj.xy1,obj.xy2]):
 						if obj.onclickInside != None:
+							self.lastX = x
+							self.lastY = y
 							obj.onclickInside(obj)
 							break 		# we quit the for loop
 					elif obj.onclickOutside != None:
+						self.lastX = x
+						self.lastY = y
 						obj.onclickOutside(obj)
 						break 			# we quit the for loop
 
