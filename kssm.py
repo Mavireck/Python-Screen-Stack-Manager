@@ -8,9 +8,6 @@ from _fbink import ffi, lib as FBInk
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
-# My own librairies (Kobo-Input-Python, Kobo-Python-OSKandUtils)
-sys.path.append('../Kobo-Input-Python')
-import KIP
 
 
 fbink_cfg = ffi.new("FBInkConfig *")
