@@ -7,6 +7,7 @@ from time import sleep
 from _fbink import ffi, lib as FBInk
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
+from PIL.ImageOps import invert as PILInvert
 # My own librairies (Kobo-Input-Python, Kobo-Python-OSKandUtils)
 sys.path.append('../Kobo-Input-Python')
 import KIP
@@ -165,29 +166,31 @@ class ScreenStackManager:
 		"""
 		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(screen_width,screen_height)]
 		print("Printing stack")
+		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		for obj in self.stack:
-			print("-----")
-			print("Looking at object : " + str(obj.name))
 			if (not skipObj) or (skipObj and obj != skipObj):
 				# We loop through the objects behind the screenObject we are working on
 				objArea = [(obj.x,obj.y),(obj.x2,obj.y2)]
 				rectIntersection = getRectanglesIntersection(mainIntersectionArea,objArea)
 				if rectIntersection != None:
 					# The obj we are looking at is behind the screenObj
-					self.printPartialObj(obj,rectIntersection)
+					intersectionImg = self.getPartialObjImg(obj,rectIntersection)
+					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
+		raw_data=placeholder.tobytes("raw")
+		mprint_raw(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
 
-	def printPartialObj(self,obj,rectIntersection):
-		print("Printing object " + str(obj.name) + " at rectIntersect : " + str(rectIntersection) + " with inversion status " + str(obj.isInverted))
-		# We crop and print a par of the object
+	def getPartialObjImg(self,obj,rectIntersection):
+		#TODO : MUST HONOR INVERSION
+		# We crop and print a part of the object
 		# First, lets make a PILLOW object:
 		img = Image.frombytes('L',(obj.w,obj.h),obj.imgData)
 		# Then, lets crop it: 
-		# TODO : There must be a way to crop the raw data directly, without pillow...
-		print("Still TODO : crop raw_data without pillow")
 		img = img.crop((rectIntersection[0][0]-obj.x, rectIntersection[0][1]-obj.y, rectIntersection[1][0]-obj.x, rectIntersection[1][1]-obj.y))
-		# Then, lets print it:
-		raw_data=img.tobytes("raw")
-		mprint_raw(raw_data,rectIntersection[0][0], rectIntersection[0][1],img.width,img.height,isInverted=obj.isInverted)
+		if obj.isInverted:
+			inverted_img = PILInvert(img)
+			return inverted_img
+		else:
+			return img
 
 	def addObj(self,screenObj):
 		"""
