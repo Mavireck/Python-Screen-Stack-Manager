@@ -80,9 +80,9 @@ def getRectanglesIntersection(area1,area2):
 def returnFalse(a=False,b=False,c=False):
 	return False
 
-def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=returnFalse):
+def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags={}):
 	raw_data = img.tobytes("raw")
-	obj =  ScreenObject(raw_data,(x,y),(x + img.width, y + img.height),name, onclickInside, onclickOutside)
+	obj =  ScreenObject(raw_data,(x,y),(x + img.width, y + img.height),name, onclickInside, onclickOutside,isInverted,data,tags)
 	return obj
 
 
