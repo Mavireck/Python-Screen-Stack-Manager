@@ -3,8 +3,6 @@ import sys
 import os
 import threading
 from time import sleep
-# Load the wrapper module, it's linked against FBInk, so the dynamic loader will take care of pulling in the actual FBInk library
-from _fbink import ffi, lib as FBInk
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
@@ -149,8 +147,8 @@ class ScreenObject:
 
 
 class ScreenStackManager:
-	def __init__(self,inputObject=None,name="screen",stack=[],isInverted=False):
-		self.inputObject = inputObject
+	def __init__(self,device,name="screen",stack=[],isInverted=False):
+		self.device = device
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
@@ -296,14 +294,17 @@ class ScreenStackManager:
 
 	def listenForTouch(self,isThread=False):
 		print("lets do this")
+		print(self.device)
+		print(self.device.interactionHandler)
+		self.device.initInteractionHandler()
 		while True:
 			try:
-				(x, y, err) = self.inputObject.getInput()
+				(x, y, err) = self.device.interactionHandler.getInput()
 			except:
 				continue
 			if isThread and not self.isInputThreadStarted:
 				break
-			if self.inputObject.debounceAllow(x,y):
+			if self.device.interactionHandler.debounceAllow(x,y):
 				n = len(self.stack)
 				for i in range(n):
 					j = n-1-i
