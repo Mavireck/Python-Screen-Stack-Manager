@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import kssm
+import pssm
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 
@@ -12,14 +12,14 @@ def rectangle(x,y,w,h,fill=255,outline=50):
 	img = Image.new('L', (w+1,h+1), color=white)
 	rect = ImageDraw.Draw(img, 'L')
 	rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
-	return kssm.pillowImgToScreenObject(img,x,y)
+	return pssm.pillowImgToScreenObject(img,x,y)
 
 def add_centeredText(obj,text,font,fill=0):
 	img = Image.frombytes('L',(obj.w,obj.h),obj.imgData)
 	imgDraw = ImageDraw.Draw(img, 'L')
 	text_w,text_h = imgDraw.textsize(text, font=font)
 	imgDraw.text((int(0.5*obj.w-0.5*text_w),int(0.5*obj.h-0.5*text_h)),text,font=font,fill=fill)
-	return kssm.pillowImgToScreenObject(img,obj.x,obj.y)
+	return pssm.pillowImgToScreenObject(img,obj.x,obj.y)
 
 
 def roundedCorner(radius, fill=255,outline=50):
@@ -41,5 +41,5 @@ def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     rectangle.paste(corner.rotate(90), (0, h - radius)) # Rotate the corner and paste it
     rectangle.paste(corner.rotate(180), (w - radius, h - radius))
     rectangle.paste(corner.rotate(270), (w - radius, 0))
-    return kssm.pillowImgToScreenObject(rectangle,x,y)
+    return pssm.pillowImgToScreenObject(rectangle,x,y)
 

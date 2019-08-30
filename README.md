@@ -1,5 +1,5 @@
-# Kobo-Screen-Stack-Manager
-KSSM - A handy tool to create an image-based user interface with easier layer control.
+# Python-Screen-Stack-Manager
+PSSM - A handy tool to create an image-based user interface with easier layer control.
 
 
 ### What it does
@@ -43,13 +43,13 @@ screen.addObj(obj1)
 screen.addObj(obj2)
 ```
 The output will look like that :
-![KSSM1](DOCS/KSSM1.png)
+![PSSM1](DOCS/PSSM1.png)
 Then, the magic comes in.
 You can for instance remove the first object, although is has been printed UNDER obj2!
 If you do this:
 `screen.removeObj(obj1)`
 You get this:
-![KSSM2](DOCS/KSSM2.png)
+![PSSM2](DOCS/PSSM2.png)
 
 
 There are a lot more features(like handling the screen inversion and partial inversion, attaching touch events etc...), I will let you dive into the source code for more information.
