@@ -39,6 +39,58 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 	return obj
 
 
+class ScreenObjectCollection:
+	def __init__(self,name,xy,xy2=[-1,-1],isFixedW=False,isFixedH=False,isTransparent=True,isInverted=False,parents=[],children=[],onclickInside=returnFalse,onclickOutside=None):
+		self.objType = "coll"
+		self.name = name		
+		self.x = xy[0]
+		self.y = xy[1]
+		self.xy = xy
+		# The following two entries define whether we should make the collection size bigger
+		# when adding an object which does not fit inside the collection
+		self.isFixedW = isFixedW
+		self.isFixedH = isFixedH
+		if xy2 != [-1,-1]:
+			self.x2 = xy2[0]
+			self.y2 = xy2[1]
+			self.xy2 = xy2
+		else:
+			self.x2 = xy[0]
+			self.y2 = xy[1]
+			self.xy2 = xy
+			self.isFixedW = False
+			self.isFixedH = False
+		self.h = self.y2 - self.y
+		self.w = self.x2 - self.x
+		self.isTransparent = isTransparent
+		self.onclickInside = onclickInside
+		self.onclickOutside = onclickOutside
+		self.isInverted = isInverted
+		self.parents = parents
+		self.children = children
+
+	def addChildren(self,children):
+		if hasattr(children,"objType"):
+			if children.objType == "obj" or children.objType == "coll":
+				children.parents.extend(self.parents)
+				children.parents.append(self.name)
+				self.children.append(children)
+				rectIntersection = getRectanglesIntersection([children.xy,children.xy2],[self.xy,self.xy2])
+				if rectIntersection != [children.xy,children.xy2]:
+					# The children does not fit inside the parent 
+					if not isFixedW:
+						self.x = min(self.x,children.x)
+						self.x2 = max(self.x2,children.x2)
+					if not isFixedH:
+						self.y = min(self.y,children.y)
+						self.y2 = max(self.y2,children.y2)
+			else:
+				print("[PSSM] Invalid object being added. Ignoring.")
+				return False
+		else:
+			print("[PSSM] Invalid object being added. Ignoring.")
+			return False
+
 
 class ScreenObject:
 	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
@@ -71,24 +123,8 @@ class ScreenObject:
 	def removeTag(self,tag):
 		self.tags.discard(tag)
 
-	def printObj(self):
-		"""
-		Standalone print. Printing can also be done through the stack manager, after adding the object
-		Should NOT be used on its own
-		"""
-		mprint_raw(self.imgData,self.x, self.y, self.w, self.h,isInverted=self.isInverted)
-
 	def setInverted(self,mode):
 		self.isInverted = mode
-
-	def invert(self,invertDuration):
-		mode = bool(self.isInverted)
-		self.setInverted(not self.isInverted)
-		self.printObj()
-		if invertDuration and invertDuration>0:
-			#Then, we start a timer to set it back to a non inverted state
-			threading.Timer(invertDuration,self.setInverted,[mode]).start()
-			threading.Timer(invertDuration,self.printObj).start()
 
 	def updateImg(self,newImg,xy1,xy2):
 		"""
@@ -122,6 +158,29 @@ class ScreenStackManager:
 		self.isInputThreadStarted = False
 		self.lastX = -1
 		self.lastY = -1
+
+	def printStack_new(self,skipObj=None,areaFromObject=None):
+		#TODO
+		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(self.width,self.height)]
+		print("Printing stack")
+		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
+		self.printStack_mainRecursiveLoop(self.stack,mainIntersectionArea,skipObj,areaFromObject)
+
+	def printStack_mainRecursiveLoop(self,inputObj,mainIntersectionArea,skipObj,areaFromObject):
+		#TODO
+		for obj in inputObj:
+			if (not skipObj) or (skipObj and obj != skipObj):
+				# We loop through the objects behind the screenObject we are working on
+				objArea = [(obj.x,obj.y),(obj.x2,obj.y2)]
+				rectIntersection = getRectanglesIntersection(mainIntersectionArea,objArea)
+				if rectIntersection != None:
+					# The obj we are looking at is behind the screenObj
+					intersectionImg = self.getPartialObjImg_new(obj,objParentsList,rectIntersection)
+					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
+
+	def getPartialObjImg_new(self,obj,objParentsList,rectIntersection):
+		#TODO
+		return False
 
 	def printStack(self,skipObj=None,areaFromObject=None):
 		"""
