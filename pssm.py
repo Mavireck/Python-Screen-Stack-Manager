@@ -8,48 +8,6 @@ from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
 
 
-fbink_cfg = ffi.new("FBInkConfig *")
-fbink_dumpcfg = ffi.new("FBInkDump *")
-fbfd = FBInk.fbink_open()
-FBInk.fbink_init(fbfd, fbink_cfg)
-#Get screen infos
-state = ffi.new("FBInkState *")
-FBInk.fbink_get_state(fbink_cfg, state)
-screen_width=state.screen_width
-screen_height=state.screen_height
-view_width=state.view_width
-view_height=state.view_height
-
-h_offset = screen_height - view_height
-w_offset = screen_width - view_width
-
-
-def mprint_raw(raw_data,x,y,w,h,length=None,isInverted=False):
-	if length==None:
-		length = len(raw_data)
-	# FBInk.fbink_print_image(fbfd, str(path).encode('ascii'), x, y, fbink_cfg)
-	FBInk.fbink_print_raw_data(fbfd, raw_data, w, h, length, x, y, fbink_cfg)
-	if isInverted == True:
-		# Workaround : print_raw_data cannot print something inverted, so we print the thing
-		# Then we invert-refresh the region
-		mode = bool(fbink_cfg.is_nightmode)
-		fbink_cfg.is_nightmode = not fbink_cfg.is_nightmode
-		FBInk.fbink_refresh(fbfd, y+h_offset,x+w_offset,w,h, FBInk.HWD_PASSTHROUGH, fbink_cfg)
-		fbink_cfg.is_nightmode = mode
-
-def do_screen_refresh(isInverted=False,isPermanent=True):
-	mode = bool(fbink_cfg.is_flashing)
-	mode2 = bool(fbink_cfg.is_nightmode)
-	fbink_cfg.is_flashing = True
-	fbink_cfg.is_nightmode = isInverted
-	FBInk.fbink_refresh(fbfd, 0, 0, 0, 0, FBInk.HWD_PASSTHROUGH, fbink_cfg)
-	fbink_cfg.is_flashing = mode
-	if not isPermanent:
-		fbink_cfg.is_nightmode = mode2
-
-def do_screen_clear():
-	FBInk.fbink_cls(fbfd, fbink_cfg)
-
 def coordsInArea(x,y,area):
 	if len(area)>2:
 		if x>=area[0] and x<area[2] and y>=area[1] and y<area[3]:
@@ -75,7 +33,7 @@ def getRectanglesIntersection(area1,area2):
 def returnFalse(a=False):
 	return False
 
-def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags={}):
+def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
 	raw_data = img.tobytes("raw")
 	obj =  ScreenObject(raw_data,(x,y),(x + img.width, y + img.height),name, onclickInside, onclickOutside,isInverted,data,tags)
 	return obj
@@ -83,12 +41,13 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 
 
 class ScreenObject:
-	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags={}):
+	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
 		"""
 		If onclickInside == None, then the stack will keep searching for another object under this one. 
 		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the object.
 		OnclickInside and onclickOutside will be given as argument : x,y,data
 		"""
+		self.objType = "obj"
 		self.imgData = imgData
 		self.name = name
 		self.xy1 = xy1
@@ -104,6 +63,7 @@ class ScreenObject:
 		self.isInverted = isInverted
 		self.data = data
 		self.tags=tags
+		self.parents = []
 
 	def addTag(self,tag):
 		self.tags.add(tag)
@@ -149,6 +109,13 @@ class ScreenObject:
 class ScreenStackManager:
 	def __init__(self,device,name="screen",stack=[],isInverted=False):
 		self.device = device
+		self.width = device.screen_width
+		self.height = device.screen_height
+		self.view_width = device.view_width
+		self.view_height = device.view_height
+		self.w_offset = device.w_offset
+		self.h_offset = device.h_offset
+		self.view_height = device.view_height
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
@@ -163,7 +130,7 @@ class ScreenStackManager:
 		If a areaFromObject is set, then, we only display
 			the part of the stack which is at the place of areaFromObject object
 		"""
-		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(screen_width,screen_height)]
+		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(self.width,self.height)]
 		print("Printing stack")
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		for obj in self.stack:
@@ -176,7 +143,7 @@ class ScreenStackManager:
 					intersectionImg = self.getPartialObjImg(obj,rectIntersection)
 					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
 		raw_data=placeholder.tobytes("raw")
-		mprint_raw(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
+		self.device.print_raw(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
 
 	def getPartialObjImg(self,obj,rectIntersection):
 		#TODO : MUST HONOR INVERSION
@@ -191,38 +158,44 @@ class ScreenStackManager:
 		else:
 			return img
 
-	def addObj(self,screenObj):
+	def simplePrintObj(self,screenObj):
+		self.device.print_raw(screenObj.imgData,screenObj.x, screenObj.y, screenObj.w, screenObj.h,isInverted=screenObj.isInverted)
+
+	def addObj(self,screenObj,skipPrint=False,skipRegistration=False):
 		"""
 		Adds object to the stack and prints it
 		"""
 		for obj in self.stack:
-			if obj == screenObj:
-				self.updateObj(screenObj)
+			if obj is screenObj:
+				if not skipPrint:
+					self.updateObj(screenObj)
 				break	#The object is already in the stack
 		else:
 			# the object is not already in the stack
-			self.forceAddObj(screenObj)
+			if not skipRegistration:
+				self.forceAddObj(screenObj)
 
 	def forceAddObj(self,screenObj):
 		"""
 		Adds object to the stack and prints it
 		"""
 		self.stack.append(screenObj)
-		screenObj.printObj()
+		self.simplePrintObj(screenObj)
 
-	def updateObj(self,screenObj):
+	def updateObj(self,areaFromObject = None):
 		"""
 		Updates the object : updates the stack and prints the object and all the stack above it
 		while keeping the stack position
 		"""
-		self.printStack(areaFromObject=screenObj)
+		self.printStack(areaFromObject=areaFromObject)
 
-	def removeObj(self,screenObj):
+	def removeObj(self,screenObj,skipPrint=False):
 		"""
 		Removes the object from the stack and hides it from the screen
 		"""
 		# We print the stack, but only the area where screenObj was
-		self.printStack(screenObj,screenObj)
+		if not skipPrint:
+			self.printStack(screenObj,screenObj)
 		self.stack.remove(screenObj)
 
 	def getTagList(self):
@@ -240,7 +213,10 @@ class ScreenStackManager:
 		"""
 		for obj in self.stack:
 			if tag in obj.tags:
-				self.removeObj(obj)
+				print("Removing object : "  +  str(obj.name))
+				self.removeObj(obj,skipPrint=True)
+		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
+		self.printStack()
 
 	def getStackLevel(self,screenObj):
 		return self.stack.index(screenObject)
@@ -256,11 +232,20 @@ class ScreenStackManager:
 		self.printStack(areaFromObject=screenObj)
 		return True
 
+	def printInvertedObj(self,invertDuration,screenObj):
+		mode = bool(screenObj.isInverted)
+		screenObj.setInverted(not screenObj.isInverted)
+		self.simplePrintObj(screenObj)
+		if invertDuration and invertDuration>0:
+			#Then, we start a timer to set it back to a non inverted state
+			threading.Timer(invertDuration,screenObj.setInverted,[mode]).start()
+			threading.Timer(invertDuration,self.simplePrintObj).start()
+
 	def invertObj(self, screenObj,invertDuration):
 		"""
 		Shortcut (or longcut, it depends on the point of view) to invert the screen object
 		"""
-		screenObj.invert(invertDuration)
+		screen.printInvertObj(invertDuration,screenObj)
 		self.printStack(skipObj=None,areaFromObject=screenObj)
 		threading.Timer(invertDuration,self.printStack,[None,screenObj]).start()
 
@@ -269,20 +254,20 @@ class ScreenStackManager:
 		Inverts the whole screen
 		"""
 		self.isInverted = not self.isInverted
-		do_screen_refresh(self.isInverted)
+		self.device.do_screen_refresh(self.isInverted)
 		return True
 
 	def refresh(self):
-		do_screen_refresh()
+		self.device.do_screen_refresh()
 
 	def clear(self):
-		do_screen_clear()
+		self.device.do_screen_clear()
 
 	def createCanvas(self,color=255):
 		"""
 		Creates a white object at the bottom of the stack, displays it while refreshing the screen
 		"""
-		img = Image.new('L', (screen_width,screen_height), color=255)
+		img = Image.new('L', (self.width,self.height), color=255)
 		background = pillowImgToScreenObject(img,0,0,name="Canvas")
 		self.addObj(background)
 		return True
@@ -294,14 +279,15 @@ class ScreenStackManager:
 
 	def listenForTouch(self,isThread=False):
 		print("lets do this")
-		print(self.device)
-		print(self.device.interactionHandler)
 		self.device.initInteractionHandler()
 		while True:
 			try:
-				(x, y, err) = self.device.interactionHandler.getInput()
+				deviceInput = self.device.interactionHandler.getInput()
+				(x, y, err) = deviceInput
+				print(deviceInput)
 			except:
 				continue
+			print(str(x)+ " - " + str(y))
 			if isThread and not self.isInputThreadStarted:
 				break
 			if self.device.interactionHandler.debounceAllow(x,y):

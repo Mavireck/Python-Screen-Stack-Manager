@@ -28,6 +28,8 @@ h_offset = screen_height - view_height
 w_offset = screen_width - view_width
 
 
+def closePrintHandler():
+	FBInk.fbink_close(fbfd)
 
 def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
 	if length==None:
