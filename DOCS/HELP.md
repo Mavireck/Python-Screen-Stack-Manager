@@ -81,17 +81,17 @@ POL.add_centeredText(obj,text,font,fill=0)
 ## 5. Advanced functions : The ScreenStackManager object
 A PSSM ScreenStackManager has these attributes :
 ````Python
-screen..device = device
-screen..width = device.screen_width
-screen..height = device.screen_height
-screen..view_width = device.view_width
-screen..view_height = device.view_height
-screen..w_offset = device.w_offset
-screen..h_offset = device.h_offset
-screen..name = name
-screen..stack = stack
-screen..isInverted = isInverted
-screen..isInputThreadStarted = False
+screen.device = device
+screen.width = device.screen_width
+screen.height = device.screen_height
+screen.view_width = device.view_width
+screen.view_height = device.view_height
+screen.w_offset = device.w_offset
+screen.h_offset = device.h_offset
+screen.name = name
+screen.stack = stack
+screen.isInverted = isInverted
+screen.isInputThreadStarted = False
 
 screen.findObjWithId(screenObjId)
 
