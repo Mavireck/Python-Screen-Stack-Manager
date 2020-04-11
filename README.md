@@ -16,7 +16,7 @@ And the ScreenManager can also handle touch inputs, it serves as a touch driver 
 What it does in this case, is that it loops through the stack, the object on the top being the first looked, and it looks if a touch click was made in its area. If so, then it calls the function associated with the ScreenObject.
 
 
-### Images is worth thousands words
+### Images are worth thousands words
 First, create a stackManager object:
 `screen = ScreenStackManager(name='Main manager')`
 
