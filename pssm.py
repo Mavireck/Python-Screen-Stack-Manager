@@ -237,6 +237,9 @@ class ScreenStackManager:
 			return img
 
 	def simplePrintObj(self,screenObj):
+		"""
+		Prints the object without adding it to the stack
+		"""
 		self.device.print_raw(screenObj.imgData,screenObj.x, screenObj.y, screenObj.w, screenObj.h,isInverted=screenObj.isInverted)
 
 	def addObj(self,screenObj,skipPrint=False,skipRegistration=False):
@@ -354,10 +357,18 @@ class ScreenStackManager:
 		return True
 
 	def refresh(self):
+		"""
+		Refreshes the screeen
+		"""
 		self.device.do_screen_refresh()
+		return True
 
 	def clear(self):
+		"""
+		Clears the screen
+		"""
 		self.device.do_screen_clear()
+		return True
 
 	def createCanvas(self,color=255):
 		"""
@@ -369,11 +380,19 @@ class ScreenStackManager:
 		return True
 
 	def startListenerThread(self):
+		"""
+		Starts the touch listener as a separate thread
+		"""
 		self.isInputThreadStarted = True
+		print("[PSSM - Touch handler] : Input thread started")
 		threading.Thread(target=self.listenForTouch,args=[True]).start()
 
 	def listenForTouch(self,isThread=False):
-		print("lets do this")
+		"""
+		Starts the touch listener without multithreading
+		It will prevent you from running any other while loop at the same time
+		"""
+		print("[PSSM - Touch handler] : Let's do this")
 		self.device.initInteractionHandler()
 		while True:
 			try:
@@ -402,7 +421,6 @@ class ScreenStackManager:
 						obj.onclickOutside(obj.id)
 						break 			# we quit the for loop
 
-
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
-		print("input thread stopped")
+		print("[PSSM - Touch handler] : Input thread stopped")
