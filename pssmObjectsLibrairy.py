@@ -10,13 +10,18 @@ gray = 128
 light_gray = 230
 
 def rectangle(x,y,w,h,fill=255,outline=50):
+	"""
+	Draw a simple rectange
+	"""
 	img = Image.new('L', (w+1,h+1), color=white)
 	rect = ImageDraw.Draw(img, 'L')
 	rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
 	return deepcopy(pssm.pillowImgToScreenObject(img,x,y))
 
 def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
-    """Draw a rounded rectangle"""
+    """
+	Draw a rounded rectangle
+	"""
     rectangle = Image.new('L', (w,h), white)
     draw = ImageDraw.Draw(rectangle)
     draw.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
@@ -30,6 +35,9 @@ def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     return deepcopy(pssm.pillowImgToScreenObject(rectangle,x,y))
 
 def button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0):
+	"""
+	Draw a simple button with a text
+	"""
     img = Image.new('L', (w+1,h+1), color=white)
     rect = ImageDraw.Draw(img, 'L')
     rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
@@ -38,6 +46,8 @@ def button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0):
 
 def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
     """
+	Adds text to an existing pillow object
+
     Valid inputs for xPosition and yPosition are :
     left,center,right or top,center,bottom or an absolute value in pixel
     """
@@ -49,15 +59,26 @@ def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
     imgDraw.text((x,y),text,font=font,fill=fill)
     return deepcopy(pssm.pillowImgToScreenObject(img,obj.x,obj.y))
 
+def add_centeredText(obj,text,font,fill=0):
+	"""
+	Shorthand to add_text([...] xPosition = Center, yPosition = Center)
+	"""
+	return deepcopy(add_text(obj,text,font,xPosition="center",yPosition="center",fill=fill))
+
 def roundedCorner(radius, fill=255,outline=50):
-    """Draw a round corner"""
+    """
+	Draw a round corner
+	"""
     corner = Image.new('L', (radius, radius), white)
     draw = ImageDraw.Draw(corner)
     draw.pieslice((0, 0, radius * 2, radius * 2), 180, 270, fill=fill,outline=outline)
     return corner
- 
+
 
 def tools_convertXArgsToPX(xPosition,objw,textw):
+	"""
+	Converts xPosition string arguments to numerical values
+	"""
     if xPosition == "left":
         x = 0
     elif xPosition == "center":
@@ -71,8 +92,11 @@ def tools_convertXArgsToPX(xPosition,objw,textw):
             print("[PSSMOL] Invalid input for xPosition")
             return False
     return x
-    
+
 def tools_convertYArgsToPX(yPosition,objh,texth):
+	"""
+	Converts yPosition string arguments to numerical values
+	"""
     if yPosition == "top":
         y = 0
     elif yPosition == "center":
