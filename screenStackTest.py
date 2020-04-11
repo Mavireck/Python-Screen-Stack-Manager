@@ -1,72 +1,71 @@
 #!/usr/bin/env python
-import sys
-import os
-import threading
+#Import the time module for demonstration purposes
 import time
-# Load the wrapper module, it's linked against FBInk, so the dynamic loader will take care of pulling in the actual FBInk library
-from _fbink import ffi, lib as FBInk
-# Load Pillow
-from PIL import Image, ImageDraw, ImageFont
-sys.path.append('../Kobo-Input-Python')
-import KIP
 # Import pssm
 import pssm
 import pssm_kobo
+import pssmObjectsLibrairy as POL
 
-def printObjData(obj):
-	print(obj.data)
+################################################################################
 
-img1 = Image.new('L', (200,800), color=255)
-drawImg = ImageDraw.Draw(img1, 'L')
-drawImg.rectangle([(0,0),(200,800)],fill=0,outline=50)
-obj1 = pssm.pillowImgToScreenObject(img1,0,0,"highObj",onclickInside=printObjData,data="highObj")
+def printObjData(objId):
+	"""
+	Will be executed on touch
+	"""
+	obj = screen.findObjWithId(objId)
+	print(obj.name, objId)
 
-img2 = Image.new('L', (800,200), color=255)
-drawImg = ImageDraw.Draw(img2, 'L')
-drawImg.rectangle([(0,0),(800,200)],fill=200,outline=50)
-obj2 = pssm.pillowImgToScreenObject(img2,0,0,"wideObj",onclickInside=printObjData,data="wideObj")
+# Create rectangle from the PSSM objecs library
+obj1 = POL.rectangle(0,0,400,1000,fill=0,outline=50)
+obj1.name = "highObj"
+obj1.onclickInside = printObjData
 
-img3 = Image.new('L', (100,400), color=255)
-drawImg = ImageDraw.Draw(img3, 'L')
-drawImg.rectangle([(0,0),(100,400)],fill=100,outline=50)
-obj3 = pssm.pillowImgToScreenObject(img3,20,20,"middleObj",onclickInside=printObjData,data="middleObj")
+obj2 = POL.rectangle(0,0,1000,400,fill=200,outline=50)
+obj2.name = "wideObj"
+obj2.onclickInside = printObjData
 
-
-##################################################################
-touchPath = "/dev/input/event1"
-touch = KIP.inputObject(touchPath, 1080, 1440)
-
+obj3 = POL.rectangle(0,0,500,500,fill=100,outline=50)
+obj3.name = "middleObj"
+obj3.onclickInside = printObjData
 
 
+################################################################################
+
+#Declare the Screen Stack Manager
 screen = pssm.ScreenStackManager(pssm_kobo,'Main')
+screenWidth = screen.width
+screenHeight = screen.height
+#Start Touch listener, as a separate thread
 screen.startListenerThread()
+#Clear and refresh the screen
 screen.clear()
 screen.refresh()
 
+# Create a blank canvas
 screen.createCanvas()
 print("just made canvas")
+
 screen.addObj(obj1)
 print("Just added highObj")
+
 screen.addObj(obj2)
 print("Just added wideObj")
 
-# screen.invert()
-# print("just inverted all the screen")
-# time.sleep(2)
-
 screen.addObj(obj3)
 print("Just added middleObj")
+
+print("Waiting 5 seconds")
 time.sleep(5)
 
-screen.invertObj(obj2,5)
-print("Just inverted wideObj for 5 seconds")
+screen.invertObj(obj2.id,5)
+print("Just inverted wideObj for 5 seconds, waiting 5 seconds after that")
 time.sleep(10)
 
-screen.removeObj(obj1)
+screen.removeObj(obj1.id)
 print("Just removed highObj")
 time.sleep(5)
 
 screen.addObj(obj1)
 print("Just added highObj")
 
-print("done")
+print("All done")
