@@ -15,6 +15,9 @@ And what is great, is that you can remove what is under ScreenObject, without re
 And the ScreenManager can also handle touch inputs, it serves as a touch driver function. (And the touch driver function can be started as a separate thread if you want to do multiple things at once).
 What it does in this case, is that it loops through the stack, the object on the top being the first looked, and it looks if a touch click was made in its area. If so, then it calls the function associated with the ScreenObject.
 
+### Documentation
+Have a look here :
+[Documentation](DOCS/HELP.md)
 
 ### Images are worth thousands words
 First, create a stackManager object:

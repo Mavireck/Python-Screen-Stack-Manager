@@ -161,7 +161,6 @@ class ScreenStackManager:
 		self.view_height = device.view_height
 		self.w_offset = device.w_offset
 		self.h_offset = device.h_offset
-		self.view_height = device.view_height
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
