@@ -74,8 +74,8 @@ Non-exhaustive list of functions :
 POL.rectangle(x,y,w,h,fill=255,outline=50)  #Create a simple rectangle
 POL.roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50)  # Create a rectangle with round corners
 POL.button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0)  # Create a button
-screenObject.add_text(obj,text,font,xPosition="left",yPosition="top",fill=0)
-screenObj.add_centeredText(obj,text,font,fill=0)
+POL.add_text(obj,text,font,xPosition="left",yPosition="top",fill=0)
+POL.add_centeredText(obj,text,font,fill=0)
 ````
 
 ## 5. Advanced functions : The ScreenStackManager object
