@@ -18,7 +18,7 @@ What it does in this case, is that it loops through the stack, the object on the
 
 ### Images is worth thousands words
 First, create a stackManager object:
-`screen = ScreenStackManager(name='Main manager')` 
+`screen = ScreenStackManager(name='Main manager')`
 
 Then, create your screen object: (I am using pillow here).
 (You can also create your own ScreenObject without Pillow)
@@ -53,8 +53,3 @@ You get this:
 
 
 There are a lot more features(like handling the screen inversion and partial inversion, attaching touch events etc...), I will let you dive into the source code for more information.
-
-IMPORTANT NOTE : 
-The stack list holds the objecs themselves and not a copy.
-Which means that if you update an object, it is updated on the stack at the same time
-Which means it is easy to use ;).

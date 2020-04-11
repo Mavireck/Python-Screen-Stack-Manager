@@ -6,7 +6,9 @@ from time import sleep
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
+from copy import deepcopy
 
+lastUsedId=0
 
 def coordsInArea(x,y,area):
 	if len(area)>2:
@@ -38,11 +40,11 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 	obj =  ScreenObject(raw_data,(x,y),(x + img.width, y + img.height),name, onclickInside, onclickOutside,isInverted,data,tags)
 	return obj
 
-
-class ScreenObjectCollection:
+#The following is depecrecated :
+class OLD_ScreenObjectCollection:
 	def __init__(self,name,xy,xy2=[-1,-1],isFixedW=False,isFixedH=False,isTransparent=True,isInverted=False,parents=[],children=[],onclickInside=returnFalse,onclickOutside=None):
 		self.objType = "coll"
-		self.name = name		
+		self.name = name
 		self.x = xy[0]
 		self.y = xy[1]
 		self.xy = xy
@@ -77,7 +79,7 @@ class ScreenObjectCollection:
 				self.children.append(children)
 				rectIntersection = getRectanglesIntersection([children.xy,children.xy2],[self.xy,self.xy2])
 				if rectIntersection != [children.xy,children.xy2]:
-					# The children does not fit inside the parent 
+					# The children does not fit inside the parent
 					if not isFixedW:
 						self.x = min(self.x,children.x)
 						self.x2 = max(self.x2,children.x2)
@@ -91,15 +93,17 @@ class ScreenObjectCollection:
 			print("[PSSM] Invalid object being added. Ignoring.")
 			return False
 
-
 class ScreenObject:
 	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
 		"""
-		If onclickInside == None, then the stack will keep searching for another object under this one. 
+		If onclickInside == None, then the stack will keep searching for another object under this one.
 		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the object.
 		OnclickInside and onclickOutside will be given as argument : x,y,data
 		"""
 		self.objType = "obj"
+		global lastUsedId
+		lastUsedId += 1
+		self.id = lastUsedId
 		self.imgData = imgData
 		self.name = name
 		self.xy1 = xy1
@@ -116,6 +120,14 @@ class ScreenObject:
 		self.data = data
 		self.tags=tags
 		self.parents = []
+
+	def __hash__(self):
+		return hash(self.id)
+
+	def __eq__(self, other):
+		if isinstance(other, self.__class__):
+			return self.id == other.id
+		return NotImplemented
 
 	def addTag(self,tag):
 		self.tags.add(tag)
@@ -140,8 +152,6 @@ class ScreenObject:
 		self.w = x2-x
 		self.h = y2-y
 
-
-
 class ScreenStackManager:
 	def __init__(self,device,name="screen",stack=[],isInverted=False):
 		self.device = device
@@ -159,15 +169,23 @@ class ScreenStackManager:
 		self.lastX = -1
 		self.lastY = -1
 
-	def printStack_new(self,skipObj=None,areaFromObject=None):
+	def findObjWithId(self,screenObjId):
+		for obj in self.stack:
+			if obj.id == screenObjId:
+				return obj
+		return None
+
+	def OLD_printStack_new(self,skipObj=None,areaFromObject=None):
 		#TODO
+		#Depecrecated ?
 		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(self.width,self.height)]
 		print("Printing stack")
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		self.printStack_mainRecursiveLoop(self.stack,mainIntersectionArea,skipObj,areaFromObject)
 
-	def printStack_mainRecursiveLoop(self,inputObj,mainIntersectionArea,skipObj,areaFromObject):
+	def OLD_printStack_mainRecursiveLoop(self,inputObj,mainIntersectionArea,skipObj,areaFromObject):
 		#TODO
+		#Depecrecated ?
 		for obj in inputObj:
 			if (not skipObj) or (skipObj and obj != skipObj):
 				# We loop through the objects behind the screenObject we are working on
@@ -178,22 +196,23 @@ class ScreenStackManager:
 					intersectionImg = self.getPartialObjImg_new(obj,objParentsList,rectIntersection)
 					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
 
-	def getPartialObjImg_new(self,obj,objParentsList,rectIntersection):
+	def OLD_getPartialObjImg_new(self,obj,objParentsList,rectIntersection):
 		#TODO
+		#Depecrecated?
 		return False
 
-	def printStack(self,skipObj=None,areaFromObject=None):
+	def printStack(self,skipObjId=None,area=None):
 		"""
 		Prints the stack elements in the stack order
 		If a skipObj is specified, then the function will not display the skipObj.
-		If a areaFromObject is set, then, we only display
-			the part of the stack which is at the place of areaFromObject object
+		If a area is set, then, we only display
+			the part of the stack which is in this area
 		"""
-		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(self.width,self.height)]
+		mainIntersectionArea = [(area[0][0],area[0][1]),(area[1][0],area[1][1])] if area else [(0,0),(self.width,self.height)]
 		print("Printing stack")
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		for obj in self.stack:
-			if (not skipObj) or (skipObj and obj != skipObj):
+			if (not skipObjId) or (skipObjId and obj.id != skipObjId):
 				# We loop through the objects behind the screenObject we are working on
 				objArea = [(obj.x,obj.y),(obj.x2,obj.y2)]
 				rectIntersection = getRectanglesIntersection(mainIntersectionArea,objArea)
@@ -209,7 +228,7 @@ class ScreenStackManager:
 		# We crop and print a part of the object
 		# First, lets make a PILLOW object:
 		img = Image.frombytes('L',(obj.w,obj.h),obj.imgData)
-		# Then, lets crop it: 
+		# Then, lets crop it:
 		img = img.crop((rectIntersection[0][0]-obj.x, rectIntersection[0][1]-obj.y, rectIntersection[1][0]-obj.x, rectIntersection[1][1]-obj.y))
 		if obj.isInverted:
 			inverted_img = PILInvert(img)
@@ -225,9 +244,9 @@ class ScreenStackManager:
 		Adds object to the stack and prints it
 		"""
 		for obj in self.stack:
-			if obj is screenObj:
+			if obj.id == screenObj.id:
 				if not skipPrint:
-					self.updateObj(screenObj)
+					self.updateArea(screenObj)
 				break	#The object is already in the stack
 		else:
 			# the object is not already in the stack
@@ -236,26 +255,33 @@ class ScreenStackManager:
 
 	def forceAddObj(self,screenObj):
 		"""
-		Adds object to the stack and prints it
+		Adds object to the stack and prints it, without checking if it is already here
 		"""
 		self.stack.append(screenObj)
 		self.simplePrintObj(screenObj)
 
-	def updateObj(self,areaFromObject = None):
+	def updateArea(self,area = None):
 		"""
 		Updates the object : updates the stack and prints the object and all the stack above it
 		while keeping the stack position
 		"""
-		self.printStack(areaFromObject=areaFromObject)
+		self.printStack(area=area)
 
-	def removeObj(self,screenObj,skipPrint=False):
+	def removeObj(self,screenObjId,skipPrint=False,weAlreadyHaveTheObj=None):
 		"""
 		Removes the object from the stack and hides it from the screen
 		"""
 		# We print the stack, but only the area where screenObj was
 		if not skipPrint:
-			self.printStack(screenObj,screenObj)
-		self.stack.remove(screenObj)
+			screenObj=self.findObjWithId(screenObjId)
+			self.printStack(screenObjId,[screenObj.xy1,screenObj.xy2])
+		if weAlreadyHaveTheObj:
+			self.stack.remove(weAlreadyHaveTheObj)
+		else :
+			obj = self.findObjWithId(screenObjId)
+			print(obj)
+			if obj:
+				self.stack.remove(obj)
 
 	def getTagList(self):
 		"""
@@ -270,43 +296,54 @@ class ScreenStackManager:
 		"""
 		Removes every object from the stack which have the specified tag
 		"""
-		for obj in self.stack:
+		print("Lets remove all object with tag : " + str(tag))
+		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
+		for obj in stackCopy:
+			print(obj.name, " has tags ", obj.tags)
 			if tag in obj.tags:
 				print("Removing object : "  +  str(obj.name))
-				self.removeObj(obj,skipPrint=True)
+				self.removeObj(obj.id,skipPrint=True,weAlreadyHaveTheObj=obj)
 		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
 		self.printStack()
 
-	def getStackLevel(self,screenObj):
-		return self.stack.index(screenObject)
+	def getStackLevel(self,screenObjId):
+		obj = self.findObjWithId(screenObjId)
+		return self.stack.index(obj)
 
-	def setStackLevel(self,screenObj,stackLevel="last"):
+	def setStackLevel(self,screenObjId,stackLevel="last"):
 		"""
 		Set the position of said object
 		Then prints every object above it (including itself)
 		"""
-		if stackLevel=="last":
+		if stackLevel=="last" or stackLevel==-1:
 			stackLevel=len(self.stack)
-		self.stack.insert(stackLevel,screenObject)
-		self.printStack(areaFromObject=screenObj)
-		return True
+			obj = self.findObjWithId(screenObjId)
+			self.removeObj(screenObjId,skipPrint=True)
+			self.stack.insert(stackLevel,obj)
+			self.printStack(area=[obj.xy,obj.xy2])
+			return True
 
 	def printInvertedObj(self,invertDuration,screenObj):
+		if screenObj==None:
+			return False
 		mode = bool(screenObj.isInverted)
 		screenObj.setInverted(not screenObj.isInverted)
 		self.simplePrintObj(screenObj)
 		if invertDuration and invertDuration>0:
 			#Then, we start a timer to set it back to a non inverted state
 			threading.Timer(invertDuration,screenObj.setInverted,[mode]).start()
-			threading.Timer(invertDuration,self.simplePrintObj).start()
+			threading.Timer(invertDuration,self.simplePrintObj,[screenObj]).start()
 
-	def invertObj(self, screenObj,invertDuration):
+	def invertObj(self, screenObjId,invertDuration):
 		"""
 		Shortcut (or longcut, it depends on the point of view) to invert the screen object
 		"""
-		screen.printInvertObj(invertDuration,screenObj)
-		self.printStack(skipObj=None,areaFromObject=screenObj)
-		threading.Timer(invertDuration,self.printStack,[None,screenObj]).start()
+		screenObj = self.findObjWithId(screenObjId)
+		self.printInvertedObj(invertDuration,screenObj)
+		area = [screenObj.xy1,screenObj.xy2]
+		self.printStack(skipObjId=None, area=area)
+		threading.Timer(invertDuration,self.printStack,[None,area]).start()
+		return True
 
 	def invert(self):
 		"""
@@ -335,7 +372,6 @@ class ScreenStackManager:
 		self.isInputThreadStarted = True
 		threading.Thread(target=self.listenForTouch,args=[True]).start()
 
-
 	def listenForTouch(self,isThread=False):
 		print("lets do this")
 		self.device.initInteractionHandler()
@@ -358,12 +394,12 @@ class ScreenStackManager:
 						if obj.onclickInside != None:
 							self.lastX = x
 							self.lastY = y
-							obj.onclickInside(obj)
+							obj.onclickInside(obj.id)
 							break 		# we quit the for loop
 					elif obj.onclickOutside != None:
 						self.lastX = x
 						self.lastY = y
-						obj.onclickOutside(obj)
+						obj.onclickOutside(obj.id)
 						break 			# we quit the for loop
 
 
