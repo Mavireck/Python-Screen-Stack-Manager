@@ -2,6 +2,7 @@
 import pssm
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
+from copy import deepcopy
 
 white = 255
 black = 0
@@ -12,7 +13,7 @@ def rectangle(x,y,w,h,fill=255,outline=50):
 	img = Image.new('L', (w+1,h+1), color=white)
 	rect = ImageDraw.Draw(img, 'L')
 	rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
-	return pssm.pillowImgToScreenObject(img,x,y)
+	return deepcopy(pssm.pillowImgToScreenObject(img,x,y))
 
 def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     """Draw a rounded rectangle"""
@@ -26,14 +27,14 @@ def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     rectangle.paste(corner.rotate(90), (0, h - radius)) # Rotate the corner and paste it
     rectangle.paste(corner.rotate(180), (w - radius, h - radius))
     rectangle.paste(corner.rotate(270), (w - radius, 0))
-    return pssm.pillowImgToScreenObject(rectangle,x,y)
+    return deepcopy(pssm.pillowImgToScreenObject(rectangle,x,y))
 
 def button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0):
     img = Image.new('L', (w+1,h+1), color=white)
     rect = ImageDraw.Draw(img, 'L')
     rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
     btn = add_text(img,text,font,xPosition="center",yPosition="center",fill=text_fill)
-    return pssm.pillowImgToScreenObject(btn,x,y)
+    return deepcopy(pssm.pillowImgToScreenObject(btn,x,y))
 
 def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
     """
@@ -46,7 +47,7 @@ def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
     x = tools_convertXArgsToPX(xPosition,obj.w,text_w)
     y = tools_convertYArgsToPX(yPosition,obj.h,text_h)
     imgDraw.text((x,y),text,font=font,fill=fill)
-    return pssm.pillowImgToScreenObject(img,obj.x,obj.y)
+    return deepcopy(pssm.pillowImgToScreenObject(img,obj.x,obj.y))
 
 def roundedCorner(radius, fill=255,outline=50):
     """Draw a round corner"""
