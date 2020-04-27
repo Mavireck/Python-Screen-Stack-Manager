@@ -1,13 +1,19 @@
 # Python-Screen-Stack-Manager - Help
 
 
+You should (and I may say you MUST) check the file named screenStackTest.py.
+It contains a few examples and useful comments. Make sure it works before testing anything else.
+
+
+
 ## Table of contents
 1. Setup
 2. Initializing PSSM
 3. Basic functions
-4. POL - PSSM Objects Librairy
-5. Advanced functions : The ScreenStackManager object
-6. Advanced functions : The ScreenObject object
+4. The EMULATOR :)
+5. POL - PSSM Objects Librairy
+6. Advanced functions : The ScreenStackManager object
+7. Advanced functions : The ScreenObject object
 
 ## 1. Setup
 To install PSSM on your Kobo, I recommend you install all my packages in :
@@ -60,7 +66,12 @@ screen.removeAllWithTag("MyTag")  # Removes all the objects which have the tag "
 ```
 More information on tags, etc below.
 
-## 4. POL - PSSM Objects Librairy
+## 4. The EMULATOR :) :)
+>**TODO**
+
+You can use : import pssm_opencv as pssm_device to use the emulator, instead of pssm_kobo. Then run your script on your computer.
+
+## 5. POL - PSSM Objects Librairy
 >**TODO**
 
 Example :
@@ -78,7 +89,7 @@ POL.add_text(obj,text,font,xPosition="left",yPosition="top",fill=0)
 POL.add_centeredText(obj,text,font,fill=0)
 ````
 
-## 5. Advanced functions : The ScreenStackManager object
+## 6. Advanced functions : The ScreenStackManager object
 A PSSM ScreenStackManager has these attributes :
 ````Python
 screen.device = device
@@ -141,10 +152,9 @@ screen.createCanvas(color=255)
 
 screen.startListenerThread()
 screen.stopListenerThread()
-screen.listenForTouch(isThread=False)
 ````
 
-## 6. Advanced functions : The ScreenObject object
+## 7. Advanced functions : The ScreenObject object
 A PSSM Object has these attributes :
 ````Python
 screenObj.id         # A specific ID - do not edit
