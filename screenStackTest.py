@@ -8,10 +8,13 @@ import pssmObjectsLibrairy as POL
 
 ################################################################################
 
-def printObjData(objId):
+def printObjData(objId,objData):
 	"""
 	Will be executed on touch
 	"""
+	# A better behaviour would be to use the obj.data structure to pass whatever
+	# you want to be passed
+	# Therefore you do not need to iterate to find the object
 	obj = screen.findObjWithId(objId)
 	print(obj.name, objId)
 

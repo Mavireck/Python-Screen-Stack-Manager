@@ -412,12 +412,12 @@ class ScreenStackManager:
 						if obj.onclickInside != None:
 							self.lastX = x
 							self.lastY = y
-							obj.onclickInside(obj.id)
+							obj.onclickInside(obj.id, obj.data)
 							break 		# we quit the for loop
 					elif obj.onclickOutside != None:
 						self.lastX = x
 						self.lastY = y
-						obj.onclickOutside(obj.id)
+						obj.onclickOutside(obj.id, obj.data)
 						break 			# we quit the for loop
 
 	def stopListenerThread(self):
