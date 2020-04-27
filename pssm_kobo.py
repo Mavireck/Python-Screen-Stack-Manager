@@ -27,6 +27,8 @@ view_height=state.view_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
 
+def wait(time_seconds):
+	sleep(time_seconds)
 
 def closePrintHandler():
 	FBInk.fbink_close(fbfd)
