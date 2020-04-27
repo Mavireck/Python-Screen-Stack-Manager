@@ -1,10 +1,13 @@
 #!/usr/bin/env python
-#Import the time module for demonstration purposes
-import time
-# Import pssm
+
 import pssm
-import pssm_kobo
 import pssmObjectsLibrairy as POL
+import cv2
+
+## Import pssm_device : you must choose between the emulator (pssm_opencv) and kobo (pssm_kobo)
+#import pssm_kobo as pssm_device
+import pssm_opencv as pssm_device
+
 
 ################################################################################
 
@@ -35,7 +38,7 @@ obj3.onclickInside = printObjData
 ################################################################################
 
 #Declare the Screen Stack Manager
-screen = pssm.ScreenStackManager(pssm_kobo,'Main')
+screen = pssm.ScreenStackManager(pssm_device,'Main')
 screenWidth = screen.width
 screenHeight = screen.height
 #Start Touch listener, as a separate thread
@@ -58,15 +61,15 @@ screen.addObj(obj3)
 print("Just added middleObj")
 
 print("Waiting 5 seconds")
-time.sleep(5)
+pssm_device.wait(5)
 
 screen.invertObj(obj2.id,5)
 print("Just inverted wideObj for 5 seconds, waiting 5 seconds after that")
-time.sleep(10)
+pssm_device.wait(10)
 
 screen.removeObj(obj1.id)
 print("Just removed highObj")
-time.sleep(5)
+pssm_device.wait(5)
 
 screen.addObj(obj1)
 print("Just added highObj")
