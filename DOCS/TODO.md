@@ -17,5 +17,7 @@
 - (Port my dashboard to PSSM and split it into multiple files)
 
 **What else to do**
+- [+++++++] Make a POL object with the "quit" icon -> use it in all my personal projects which require a Quit button
+- [+++++++] More generally, make a POL function which makes a button out of a png icon
 - [++] Add objects to pssmObjectsLibrairy
 - More documentation (including on pssmObjectsLibrairy)
