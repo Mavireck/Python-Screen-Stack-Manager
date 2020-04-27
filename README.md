@@ -1,6 +1,7 @@
 # Python-Screen-Stack-Manager
 PSSM - A handy tool to create an image-based user interface with easier layer control.
 
+**Warning** - I am no python expert, I had to work around quite a few simple issues. Do not expect the code to be work perfectly out of the bor, nor to be written elegantly.
 
 ### What it does
 Look at the test file for an example.
