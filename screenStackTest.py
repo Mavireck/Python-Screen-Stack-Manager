@@ -3,9 +3,15 @@
 import pssm
 import pssmObjectsLibrairy as POL
 
-## Import pssm_device : you must choose between the emulator (pssm_opencv) and kobo (pssm_kobo)
-#import pssm_kobo as pssm_device
-import pssm_opencv as pssm_device
+## Import pssm_device
+import platform
+if platform.machine() in ["x86","AMD64","i686","x86_64"]:
+	# If it is a non-ARM device, it is likely to be used on a computer -> emulator
+	# TODO : make a better test (get the device's precise name for instance or something like that)
+	import pssm_opencv as pssm_device
+else:
+	import pssm_kobo as pssm_device
+
 
 
 ################################################################################
