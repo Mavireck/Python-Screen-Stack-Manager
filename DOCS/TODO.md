@@ -3,9 +3,8 @@
 
 **Emulator**
 - [S] Make the emulator better
-- [L] If the emulator is a success, then allow to use the computer's built-in keyboard.
 - [S] Make sure it can handle RGB images ! (Perhaps use a boolean, like screen.is_rgb, in order not to deal with full RGB images on ereaders which will have limited resources)
-- [M] Avoid looping continously to read click events on the emulator
+- [L] If the emulator is a success, then allow to use the computer's built-in keyboard.
 
 **What to clean**
 - [XS] Remove depecrecated nested structure (+ cleanup code)
