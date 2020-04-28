@@ -378,14 +378,14 @@ class ScreenStackManager:
 		self.addObj(background)
 		return True
 
-	def startListenerThread(self):
+	def startListenerThread(self,grabInput=False):
 		"""
 		Starts the touch listener as a separate thread
 		"""
 		self.isInputThreadStarted = True
 		self.device.isInputThreadStarted = True
 		print("[PSSM - Touch handler] : Input thread started")
-		threading.Thread(target=self.device.eventBindings,args=[self.clickHandler,True]).start()
+		threading.Thread(target=self.device.eventBindings,args=[self.clickHandler,True,grabInput]).start()
 
 	def clickHandler(self,x,y):
 		n = len(self.stack)

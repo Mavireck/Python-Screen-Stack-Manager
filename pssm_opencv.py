@@ -54,13 +54,15 @@ def do_screen_clear():
 ################################# - Click - ####################################
 eventCallbackFct = None
 isInputThreadStarted = False
-def eventBindings(callbackFct, isThread=False):
+def eventBindings(callbackFct, isThread=False,grabInput=False):
 	"""
 	This function is started as another thread, and calls 'callbackFct(x,y)'
 	When a click or touch event is recorded
 	"""
 	print("[PSSM_OpenCV - Click handler] : Let's do this")
 	global eventCallbackFct
+	if grabInput:
+		print('Using an emulator - nothing to be grabbed')
 	eventCallbackFct = callbackFct
 	cv2.setMouseCallback("PSSM_Emulator", cv2Link)
 
