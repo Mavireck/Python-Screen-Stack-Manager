@@ -49,48 +49,24 @@ def do_screen_clear():
 	cv2.imshow('PSSM_Emulator',opencvImage)
 
 
-interactionHandler = None
-def initInteractionHandler():
-	print("initInteractionHandler started")
-	global interactionHandler
-	interactionHandler = inputObject()
-	cv2.setMouseCallback("PSSM_Emulator", interactionHandler.cv2Link)
+################################# - Click - ####################################
+eventCallbackFct = None
+isInputThreadStarted = False
+def eventBindings(callbackFct, isThread=False):
+	"""
+	This function is started as another thread, and calls 'callbackFct(x,y)'
+	When a click or touch event is recorded
+	"""
+	print("[PSSM_OpenCV - Click handler] : Let's do this")
+	global eventCallbackFct
+	eventCallbackFct = callbackFct
+	cv2.setMouseCallback("PSSM_Emulator", cv2Link)
 
 def closeInteractionHandler():
-	#TODO: is there anything to do?
+	#TODO
 	print("Closed interactionHandler")
 
-
-class inputObject():
-	"""
-	Input object
-	"""
-	def __init__(self):
-		self.lastClick_wasSent = True
-		self.lastClick = (-1,-1)
-
-	def close(self):
-		""" Closes the input event file """
-		self.devFile.close()
-		return True
-
-	def cv2Link(self,event, x, y, flags, param):
-		if event == cv2.EVENT_LBUTTONUP:
-			self.lastClick = (x, y)
-			self.lastClick_wasSent = False
-
-	def getInput(self):
-		"""
-		Returns the rotated x,y coordinates of where the user last touched
-		returns None if the last touch coordinates have already been sent
-		"""
-		err = None
-		if self.lastClick_wasSent == False:
-			(x,y) = self.lastClick
-			self.lastClick_wasSent = True
-			return (x, y, None)
-		else:
-			return None
-
-	def debounceAllow(self,x,y):
-		return True
+def cv2Link(event, x, y, flags, param):
+	global eventCallbackFct
+	if event == cv2.EVENT_LBUTTONUP:
+		eventCallbackFct(x,y)

@@ -32,7 +32,7 @@ def getRectanglesIntersection(area1,area2):
 	else:
 		return None
 
-def returnFalse(a=False):
+def returnFalse(*args):
 	return False
 
 def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
@@ -383,10 +383,28 @@ class ScreenStackManager:
 		Starts the touch listener as a separate thread
 		"""
 		self.isInputThreadStarted = True
+		self.device.isInputThreadStarted = True
 		print("[PSSM - Touch handler] : Input thread started")
-		threading.Thread(target=self.listenForTouch,args=[True]).start()
+		threading.Thread(target=self.device.eventBindings,args=[self.clickHandler,True]).start()
 
-	def listenForTouch(self,isThread=False):
+	def clickHandler(self,x,y):
+		n = len(self.stack)
+		for i in range(n):
+			j = n-1-i 	# We go through the stack in descending order
+			obj = self.stack[j]
+			if coordsInArea(x,y,[obj.xy1,obj.xy2]):
+				if obj.onclickInside != None:
+					self.lastX = x
+					self.lastY = y
+					obj.onclickInside(obj.id, obj.data)
+					break 		# we quit the for loop
+			elif obj.onclickOutside != None:
+				self.lastX = x
+				self.lastY = y
+				obj.onclickOutside(obj.id, obj.data)
+				break 			# we quit the for loop
+
+	def OLD_listenForTouch(self,isThread=False):
 		"""
 		Starts the touch listener without multithreading
 		It will prevent you from running any other while loop at the same time
@@ -422,4 +440,5 @@ class ScreenStackManager:
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
+		self.device.isInputThreadStarted = False
 		print("[PSSM - Touch handler] : Input thread stopped")

@@ -63,12 +63,32 @@ def do_screen_clear():
 
 
 interactionHandler = None
+isInputThreadStarted = False
 def initInteractionHandler():
 	print("initInteractionHandler started")
 	global interactionHandler
 	touchPath = "/dev/input/event1"
 	interactionHandler = KIP.inputObject(touchPath, screen_width, screen_height)
 
+def eventBindings(callbackFct, isThread=False):
+	"""
+	This function is started as another thread, and calls 'callbackFct(x,y)'
+	When a click or touch event is recorded
+	"""
+	print("[PSSM_Kobo - Touch handler] : Let's do this")
+	global interactionHandler
+	initInteractionHandler()
+	while True:
+		try:
+			deviceInput = interactionHandler.getInput()
+			(x, y, err) = deviceInput
+			print(deviceInput)
+		except:
+			continue
+		if isThread and not isInputThreadStarted:
+			break
+		if interactionHandler.debounceAllow(x,y):
+			callbackFct(x,y)
 
 def closeInteractionHandler():
 	global interactionHandler
