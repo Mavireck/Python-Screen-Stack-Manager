@@ -2,7 +2,6 @@
 
 import pssm
 import pssmObjectsLibrairy as POL
-import cv2
 
 ## Import pssm_device : you must choose between the emulator (pssm_opencv) and kobo (pssm_kobo)
 #import pssm_kobo as pssm_device
