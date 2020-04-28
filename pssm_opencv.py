@@ -20,7 +20,9 @@ last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)
 
 
 def wait(time_seconds):
+	print("Reminder : When using 'wait' in the emulator, you can skip the wait by pressing any keyboard key")
 	cv2.waitKey(int(time_seconds*1000))
+
 
 def closePrintHandler():
 	#TODO
