@@ -178,7 +178,6 @@ class ScreenStackManager:
 		#TODO
 		#Depecrecated ?
 		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(self.width,self.height)]
-		print("Printing stack")
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		self.printStack_mainRecursiveLoop(self.stack,mainIntersectionArea,skipObj,areaFromObject)
 
@@ -208,7 +207,6 @@ class ScreenStackManager:
 			the part of the stack which is in this area
 		"""
 		mainIntersectionArea = [(area[0][0],area[0][1]),(area[1][0],area[1][1])] if area else [(0,0),(self.width,self.height)]
-		print("Printing stack")
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		for obj in self.stack:
 			if (not skipObjId) or (skipObjId and obj.id != skipObjId):
@@ -281,7 +279,6 @@ class ScreenStackManager:
 			self.stack.remove(weAlreadyHaveTheObj)
 		else :
 			obj = self.findObjWithId(screenObjId)
-			print(obj)
 			if obj:
 				self.stack.remove(obj)
 
@@ -298,12 +295,9 @@ class ScreenStackManager:
 		"""
 		Removes every object from the stack which have the specified tag
 		"""
-		print("Lets remove all object with tag : " + str(tag))
 		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
 		for obj in stackCopy:
-			print(obj.name, " has tags ", obj.tags)
 			if tag in obj.tags:
-				print("Removing object : "  +  str(obj.name))
 				self.removeObj(obj.id,skipPrint=True,weAlreadyHaveTheObj=obj)
 		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
 		self.printStack()
@@ -415,10 +409,8 @@ class ScreenStackManager:
 			try:
 				deviceInput = self.device.interactionHandler.getInput()
 				(x, y, err) = deviceInput
-				print(deviceInput)
 			except:
 				continue
-			print(str(x)+ " - " + str(y))
 			if isThread and not self.isInputThreadStarted:
 				break
 			if self.device.interactionHandler.debounceAllow(x,y):

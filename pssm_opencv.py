@@ -20,7 +20,7 @@ last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)
 
 
 def wait(time_seconds):
-	print("Reminder : When using 'wait' in the emulator, you can skip the wait by pressing any keyboard key")
+	#Reminder : When using 'wait' in the emulator, you can skip the wait by pressing any keyboard key
 	cv2.waitKey(int(time_seconds*1000))
 
 
@@ -38,6 +38,7 @@ def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
 	# Convert RGB to BGR
 	opencvImage = opencvImage[:, :, ::-1].copy()
 	cv2.imshow('PSSM_Emulator',opencvImage)
+	cv2.waitKey(1)
 
 def do_screen_refresh(isInverted=False,isPermanent=True):
 	#TODO:
@@ -49,6 +50,7 @@ def do_screen_clear():
 	# Convert RGB to BGR
 	opencvImage = opencvImage[:, :, ::-1].copy()
 	cv2.imshow('PSSM_Emulator',opencvImage)
+	cv2.waitKey(1)
 
 
 ################################# - Click - ####################################
