@@ -126,25 +126,25 @@ def tools_parseKnownImageFile(file):
         return "icons/back.png"
     elif file=="delete":
         return "icons/delete.jpg"
-    elif file="frontlight-down":
+    elif file=="frontlight-down":
         return "icons/frontlight-down.jpg"
-    elif file="frontlight-up":
+    elif file=="frontlight-up":
         return "icons/frontlight-up.jpg"
-    elif file="invert":
+    elif file=="invert":
         return "icons/invert.jpg"
-    elif file="reboot":
+    elif file=="reboot":
         return "icons/reboot.jpg"
-    elif file="save":
+    elif file=="save":
         return "icons/save.png"
-    elif file="touch-off":
+    elif file=="touch-off":
         return "icons/touch-off.png"
-    elif file="touch-on":
+    elif file=="touch-on":
         return "icons/touch-on.png"
-    elif file="wifi-lock":
+    elif file=="wifi-lock":
         return "icons/wifi-lock.jpg"
-    elif file="wifi-on":
+    elif file=="wifi-on":
         return "icons/wifi-on.jpg"
-    elif file="wifi-off":
+    elif file=="wifi-off":
         return "icons/wifi-off.jpg"
     else:
         return file
