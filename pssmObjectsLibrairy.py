@@ -44,6 +44,16 @@ def button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0):
     btn = add_text(img,text,font,xPosition="center",yPosition="center",fill=text_fill)
     return deepcopy(pssm.pillowImgToScreenObject(btn,x,y))
 
+def icon(file,x,y,w,h,icon_size=50):
+    """
+    Returns a ScreenObject with the icon corresponding to the path you give as argument.
+    If you pass "back", "delete" or another known image, it will fetch the integrated icons
+    """
+    icon_size = 48
+    path_to_file = tools_parseKnownImageFile(file)
+    iconImg = Image.open(path_to_file).resize((icon_size,icon_size))
+    return deepcopy(pssm.pillowImgToScreenObject(iconImg,x,y))
+
 def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
     """
     Adds text to an existing pillow object
@@ -110,3 +120,31 @@ def tools_convertYArgsToPX(yPosition,objh,texth):
             print("[PSSMOL] Invalid input for yPosition")
             return False
     return y
+
+def tools_parseKnownImageFile(file):
+    if file=="back":
+        return "icons/back.png"
+    elif file=="delete":
+        return "icons/delete.jpg"
+    elif file="frontlight-down":
+        return "icons/frontlight-down.jpg"
+    elif file="frontlight-up":
+        return "icons/frontlight-up.jpg"
+    elif file="invert":
+        return "icons/invert.jpg"
+    elif file="reboot":
+        return "icons/reboot.jpg"
+    elif file="save":
+        return "icons/save.png"
+    elif file="touch-off":
+        return "icons/touch-off.png"
+    elif file="touch-on":
+        return "icons/touch-on.png"
+    elif file="wifi-lock":
+        return "icons/wifi-lock.jpg"
+    elif file="wifi-on":
+        return "icons/wifi-on.jpg"
+    elif file="wifi-off":
+        return "icons/wifi-off.jpg"
+    else:
+        return file
