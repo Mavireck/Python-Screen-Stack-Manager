@@ -319,7 +319,8 @@ class ScreenStackManager:
 			self.printStack(area=[obj.xy,obj.xy2])
 			return True
 
-	def printInvertedObj(self,invertDuration,screenObj):
+	def printInvertedObj(self,invertDuration,screenObjId):
+		screenObj = self.findObjWithId(screenObjId)
 		if screenObj==None:
 			return False
 		mode = bool(screenObj.isInverted)
