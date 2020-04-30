@@ -8,12 +8,13 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 
-screen_width=768
-screen_height=1024
-view_width=768
-view_height=1024
+screen_width=600
+screen_height=800
+view_width=screen_width
+view_height=screen_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
+isEmulator=True
 cv2.namedWindow("PSSM_Emulator")
 
 last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)

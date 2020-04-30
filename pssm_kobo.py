@@ -23,9 +23,10 @@ screen_width=state.screen_width
 screen_height=state.screen_height
 view_width=state.view_width
 view_height=state.view_height
-
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
+isEmulator=False
+
 
 def wait(time_seconds):
 	sleep(time_seconds)
@@ -57,6 +58,13 @@ def do_screen_refresh(isInverted=False,isPermanent=True):
 	if not isPermanent:
 		fbink_cfg.is_nightmode = mode2
 
+def do_screenDump():
+	d = FBInk.fbink_dump(fbfd,fbink_dumpcfg)
+	return True
+
+def do_screenDump_restore():
+	FBInk.fbink_restore(fbfd,fbink_cfg,fbink_dumpcfg)
+	return True
 
 def do_screen_clear():
 	FBInk.fbink_cls(fbfd, fbink_cfg)

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+import os
 import pssm
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from copy import deepcopy
 
+path_to_pssm = os.path.dirname(os.path.abspath(__file__))
 white = 255
 black = 0
 gray = 128
@@ -22,7 +24,7 @@ def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     """
     Draw a rounded rectangle
     """
-    rectangle = Image.new('L', (w,h), white)
+    # rectangle = Image.new('L', (w,h), white)
     draw = ImageDraw.Draw(rectangle)
     draw.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
     draw.line([(radius,h-1),(w-radius,h-1)],fill=outline,width=1)
@@ -38,20 +40,20 @@ def button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0):
     """
     Draw a simple button with a text
     """
+    #TODO : FIX IT
     img = Image.new('L', (w+1,h+1), color=white)
     rect = ImageDraw.Draw(img, 'L')
     rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
     btn = add_text(img,text,font,xPosition="center",yPosition="center",fill=text_fill)
     return deepcopy(pssm.pillowImgToScreenObject(btn,x,y))
 
-def icon(file,x,y,w,h,icon_size=50):
+def icon(file,x,y,icon_size=50):
     """
     Returns a ScreenObject with the icon corresponding to the path you give as argument.
     If you pass "back", "delete" or another known image, it will fetch the integrated icons
     """
-    icon_size = 48
     path_to_file = tools_parseKnownImageFile(file)
-    iconImg = Image.open(path_to_file).resize((icon_size,icon_size))
+    iconImg = Image.open(path_to_file).convert("L").resize((icon_size,icon_size))
     return deepcopy(pssm.pillowImgToScreenObject(iconImg,x,y))
 
 def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
@@ -123,28 +125,28 @@ def tools_convertYArgsToPX(yPosition,objh,texth):
 
 def tools_parseKnownImageFile(file):
     if file=="back":
-        return "icons/back.png"
+        return path_to_pssm + "/icons/back.png"
     elif file=="delete":
-        return "icons/delete.jpg"
+        return path_to_pssm + "/icons/delete.jpg"
     elif file=="frontlight-down":
-        return "icons/frontlight-down.jpg"
+        return path_to_pssm + "/icons/frontlight-down.jpg"
     elif file=="frontlight-up":
-        return "icons/frontlight-up.jpg"
+        return path_to_pssm + "/icons/frontlight-up.jpg"
     elif file=="invert":
-        return "icons/invert.jpg"
+        return path_to_pssm + "/icons/invert.jpg"
     elif file=="reboot":
-        return "icons/reboot.jpg"
+        return path_to_pssm + "/icons/reboot.jpg"
     elif file=="save":
-        return "icons/save.png"
+        return path_to_pssm + "/icons/save.png"
     elif file=="touch-off":
-        return "icons/touch-off.png"
+        return path_to_pssm + "/icons/touch-off.png"
     elif file=="touch-on":
-        return "icons/touch-on.png"
+        return path_to_pssm + "/icons/touch-on.png"
     elif file=="wifi-lock":
-        return "icons/wifi-lock.jpg"
+        return path_to_pssm + "/icons/wifi-lock.jpg"
     elif file=="wifi-on":
-        return "icons/wifi-on.jpg"
+        return path_to_pssm + "/icons/wifi-on.jpg"
     elif file=="wifi-off":
-        return "icons/wifi-off.jpg"
+        return path_to_pssm + "/icons/wifi-off.jpg"
     else:
         return file

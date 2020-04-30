@@ -65,6 +65,8 @@ print("Just added wideObj")
 screen.addObj(obj3)
 print("Just added middleObj")
 
+
+"""
 print("Waiting 5 seconds")
 pssm_device.wait(5)
 
@@ -80,3 +82,5 @@ screen.addObj(obj1)
 print("Just added highObj")
 
 print("All done")
+
+"""
