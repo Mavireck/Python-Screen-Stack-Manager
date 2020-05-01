@@ -24,7 +24,7 @@ def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     """
     Draw a rounded rectangle
     """
-    # rectangle = Image.new('L', (w,h), white)
+    rectangle = Image.new('L', (w,h), white)
     draw = ImageDraw.Draw(rectangle)
     draw.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
     draw.line([(radius,h-1),(w-radius,h-1)],fill=outline,width=1)
