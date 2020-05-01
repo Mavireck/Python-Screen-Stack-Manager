@@ -40,58 +40,6 @@ def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,oncl
 	obj =  ScreenObject(raw_data,(x,y),(x + img.width, y + img.height),name, onclickInside, onclickOutside,isInverted,data,tags)
 	return obj
 
-#The following is depecrecated :
-class OLD_ScreenObjectCollection:
-	def __init__(self,name,xy,xy2=[-1,-1],isFixedW=False,isFixedH=False,isTransparent=True,isInverted=False,parents=[],children=[],onclickInside=returnFalse,onclickOutside=None):
-		self.objType = "coll"
-		self.name = name
-		self.x = xy[0]
-		self.y = xy[1]
-		self.xy = xy
-		# The following two entries define whether we should make the collection size bigger
-		# when adding an object which does not fit inside the collection
-		self.isFixedW = isFixedW
-		self.isFixedH = isFixedH
-		if xy2 != [-1,-1]:
-			self.x2 = xy2[0]
-			self.y2 = xy2[1]
-			self.xy2 = xy2
-		else:
-			self.x2 = xy[0]
-			self.y2 = xy[1]
-			self.xy2 = xy
-			self.isFixedW = False
-			self.isFixedH = False
-		self.h = self.y2 - self.y
-		self.w = self.x2 - self.x
-		self.isTransparent = isTransparent
-		self.onclickInside = onclickInside
-		self.onclickOutside = onclickOutside
-		self.isInverted = isInverted
-		self.parents = parents
-		self.children = children
-
-	def addChildren(self,children):
-		if hasattr(children,"objType"):
-			if children.objType == "obj" or children.objType == "coll":
-				children.parents.extend(self.parents)
-				children.parents.append(self.name)
-				self.children.append(children)
-				rectIntersection = getRectanglesIntersection([children.xy,children.xy2],[self.xy,self.xy2])
-				if rectIntersection != [children.xy,children.xy2]:
-					# The children does not fit inside the parent
-					if not isFixedW:
-						self.x = min(self.x,children.x)
-						self.x2 = max(self.x2,children.x2)
-					if not isFixedH:
-						self.y = min(self.y,children.y)
-						self.y2 = max(self.y2,children.y2)
-			else:
-				print("[PSSM] Invalid object being added. Ignoring.")
-				return False
-		else:
-			print("[PSSM] Invalid object being added. Ignoring.")
-			return False
 
 class ScreenObject:
 	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
@@ -173,31 +121,6 @@ class ScreenStackManager:
 			if obj.id == screenObjId:
 				return obj
 		return None
-
-	def OLD_printStack_new(self,skipObj=None,areaFromObject=None):
-		#TODO
-		#Depecrecated ?
-		mainIntersectionArea = [(areaFromObject.x,areaFromObject.y),(areaFromObject.x2,areaFromObject.y2)] if areaFromObject else [(0,0),(self.width,self.height)]
-		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
-		self.printStack_mainRecursiveLoop(self.stack,mainIntersectionArea,skipObj,areaFromObject)
-
-	def OLD_printStack_mainRecursiveLoop(self,inputObj,mainIntersectionArea,skipObj,areaFromObject):
-		#TODO
-		#Depecrecated ?
-		for obj in inputObj:
-			if (not skipObj) or (skipObj and obj != skipObj):
-				# We loop through the objects behind the screenObject we are working on
-				objArea = [(obj.x,obj.y),(obj.x2,obj.y2)]
-				rectIntersection = getRectanglesIntersection(mainIntersectionArea,objArea)
-				if rectIntersection != None:
-					# The obj we are looking at is behind the screenObj
-					intersectionImg = self.getPartialObjImg_new(obj,objParentsList,rectIntersection)
-					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
-
-	def OLD_getPartialObjImg_new(self,obj,objParentsList,rectIntersection):
-		#TODO
-		#Depecrecated?
-		return False
 
 	def printStack(self,skipObjId=None,area=None):
 		"""
@@ -399,37 +322,6 @@ class ScreenStackManager:
 				obj.onclickOutside(obj.id, obj.data)
 				break 			# we quit the for loop
 
-	def OLD_listenForTouch(self,isThread=False):
-		"""
-		Starts the touch listener without multithreading
-		It will prevent you from running any other while loop at the same time
-		"""
-		print("[PSSM - Touch handler] : Let's do this")
-		self.device.initInteractionHandler()
-		while True:
-			try:
-				deviceInput = self.device.interactionHandler.getInput()
-				(x, y, err) = deviceInput
-			except:
-				continue
-			if isThread and not self.isInputThreadStarted:
-				break
-			if self.device.interactionHandler.debounceAllow(x,y):
-				n = len(self.stack)
-				for i in range(n):
-					j = n-1-i
-					obj = self.stack[j]
-					if coordsInArea(x,y,[obj.xy1,obj.xy2]):
-						if obj.onclickInside != None:
-							self.lastX = x
-							self.lastY = y
-							obj.onclickInside(obj.id, obj.data)
-							break 		# we quit the for loop
-					elif obj.onclickOutside != None:
-						self.lastX = x
-						self.lastY = y
-						obj.onclickOutside(obj.id, obj.data)
-						break 			# we quit the for loop
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
