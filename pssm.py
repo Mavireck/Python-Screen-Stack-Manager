@@ -2,7 +2,6 @@
 import sys
 import os
 import threading
-from time import sleep
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
@@ -67,7 +66,6 @@ class ScreenObject:
 		self.isInverted = isInverted
 		self.data = data
 		self.tags=tags
-		self.parents = []
 
 	def __hash__(self):
 		return hash(self.id)
@@ -86,19 +84,6 @@ class ScreenObject:
 	def setInverted(self,mode):
 		self.isInverted = mode
 
-	def updateImg(self,newImg,xy1,xy2):
-		"""
-		Updates the object without displaying it.
-		"""
-		self.imgData = imgData
-		self.xy1 = xy1
-		self.x = xy1[0]
-		self.y = xy1[1]
-		self.xy2 = xy2
-		self.x2 = xy2[0]
-		self.y2 = xy2[1]
-		self.w = x2-x
-		self.h = y2-y
 
 class ScreenStackManager:
 	def __init__(self,device,name="screen",stack=[],isInverted=False):
