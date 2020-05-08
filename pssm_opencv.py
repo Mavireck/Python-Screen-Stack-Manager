@@ -26,11 +26,12 @@ def wait(time_seconds):
 
 
 def closePrintHandler():
-	#TODO
+	#TODO : is there anything to do?
 	print("Closed")
 
 def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
 	#TODO : honor is inverted
+	global last_printed_PIL
 	if length==None:
 		length = len(raw_data)
 	pil_image = Image.frombytes('L',(w,h),raw_data).convert("RGB")
@@ -41,12 +42,13 @@ def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
 	cv2.imshow('PSSM_Emulator',opencvImage)
 	cv2.waitKey(1)
 
-def do_screen_refresh(isInverted=False,isPermanent=True):
-	#TODO:
-	print("Screen refresh")
+def do_screen_refresh(isInverted=False,isPermanent=True,area=[[0,0],[0,0]]):
+	#TODO: Honor inversion 
+	print("Screen refresh - Inversion (partial and full) are not yet supported on the emulator")
 
 def do_screen_clear():
 	pil_image = Image.new('L', (screen_width,screen_height), color=255).convert("RGB")
+	last_printed_PIL = pil_image
 	opencvImage = np.array(pil_image)
 	# Convert RGB to BGR
 	opencvImage = opencvImage[:, :, ::-1].copy()
