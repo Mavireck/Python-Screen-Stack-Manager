@@ -11,6 +11,11 @@ black = 0
 gray = 128
 light_gray = 230
 
+Merri_regular = os.path.join("fonts", "Merriweather-Regular.ttf")
+standard_font_size = int(15)
+standard_font = ImageFont.truetype(Merri_regular, standard_font_size)
+
+
 def rectangle(x,y,w,h,fill=255,outline=50):
     """
     Draw a simple rectange
@@ -36,16 +41,18 @@ def roundedRectangle(x,y,w,h, radius=20, fill=255,outline=50):
     rectangle.paste(corner.rotate(270), (w - radius, 0))
     return deepcopy(pssm.pillowImgToScreenObject(rectangle,x,y))
 
-def button(x,y,w,h,text,font,fill=255,outline=50,text_fill=0):
+def button(area,text,font=standard_font,fill=255,outline=50,text_fill=0):
     """
     Draw a simple button with a text
     """
     #TODO : FIX IT
+    (x,y),(w,h) = area
     img = Image.new('L', (w+1,h+1), color=white)
     rect = ImageDraw.Draw(img, 'L')
     rect.rectangle([(0,0),(w,h)],fill=fill,outline=outline)
-    btn = add_text(img,text,font,xPosition="center",yPosition="center",fill=text_fill)
-    return deepcopy(pssm.pillowImgToScreenObject(btn,x,y))
+    btn_withoutText = pssm.pillowImgToScreenObject(img,x,y)
+    btn_withText = add_text(btn_withoutText,text,font,xPosition="center",yPosition="center",fill=text_fill)
+    return btn_withText
 
 def icon(file,x,y,icon_size=50):
     """
@@ -56,7 +63,7 @@ def icon(file,x,y,icon_size=50):
     iconImg = Image.open(path_to_file).convert("L").resize((icon_size,icon_size))
     return deepcopy(pssm.pillowImgToScreenObject(iconImg,x,y))
 
-def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
+def add_text(obj,text,font=standard_font,xPosition="left",yPosition="top",fill=0):
     """
     Adds text to an existing pillow object
 
@@ -71,11 +78,48 @@ def add_text(obj,text,font,xPosition="left",yPosition="top",fill=0):
     imgDraw.text((x,y),text,font=font,fill=fill)
     return deepcopy(pssm.pillowImgToScreenObject(img,obj.x,obj.y))
 
-def add_centeredText(obj,text,font,fill=0):
+def add_centeredText(obj,text,font=standard_font,fill=0):
     """
     Shorthand to add_text([...] xPosition = Center, yPosition = Center)
     """
     return deepcopy(add_text(obj,text,font,xPosition="center",yPosition="center",fill=fill))
+
+def tools_createTable(area,rows,cols,borders=[(0,0),(0,0)],min_height=-1,min_width=-1,max_height=-1,max_width=-1):
+    """
+    Returns a list of coordinates in order to help create a rows*cols Table
+    If any dimension is bigger than the corresponding max_size
+    > area : a [(x,y),(w,h)] list
+    > rows (int) : number of rows
+    > cols (int) : number of columns
+    > borders : [(border_left,border_top),(border_right,border_bottom)] - borders around each item
+    """
+    (x,y),(w,h) = area
+    (b_left,b_top),(b_right,b_bottom) = borders
+    if max_height<=0:
+        max_height=h
+    if max_width<=0:
+        max_width=w
+    calculated_height = int(h/rows - b_top  - b_bottom)
+    calculated_width  = int(w/cols - b_left - b_right)
+    item_height = min(max_height,max(min_height,calculated_height))
+    item_width  = min(max_width, max(min_width, calculated_width ))
+    total_item_width = b_left + item_width  + b_right
+    total_item_height= b_top  + item_height + b_bottom
+    table=[]
+    x0=x
+    for i in range(cols):
+        col=[]
+        y0=y
+        for j in range(rows):
+            item = [
+                (x0 + b_left, y0 + b_top ),
+                (item_width , item_height)
+            ]
+            y0 += total_item_height
+            col.append(item)
+        table.append(col)
+        x0 += total_item_width
+    return table
 
 def roundedCorner(radius, fill=255,outline=50):
     """
@@ -85,7 +129,6 @@ def roundedCorner(radius, fill=255,outline=50):
     draw = ImageDraw.Draw(corner)
     draw.pieslice((0, 0, radius * 2, radius * 2), 180, 270, fill=fill,outline=outline)
     return corner
-
 
 def tools_convertXArgsToPX(xPosition,objw,textw):
     """
