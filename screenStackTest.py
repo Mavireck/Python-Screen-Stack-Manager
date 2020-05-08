@@ -16,28 +16,14 @@ else:
 
 ################################################################################
 
-def printObjData(objId,objData):
+def printObjData(obj,coords):
 	"""
 	Will be executed on touch
 	"""
 	# A better behaviour would be to use the obj.data structure to pass whatever
 	# you want to be passed
 	# Therefore you do not need to iterate to find the object
-	obj = screen.findObjWithId(objId)
-	print(obj.name, objId)
-
-# Create rectangle from the PSSM objecs library
-obj1 = POL.rectangle(0,0,400,1000,fill=0,outline=50)
-obj1.name = "highObj"
-obj1.onclickInside = printObjData
-
-obj2 = POL.rectangle(0,0,1000,400,fill=200,outline=50)
-obj2.name = "wideObj"
-obj2.onclickInside = printObjData
-
-obj3 = POL.rectangle(0,0,500,500,fill=100,outline=50)
-obj3.name = "middleObj"
-obj3.onclickInside = printObjData
+	print(obj.id, " - ", obj.data, coords)
 
 
 ################################################################################
@@ -56,31 +42,64 @@ screen.refresh()
 screen.createCanvas()
 print("just made canvas")
 
-screen.addObj(obj1)
-print("Just added highObj")
+def demo():
+	"""
+	A simple demo to show how to add, invert and remove objects
+	"""
+	# Create rectangle from the PSSM objecs library
+	obj1 = POL.rectangle(0,0,400,1000,fill=0,outline=50)
+	obj2 = POL.rectangle(0,0,1000,400,fill=200,outline=50)
+	obj3 = POL.rectangle(0,0,500,500,fill=100,outline=50)
 
-screen.addObj(obj2)
-print("Just added wideObj")
+	# There are a few ways to edit an object's attribute
+	# Here are some : depending on the context, one may be simpler than the other
+	obj1.updateAttributes({
+		'data' : "highObj",
+		'onclickInside' : printObjData
+	})
 
-screen.addObj(obj3)
-print("Just added middleObj")
+	obj2.data = "wideObj"
+	obj2.onclickInside = printObjData
+
+	obj3.data = "middleObj"
+	obj3.onclickInside = printObjData
+
+	# Here is how to add them to the screen :
+	screen.addObj(obj1)
+	screen.addObj(obj2)
+	screen.addObj(obj3)
+	print("Waiting 5 seconds")
+	pssm_device.wait(5)
+
+	screen.removeObj(obj1.id)
+	print("Waiting 5 seconds")
+	pssm_device.wait(5)
+
+	screen.addObj(obj1)
+	print("All done")
 
 
-"""
-print("Waiting 5 seconds")
-pssm_device.wait(5)
+def makeAMatrix():
+	"""
+	How to use POL to make a simple matrix with buttons
+	"""
+	# Let's choose an area on the screen where to display our table
+	area = [(0,0),(screen.width,screen.height)]
+	# Let's choose the size of each borders
+	# borders is a [(border_left,border_top),(border_right,border_bottom)] list
+	borders = [(20,10),(20,10)]
+	# Now let's use a built-in function to get all the coordinates for our table:
+	table = POL.tools_createTable(area,rows=8,cols=2,borders=borders)
+	i=0
+	for col in table:
+		for row_item in col:
+			# Then, let's create one button per table entry
+			# Note :  row_item is a [(x,y),(w,h)] list
+			i+=1
+			text = "This is some text - " + str(i)
+			item = POL.button(row_item,text)
+			screen.addObj(item)
 
-screen.invertObj(obj2.id,5)
-print("Just inverted wideObj for 5 seconds, waiting 5 seconds after that")
+demo()
 pssm_device.wait(10)
-
-screen.removeObj(obj1.id)
-print("Just removed highObj")
-pssm_device.wait(5)
-
-screen.addObj(obj1)
-print("Just added highObj")
-
-print("All done")
-
-"""
+makeAMatrix()
