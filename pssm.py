@@ -75,6 +75,14 @@ class ScreenObject:
 			return self.id == other.id
 		return NotImplemented
 
+	def updateAttributes(self,newParams):
+		"""
+		Pass a dict as argument, and it will update the object's attributes accordingly
+		"""
+		for param in newParams:
+			setattr(self, param, newParams[param])
+		return True
+
 	def addTag(self,tag):
 		self.tags.add(tag)
 
