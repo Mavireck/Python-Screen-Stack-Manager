@@ -133,6 +133,9 @@ screen.getTagList()
 screen.removeAllWithTag("tag")
 """ Removes all the object with this tag"""
 
+screen.invertAllWithTag("tag")
+""" Inverts all the object with this tag"""
+
 screen.getStackLevel(screenObjId)
 """ Returns the index of the object """
 
@@ -140,7 +143,6 @@ screen.setStackLevel(screenObjId,stackLevel="last")
 """ Set the position of said object
 Then prints every object above it (including itself) """
 
-screen.printInvertedObj(invertDuration,screenObj)
 screen.invertObj(screenObjId,invertDuration)
 """ Inverts an object """
 
@@ -168,8 +170,8 @@ screenObj.x2
 screenObj.y2
 screenObj.w          # The width of the image
 screenObj.h          # The height of the image
-screenObj.onclickInside   # A function to be executed on a touch event on the object (should accept as paramater the object's ID and data)
-screenObj.onclickOutside  # A function to be executed on a touch event not on the object (should accept as paramater the object's ID and data)
+screenObj.onclickInside   # A function to be executed on a touch event on the object (should accept as paramater the object and a (x,y) coordinate tuple)
+screenObj.onclickOutside  # A function to be executed on a touch event not on the object (should accept as paramater the object and a (x,y) coordinate tuple)
 screenObj.isInverted  # Boolean (Do not edit - use screen.invertObj(objId,duration))
 screenObj.data        # Some data you can attach to the object, as you wish
 screenObj.tags        # A set of tags the object has. Useful to remove a lot of objects at the same time
