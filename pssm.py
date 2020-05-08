@@ -120,7 +120,9 @@ class ScreenStackManager:
 		Prints the stack elements in the stack order
 		If a skipObj is specified, then the function will not display the skipObj.
 		If a area is set, then, we only display
-			the part of the stack which is in this area
+		the part of the stack which is in this area
+		> skipObjId : The ID of a PSSM ScreenObject
+		> area : a [[x1,y1],[x2,y2]] array
 		"""
 		mainIntersectionArea = [(area[0][0],area[0][1]),(area[1][0],area[1][1])] if area else [(0,0),(self.width,self.height)]
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
@@ -137,6 +139,12 @@ class ScreenStackManager:
 		self.device.print_raw(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
 
 	def getPartialObjImg(self,obj,rectIntersection):
+		"""
+		Returns a PIL image of the the interesection of the object image and the
+		rectangle coordinated given as parameter.
+		> obj : a PSSM ScreenObject
+		> rectIntersection : a [[x1,y1],[x2,y2]] array
+		"""
 		#TODO : MUST HONOR INVERSION
 		# We crop and print a part of the object
 		# First, lets make a PILLOW object:
@@ -158,9 +166,13 @@ class ScreenStackManager:
 	def addObj(self,screenObj,skipPrint=False,skipRegistration=False):
 		"""
 		Adds object to the stack and prints it
+		> screenObj : (PSSM ScreenObject)
+		> skipPrint : (boolean) True if you don't want to update the screen
+		> skipRegistration : (boolean) True if you don't want to add the object to the stack
 		"""
 		for obj in self.stack:
 			if obj.id == screenObj.id:
+				# There is already an object in the stack with the same ID.
 				if not skipPrint:
 					self.updateArea(screenObj)
 				break	#The object is already in the stack
@@ -236,6 +248,12 @@ class ScreenStackManager:
 			return True
 
 	def printInvertedObj(self,invertDuration,screenObjId):
+	def invertObj(self,screenObjId,invertDuration=-1,skipPrint=False):
+		"""
+		Inverts an object
+		> screenObjId
+		> invertDuration (int) : -1 or 0 if permanent, else an integer
+		"""
 		screenObj = self.findObjWithId(screenObjId)
 		if screenObj==None:
 			return False
