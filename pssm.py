@@ -105,6 +105,7 @@ class ScreenStackManager:
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
+		self.isPrintLocked = False
 		self.isInputThreadStarted = False
 		self.lastX = -1
 		self.lastY = -1
@@ -124,6 +125,8 @@ class ScreenStackManager:
 		> skipObjId : The ID of a PSSM ScreenObject
 		> area : a [[x1,y1],[x2,y2]] array
 		"""
+		if self.isPrintLocked:
+			return False
 		mainIntersectionArea = [(area[0][0],area[0][1]),(area[1][0],area[1][1])] if area else [(0,0),(self.width,self.height)]
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		for obj in self.stack:
@@ -161,7 +164,20 @@ class ScreenStackManager:
 		"""
 		Prints the object without adding it to the stack
 		"""
-		self.device.print_raw(screenObj.imgData,screenObj.x, screenObj.y, screenObj.w, screenObj.h,isInverted=screenObj.isInverted)
+		if not self.isPrintLocked:
+			self.device.print_raw(screenObj.imgData,screenObj.x, screenObj.y, screenObj.w, screenObj.h,isInverted=screenObj.isInverted)
+		else:
+			print("[PSSM] Print is locked, no image was updated")
+
+	def createCanvas(self,color=255):
+		"""
+		Creates a white object at the bottom of the stack, displays it while refreshing the screen
+		"""
+		img = Image.new('L', (self.width,self.height), color=255)
+		background = pillowImgToScreenObject(img,0,0,name="Canvas")
+		background.addTag("Canvas")
+		self.addObj(background)
+		return True
 
 	def addObj(self,screenObj,skipPrint=False,skipRegistration=False):
 		"""
@@ -170,11 +186,14 @@ class ScreenStackManager:
 		> skipPrint : (boolean) True if you don't want to update the screen
 		> skipRegistration : (boolean) True if you don't want to add the object to the stack
 		"""
-		for obj in self.stack:
+		for i in range(len(self.stack)):
+			obj=self.stack[i]
 			if obj.id == screenObj.id:
 				# There is already an object in the stack with the same ID.
+				# Let's update the object in the stack
 				if not skipPrint:
-					self.updateArea(screenObj)
+					self.stack[i] = screenObj
+					self.updateArea([screenObj.xy1,screenObj.xy2])
 				break	#The object is already in the stack
 		else:
 			# the object is not already in the stack
@@ -188,7 +207,7 @@ class ScreenStackManager:
 		self.stack.append(screenObj)
 		self.simplePrintObj(screenObj)
 
-	def updateArea(self,area = None):
+	def updateArea(self,area=None):
 		"""
 		Updates the object : updates the stack and prints the object and all the stack above it
 		while keeping the stack position
@@ -199,10 +218,11 @@ class ScreenStackManager:
 		"""
 		Removes the object from the stack and hides it from the screen
 		"""
-		# We print the stack, but only the area where screenObj was
+		# First, we print the stack where the object useed to stand
 		if not skipPrint:
 			screenObj=self.findObjWithId(screenObjId)
-			self.printStack(screenObjId,[screenObj.xy1,screenObj.xy2])
+			self.printStack(skipObjId=screenObjId,area=[screenObj.xy1,screenObj.xy2])
+		# Then it can be removed from the stack
 		if weAlreadyHaveTheObj:
 			self.stack.remove(weAlreadyHaveTheObj)
 		else :
@@ -230,6 +250,20 @@ class ScreenStackManager:
 		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
 		self.printStack()
 
+	def invertAllWithTag(self,tag,invertDuration=-1):
+		"""
+		Removes all the object which have a specific tag
+		"""
+		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
+		for obj in stackCopy:
+			if tag in obj.tags:
+				self.invertObj(screenObjId=obj.id,invertDuration=-1,skipPrint=True)
+		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
+		self.printStack()
+		# If an invert duration is given, then start a timer to go back to the original state
+		if invertDuration>0:
+			threading.Timer(invertDuration,self.invertAllWithTag,[tag,-1]).start()
+
 	def getStackLevel(self,screenObjId):
 		obj = self.findObjWithId(screenObjId)
 		return self.stack.index(obj)
@@ -239,6 +273,7 @@ class ScreenStackManager:
 		Set the position of said object
 		Then prints every object above it (including itself)
 		"""
+		#TODO : Must be able to accept another stackLevel
 		if stackLevel=="last" or stackLevel==-1:
 			stackLevel=len(self.stack)
 			obj = self.findObjWithId(screenObjId)
@@ -247,7 +282,6 @@ class ScreenStackManager:
 			self.printStack(area=[obj.xy,obj.xy2])
 			return True
 
-	def printInvertedObj(self,invertDuration,screenObjId):
 	def invertObj(self,screenObjId,invertDuration=-1,skipPrint=False):
 		"""
 		Inverts an object
@@ -257,23 +291,31 @@ class ScreenStackManager:
 		screenObj = self.findObjWithId(screenObjId)
 		if screenObj==None:
 			return False
-		mode = bool(screenObj.isInverted)
-		screenObj.setInverted(not screenObj.isInverted)
-		self.simplePrintObj(screenObj)
+		# First, let's get the object's initial inverted state
+		object_initial_state = bool(screenObj.isInverted)
+		# Then, we change the object's state
+		screenObj.setInverted(not object_initial_state)
+		if not skipPrint:
+			# Then we print the inverted version
+			area = [screenObj.xy1,screenObj.xy2]
+			self.printStack(skipObjId=None, area=area)
+		# Then, if an invertDuration is given, we setup a timer to go back to the original state
 		if invertDuration and invertDuration>0:
-			#Then, we start a timer to set it back to a non inverted state
-			threading.Timer(invertDuration,screenObj.setInverted,[mode]).start()
-			threading.Timer(invertDuration,self.simplePrintObj,[screenObj]).start()
+			#Then, we start a timer to set it back to its intial state
+			threading.Timer(invertDuration,screenObj.setInverted,[object_initial_state]).start()
+			threading.Timer(invertDuration,self.invertObj,[screenObjId,-1]).start()
 
-	def invertObj(self, screenObjId,invertDuration):
+	def invertArea(self,area,invertDuration,isInverted=False):
 		"""
-		Shortcut (or longcut, it depends on the point of view) to invert the screen object
+		Inverts an area
 		"""
-		screenObj = self.findObjWithId(screenObjId)
-		self.printInvertedObj(invertDuration,screenObj)
-		area = [screenObj.xy1,screenObj.xy2]
-		self.printStack(skipObjId=None, area=area)
-		threading.Timer(invertDuration,self.printStack,[None,area]).start()
+		# TODO: TO be tested
+		initial_mode = False
+		self.device.do_screen_refresh(isInverted=not initial_mode,area=area)
+		if invertDuration>0:
+			# Now we call this funcion, without starting a timer
+			# And the screen is now in an opposite state as the initial one
+			threading.Timer(invertDuration,self.invertArea,[area,-1,not initial_mode]).start()
 		return True
 
 	def invert(self):
@@ -298,18 +340,11 @@ class ScreenStackManager:
 		self.device.do_screen_clear()
 		return True
 
-	def createCanvas(self,color=255):
-		"""
-		Creates a white object at the bottom of the stack, displays it while refreshing the screen
-		"""
-		img = Image.new('L', (self.width,self.height), color=255)
-		background = pillowImgToScreenObject(img,0,0,name="Canvas")
-		self.addObj(background)
-		return True
-
 	def startListenerThread(self,grabInput=False):
 		"""
 		Starts the touch listener as a separate thread
+		> grabInput : (boolean) Whether to do an EVIOCGRAB IOCTL call to prevent
+			another software from registering touch events
 		"""
 		self.isInputThreadStarted = True
 		self.device.isInputThreadStarted = True
@@ -325,14 +360,13 @@ class ScreenStackManager:
 				if obj.onclickInside != None:
 					self.lastX = x
 					self.lastY = y
-					obj.onclickInside(obj.id, obj.data)
+					obj.onclickInside(obj,(x,y))
 					break 		# we quit the for loop
 			elif obj.onclickOutside != None:
 				self.lastX = x
 				self.lastY = y
-				obj.onclickOutside(obj.id, obj.data)
+				obj.onclickOutside(obj,(x,y))
 				break 			# we quit the for loop
-
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
