@@ -48,12 +48,19 @@ def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
 		fbink_cfg.is_nightmode = mode
 
 
-def do_screen_refresh(isInverted=False,isPermanent=True):
+def do_screen_refresh(isInverted=False,isPermanent=True,area=[[0,0],[0,0]]):
 	mode = bool(fbink_cfg.is_flashing)
 	mode2 = bool(fbink_cfg.is_nightmode)
 	fbink_cfg.is_flashing = True
 	fbink_cfg.is_nightmode = isInverted
-	FBInk.fbink_refresh(fbfd, 0, 0, 0, 0, FBInk.HWD_PASSTHROUGH, fbink_cfg)
+	# Note : FBInk expects coordinates in a weird order : top(y), left(x), width, height
+	# If given an empty area, it will perform a full screen refresh
+	FBInk.fbink_refresh(
+		fbfd,
+		area[0][1], area[0][0], area[1][0]-area[0][0], area[1][1]-area[0][1],
+		FBInk.HWD_PASSTHROUGH,
+		fbink_cfg
+	)
 	fbink_cfg.is_flashing = mode
 	if not isPermanent:
 		fbink_cfg.is_nightmode = mode2
