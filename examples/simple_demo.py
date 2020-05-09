@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import sys
+sys.path.append("../")
 import pssm
 import pssmElementsLibrairy as PEL
 
@@ -32,12 +34,12 @@ def demo1():
     button2 = PEL.Button("Hey2",onclickInside=reactFctn)
     button3 = PEL.Button("Hey3",onclickInside=reactFctn)
     layout_demo = [
-        [30                                                                         ],
-        [100, (None,20), (button1,200), (None,20)                                   ],
-        [30                                                                         ],
-        [100, (None,20), (button2,200), (None,20)                                   ],
-        [30                                                                         ],
-        [100, (None,20), (button3,200), (None,20), (PEL.Button("nope"),300)         ],
+        [30                                                                             ],
+        [100, (None,20), (button1,200), (None,20)                                       ],
+        [30                                                                             ],
+        [100, (None,20), (button2,200), (None,20)                                       ],
+        [30                                                                             ],
+        [100, (None,20), (button3,200), (None,20), (PEL.Button("nope"),300), (None,10)  ],
         [40]
     ]
     myLayout = PEL.Layout(layout_demo,screen.area)
