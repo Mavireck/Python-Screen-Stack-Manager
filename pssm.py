@@ -17,12 +17,16 @@ def coordsInArea(click_x,click_y,area):
 		return False
 
 def getRectanglesIntersection(area1,area2):
-	x1 = max(area1[0][0],area2[0][0])
-	x2 = min(area1[1][0],area2[1][0])
-	y1 = max(area1[0][1],area2[0][1])
-	y2 = min(area1[1][1],area2[1][1])
-	if x2-x1>0 and y2-y1>0:
-		return [[x1,y1],[x2,y2]]
+	(x1,y1),(w1,h1) = area1
+	(x2,y2),(w2,h2) = area2
+	x0a = max(x1,x2)
+	x0b = min(x1+w1,x2+w2)
+	y0a = max(y1,y2)
+	y0b = min(y1+h1,y2+h2)
+	w0 = x0b-x0a
+	h0 = y0b-y0a
+	if  w0 > 0 and h0 > 0:
+		return [(x0a,y0a),(w0,h0)]
 	else:
 		return None
 
@@ -50,7 +54,7 @@ class Element:
 		self.area = area
 		self.onclickInside = onclickInside
 		self.isInverted = isInverted
-		self.data = data
+		self.user_data = data
 		self.tags=tags
 
 	def __hash__(self):
@@ -119,13 +123,12 @@ class ScreenStackManager:
 		if self.isPrintLocked:
 			return False
 		[(x,y),(w,h)] = area
-		mainIntersectionArea = [(x,y),(x+w,y+h)] if area else [(0,0),(self.width,self.height)]
+		mainIntersectionArea = [(x,y),(w,h)] if area else [(0,0),(self.width,self.height)]
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
 		for elt in self.stack:
 			if (not skipEltId) or (skipEltId and elt.id != skipEltId):
 				# We loop through the Elements behind the Element we are working on
-				eltArea = [(elt.x,elt.y),(elt.x2,elt.y2)]
-				rectIntersection = getRectanglesIntersection(mainIntersectionArea,eltArea)
+				rectIntersection = getRectanglesIntersection(mainIntersectionArea,elt.area)
 				if rectIntersection != None:
 					# The elt we are looking at is behind the myElement
 					intersectionImg = self.getPartialEltImg(elt,rectIntersection)
@@ -143,9 +146,10 @@ class ScreenStackManager:
 		#TODO : MUST HONOR INVERSION
 		# We crop and print a part of the Element
 		# First, lets make a PILLOW Element:
-		img = Image.frombytes('L',(elt.w,elt.h),elt.imgData)
+		[(x,y),(w,h)] = elt.area
+		img = deepcopy(elt.imgData)
 		# Then, lets crop it:
-		img = img.crop((rectIntersection[0][0]-elt.x, rectIntersection[0][1]-elt.y, rectIntersection[1][0]-elt.x, rectIntersection[1][1]-elt.y))
+		img = img.crop((rectIntersection[0][0]-x, rectIntersection[0][1]-y, rectIntersection[1][0]-x, rectIntersection[1][1]-y))
 		if elt.isInverted:
 			inverted_img = PILInvert(img)
 			return inverted_img
@@ -216,7 +220,7 @@ class ScreenStackManager:
 		# First, we print the stack where the Element useed to stand
 		if not skipPrint:
 			myElement=self.findEltWithId(myElementId)
-			self.printStack(skipEltId=myElementId,area=[myElement.xy1,myElement.xy2])
+			self.printStack(skipEltId=myElementId,area=myElement.area)
 		# Then it can be removed from the stack
 		if weAlreadyHaveTheElt:
 			self.stack.remove(weAlreadyHaveTheElt)
@@ -292,8 +296,7 @@ class ScreenStackManager:
 		myElement.setInverted(not Element_initial_state)
 		if not skipPrint:
 			# Then we print the inverted version
-			area = [myElement.xy1,myElement.xy2]
-			self.printStack(skipEltId=None, area=area)
+			self.printStack(skipEltId=None, area=myElement.area)
 		# Then, if an invertDuration is given, we setup a timer to go back to the original state
 		if invertDuration and invertDuration>0:
 			#Then, we start a timer to set it back to its intial state
