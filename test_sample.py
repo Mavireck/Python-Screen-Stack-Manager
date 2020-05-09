@@ -25,15 +25,12 @@ print("just made canvas")
 
 
 def demo1():
+    def reactFctn(elt,coords):
+        print(coords," - ",elt.text)
 
-    button1 = PEL.Button("Hey")
-    button1.onclickInside = lambda _,coords: print(coords,"button1")
-
-    button2 = PEL.Button("Hey2")
-    button2.onclickInside = lambda _,coords: print(coords,"button2")
-
-    button3 = PEL.Button("Hey3")
-    button3.onclickInside = lambda _,coords: print(coords,"button3")
+    button1 = PEL.Button("Hey", onclickInside=reactFctn)
+    button2 = PEL.Button("Hey2",onclickInside=reactFctn)
+    button3 = PEL.Button("Hey3",onclickInside=reactFctn)
     layout_demo = [
         [30                                                                         ],
         [100, (None,20), (button1,200), (None,20)                                   ],
@@ -43,7 +40,6 @@ def demo1():
         [100, (None,20), (button3,200), (None,20), (PEL.Button("nope"),300)         ],
         [40]
     ]
-
     myLayout = PEL.Layout(layout_demo,screen.area)
     myLayout.tags.add("layout")
     screen.addElt(myLayout)
@@ -76,7 +72,7 @@ def demo3():
     button_next     = PEL.Button("Next")
     menu = [
         [30                                                                                                             ],
-        [100,            (None,80),                        (button_welcome,"?"),                    (None,80)           ],
+        [100,            (None,80),                       (button_welcome,"?"),                    (None,80)            ],
         ["?",                                               (buttonList,"?")                                            ],
         [100,(None,30), (button_previous,"?"), (None,30), (button_reboot,"?"), (None,30), (button_next,"?"), (None,30)  ],
         [30                                                                                                             ]
