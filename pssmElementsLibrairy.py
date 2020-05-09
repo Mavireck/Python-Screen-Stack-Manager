@@ -13,7 +13,7 @@ black = 0
 
 Merri_regular = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
 Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
-standard_font_size = 15
+standard_font_size = 20
 
 def returnFalse(*args):
 	return False
@@ -108,13 +108,15 @@ class Layout(pssm.Element):
             n_cols = len(row)     # Do not forget that the first item of each row is an int indicating the row height
             for j in range(1,n_cols):
                 (element,element_width) = row[j]
+                if element != None:
+                    self.layout[i][j][0].parentStackManager = self.parentStackManager
                 if element_width == "?":
                     element_width = self.calculate_remainingWidth(i)
                     self.layout[i][j] = (self.layout[i][j][0], element_width)
                 element_area = [(x0,y0),(element_width,row_height)]
-                x0 += element_width +1
+                x0 += element_width
                 row_cols.append(element_area)
-            y0 += row_height +1
+            y0 += row_height
             x0 = x
             matrix.append(row_cols)
         self.areaMatrix = matrix
@@ -166,14 +168,18 @@ class Layout(pssm.Element):
             if is_found:
                 break
         if is_found:
-            element,element_width = self.layout[row][col+1]
-            if element != None and element.onclickInside != None:
-                if element.subclass == "Layout":
-                    if element.onclickInside != None:
-                        element.onclickInside(element,coords)
-                    element.dispatchClick(coords)
+            elt,_ = self.layout[row][col+1]
+            if elt != None and elt.onclickInside != None:
+                if elt.subclass == "Layout":
+                    if elt.onclickInside != None:
+                        elt.onclickInside(elt,coords)
+                    if elt.invertOnClick:
+                        elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
+                    elt.dispatchClick(coords)
                 else:
-                    element.onclickInside(element,coords)
+                    if elt.invertOnClick:
+                        elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
+                    elt.onclickInside(elt,coords)
             return True
         else:
             return False
