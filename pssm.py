@@ -40,7 +40,17 @@ def pillowImgToElement(img,x,y,name="noname",onclickInside=returnFalse,isInverte
 
 
 class Element:
-	def __init__(self,area=None,imgData=None,onclickInside=returnFalse,isInverted=False,data=[],tags=set()):
+	def __init__(
+			self,
+			area=None,
+			imgData=None,
+			onclickInside=returnFalse,
+			isInverted=False,
+			data=[],
+			tags=set(),
+			invertOnClick = False,
+			invertDuration = 0.5
+		):
 		"""
 		If onclickInside == None, then the stack will keep searching for another Element under this one.
 		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the Element.
@@ -55,7 +65,10 @@ class Element:
 		self.onclickInside = onclickInside
 		self.isInverted = isInverted
 		self.user_data = data
+		self.invertOnClick = invertOnClick
 		self.tags=tags
+		self.default_invertDuration = invertDuration
+		self.parentStackManager = None
 
 	def __hash__(self):
 		return hash(self.id)
@@ -84,7 +97,13 @@ class Element:
 
 
 class ScreenStackManager:
-	def __init__(self,deviceName,name="screen",stack=[],isInverted=False):
+	def __init__(
+			self,
+			deviceName,
+			name="screen",
+			stack=[],
+			isInverted=False
+		):
 		if deviceName == "Kobo":
 			import pssm_kobo as pssm_device
 		else:
@@ -96,7 +115,7 @@ class ScreenStackManager:
 		self.view_height = self.device.view_height
 		self.w_offset = self.device.w_offset
 		self.h_offset = self.device.h_offset
-		self.area = [(0,0),(self.width,self.height)]
+		self.area = [(0,0),(self.view_width,self.view_height)]
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
@@ -203,6 +222,7 @@ class ScreenStackManager:
 		"""
 		Adds Element to the stack and prints it, without checking if it is already here
 		"""
+		myElement.parentStackManager = self
 		self.stack.append(myElement)
 		self.simplePrintElt(myElement)
 
@@ -307,9 +327,17 @@ class ScreenStackManager:
 		"""
 		Inverts an area
 		"""
-		# TODO: TO be tested
-		initial_mode = False
-		self.device.do_screen_refresh(isInverted=not initial_mode,area=area)
+		# TODO: To be tested
+		initial_mode = isInverted
+		print("invertArea called ", isInverted)
+		self.device.do_screen_refresh(
+			isInverted	= not isInverted,
+			area		= area,
+			isPermanent	= False,
+			isFlashing 	= False,
+			w_offset	= self.w_offset,
+			h_offset	= self.h_offset
+		)
 		if invertDuration>0:
 			# Now we call this funcion, without starting a timer
 			# And the screen is now in an opposite state as the initial one
@@ -365,8 +393,12 @@ class ScreenStackManager:
 					if elt.subclass == "Layout":
 						if elt.onclickInside != None:
 							elt.onclickInside(elt,(x,y))
+						if elt.invertOnClick:
+							self.invertArea(elt.area,elt.default_invertDuration)
 						elt.dispatchClick((x,y))
 					else:
+						if elt.invertOnClick:
+							self.invertArea(elt.area,elt.default_invertDuration)
 						elt.onclickInside(elt,(x,y))
 					break 		# we quit the for loop
 
