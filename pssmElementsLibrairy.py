@@ -11,8 +11,8 @@ light_gray = 230
 gray = 128
 black = 0
 
-Merri_regular = os.path.join("fonts", "Merriweather-Regular.ttf")
-Merri_bold = os.path.join("fonts", "Merriweather-Bold.ttf")
+Merri_regular = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
+Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
 standard_font_size = 15
 
 def returnFalse(*args):
