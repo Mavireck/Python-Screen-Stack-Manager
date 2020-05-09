@@ -34,9 +34,9 @@ def wait(time_seconds):
 def closePrintHandler():
 	FBInk.fbink_close(fbfd)
 
-def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
-	if length==None:
-		length = len(raw_data)
+def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
+	raw_data = imgData.tobytes("raw")
+	length = len(raw_data)
 	# FBInk.fbink_print_image(fbfd, str(path).encode('ascii'), x, y, fbink_cfg)
 	FBInk.fbink_print_raw_data(fbfd, raw_data, w, h, length, x, y, fbink_cfg)
 	if isInverted == True:

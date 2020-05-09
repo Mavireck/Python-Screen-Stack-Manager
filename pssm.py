@@ -9,17 +9,12 @@ from copy import deepcopy
 
 lastUsedId=0
 
-def coordsInArea(x,y,area):
-	if len(area)>2:
-		if x>=area[0] and x<area[2] and y>=area[1] and y<area[3]:
-			return True
-		else:
-			return False
+def coordsInArea(click_x,click_y,area):
+	[(x,y),(w,h)] = area
+	if click_x>=x and click_x<x+w and click_y>=y and click_y<y+h:
+		return True
 	else:
-		if x>=area[0][0] and x<area[1][0] and y>=area[0][1] and y<area[1][1]:
-			return True
-		else:
-			return False
+		return False
 
 def getRectanglesIntersection(area1,area2):
 	x1 = max(area1[0][0],area2[0][0])
@@ -34,35 +29,26 @@ def getRectanglesIntersection(area1,area2):
 def returnFalse(*args):
 	return False
 
-def pillowImgToScreenObject(img,x,y,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
-	raw_data = img.tobytes("raw")
-	obj =  ScreenObject(raw_data,(x,y),(x + img.width, y + img.height),name, onclickInside, onclickOutside,isInverted,data,tags)
-	return obj
+def pillowImgToElement(img,x,y,name="noname",onclickInside=returnFalse,isInverted=False,data=[],tags=set()):
+	area = [(x,y),(img.width,img.height)]
+	elt =  Element(area=area,imgData=img, onclickInside=onclickInside,isInverted=isInverted,data=data,tags=tags)
+	return elt
 
 
-class ScreenObject:
-	def __init__(self,imgData,xy1,xy2,name="noname",onclickInside=returnFalse,onclickOutside=None,isInverted=False,data=[],tags=set()):
+class Element:
+	def __init__(self,area=None,imgData=None,onclickInside=returnFalse,isInverted=False,data=[],tags=set()):
 		"""
-		If onclickInside == None, then the stack will keep searching for another object under this one.
-		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the object.
+		If onclickInside == None, then the stack will keep searching for another Element under this one.
+		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the Element.
 		OnclickInside and onclickOutside will be given as argument : x,y,data
 		"""
-		self.objType = "obj"
 		global lastUsedId
-		lastUsedId += 1
 		self.id = lastUsedId
+		lastUsedId += 1
+		self.subclass = None
 		self.imgData = imgData
-		self.name = name
-		self.xy1 = xy1
-		self.x = xy1[0]
-		self.y = xy1[1]
-		self.xy2 = xy2
-		self.x2 = xy2[0]
-		self.y2 = xy2[1]
-		self.w = self.x2-self.x
-		self.h = self.y2-self.y
+		self.area = area
 		self.onclickInside = onclickInside
-		self.onclickOutside = onclickOutside
 		self.isInverted = isInverted
 		self.data = data
 		self.tags=tags
@@ -77,31 +63,36 @@ class ScreenObject:
 
 	def updateAttributes(self,newParams):
 		"""
-		Pass a dict as argument, and it will update the object's attributes accordingly
+		Pass a dict as argument, and it will update the Element's attributes accordingly
 		"""
 		for param in newParams:
 			setattr(self, param, newParams[param])
 		return True
 
-	def addTag(self,tag):
-		self.tags.add(tag)
-
-	def removeTag(self,tag):
-		self.tags.discard(tag)
+	def generator(self):
+		"""
+		A basic Element has no generator
+		"""
+		return NotImplemented
 
 	def setInverted(self,mode):
 		self.isInverted = mode
 
 
 class ScreenStackManager:
-	def __init__(self,device,name="screen",stack=[],isInverted=False):
-		self.device = device
-		self.width = device.screen_width
-		self.height = device.screen_height
-		self.view_width = device.view_width
-		self.view_height = device.view_height
-		self.w_offset = device.w_offset
-		self.h_offset = device.h_offset
+	def __init__(self,deviceName,name="screen",stack=[],isInverted=False):
+		if deviceName == "Kobo":
+			import pssm_kobo as pssm_device
+		else:
+			import pssm_opencv as pssm_device
+		self.device = pssm_device
+		self.width = self.device.screen_width
+		self.height = self.device.screen_height
+		self.view_width = self.device.view_width
+		self.view_height = self.device.view_height
+		self.w_offset = self.device.w_offset
+		self.h_offset = self.device.h_offset
+		self.area = [(0,0),(self.width,self.height)]
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
@@ -110,200 +101,204 @@ class ScreenStackManager:
 		self.lastX = -1
 		self.lastY = -1
 
-	def findObjWithId(self,screenObjId):
-		for obj in self.stack:
-			if obj.id == screenObjId:
-				return obj
+	def findEltWithId(self,myElementId):
+		for elt in self.stack:
+			if elt.id == myElementId:
+				return elt
 		return None
 
-	def printStack(self,skipObjId=None,area=None):
+	def printStack(self,skipEltId=None,area=None):
 		"""
-		Prints the stack elements in the stack order
-		If a skipObj is specified, then the function will not display the skipObj.
+		Prints the stack Elements in the stack order
+		If a skipElt is specified, then the function will not display the skipElt.
 		If a area is set, then, we only display
 		the part of the stack which is in this area
-		> skipObjId : The ID of a PSSM ScreenObject
-		> area : a [[x1,y1],[x2,y2]] array
+		> skipEltId : The ID of a PSSM Element
+		> area : a [(x,y),(w,h)] array
 		"""
 		if self.isPrintLocked:
 			return False
-		mainIntersectionArea = [(area[0][0],area[0][1]),(area[1][0],area[1][1])] if area else [(0,0),(self.width,self.height)]
+		[(x,y),(w,h)] = area
+		mainIntersectionArea = [(x,y),(x+w,y+h)] if area else [(0,0),(self.width,self.height)]
 		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
-		for obj in self.stack:
-			if (not skipObjId) or (skipObjId and obj.id != skipObjId):
-				# We loop through the objects behind the screenObject we are working on
-				objArea = [(obj.x,obj.y),(obj.x2,obj.y2)]
-				rectIntersection = getRectanglesIntersection(mainIntersectionArea,objArea)
+		for elt in self.stack:
+			if (not skipEltId) or (skipEltId and elt.id != skipEltId):
+				# We loop through the Elements behind the Element we are working on
+				eltArea = [(elt.x,elt.y),(elt.x2,elt.y2)]
+				rectIntersection = getRectanglesIntersection(mainIntersectionArea,eltArea)
 				if rectIntersection != None:
-					# The obj we are looking at is behind the screenObj
-					intersectionImg = self.getPartialObjImg(obj,rectIntersection)
+					# The elt we are looking at is behind the myElement
+					intersectionImg = self.getPartialEltImg(elt,rectIntersection)
 					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
-		raw_data=placeholder.tobytes("raw")
-		self.device.print_raw(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
+		raw_data=placeholder
+		self.device.print_pil(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
 
-	def getPartialObjImg(self,obj,rectIntersection):
+	def getPartialEltImg(self,elt,rectIntersection):
 		"""
-		Returns a PIL image of the the interesection of the object image and the
+		Returns a PIL image of the the interesection of the Element image and the
 		rectangle coordinated given as parameter.
-		> obj : a PSSM ScreenObject
+		> elt : a PSSM Element
 		> rectIntersection : a [[x1,y1],[x2,y2]] array
 		"""
 		#TODO : MUST HONOR INVERSION
-		# We crop and print a part of the object
-		# First, lets make a PILLOW object:
-		img = Image.frombytes('L',(obj.w,obj.h),obj.imgData)
+		# We crop and print a part of the Element
+		# First, lets make a PILLOW Element:
+		img = Image.frombytes('L',(elt.w,elt.h),elt.imgData)
 		# Then, lets crop it:
-		img = img.crop((rectIntersection[0][0]-obj.x, rectIntersection[0][1]-obj.y, rectIntersection[1][0]-obj.x, rectIntersection[1][1]-obj.y))
-		if obj.isInverted:
+		img = img.crop((rectIntersection[0][0]-elt.x, rectIntersection[0][1]-elt.y, rectIntersection[1][0]-elt.x, rectIntersection[1][1]-elt.y))
+		if elt.isInverted:
 			inverted_img = PILInvert(img)
 			return inverted_img
 		else:
 			return img
 
-	def simplePrintObj(self,screenObj):
+	def simplePrintElt(self,myElement):
 		"""
-		Prints the object without adding it to the stack
+		Prints the Element without adding it to the stack
 		"""
+		# First, the element must be generated
+		myElement.generator()
 		if not self.isPrintLocked:
-			self.device.print_raw(screenObj.imgData,screenObj.x, screenObj.y, screenObj.w, screenObj.h,isInverted=screenObj.isInverted)
+			[(x,y),(w,h)] = myElement.area
+			self.device.print_pil(myElement.imgData,x, y, w, h, isInverted=myElement.isInverted)
 		else:
 			print("[PSSM] Print is locked, no image was updated")
 
 	def createCanvas(self,color=255):
 		"""
-		Creates a white object at the bottom of the stack, displays it while refreshing the screen
+		Creates a white Element at the bottom of the stack, displays it while refreshing the screen
 		"""
 		img = Image.new('L', (self.width,self.height), color=255)
-		background = pillowImgToScreenObject(img,0,0,name="Canvas")
-		background.addTag("Canvas")
-		self.addObj(background)
+		background = pillowImgToElement(img,0,0,name="Canvas")
+		background.tags.add("Canvas")
+		self.addElt(background)
 		return True
 
-	def addObj(self,screenObj,skipPrint=False,skipRegistration=False):
+	def addElt(self,myElement,skipPrint=False,skipRegistration=False):
 		"""
-		Adds object to the stack and prints it
-		> screenObj : (PSSM ScreenObject)
+		Adds Element to the stack and prints it
+		> myElement : (PSSM Element)
 		> skipPrint : (boolean) True if you don't want to update the screen
-		> skipRegistration : (boolean) True if you don't want to add the object to the stack
+		> skipRegistration : (boolean) True if you don't want to add the Element to the stack
 		"""
 		for i in range(len(self.stack)):
-			obj=self.stack[i]
-			if obj.id == screenObj.id:
-				# There is already an object in the stack with the same ID.
-				# Let's update the object in the stack
+			elt=self.stack[i]
+			if elt.id == myElement.id:
+				# There is already an Element in the stack with the same ID.
+				# Let's update the Element in the stack
 				if not skipPrint:
-					self.stack[i] = screenObj
-					self.updateArea([screenObj.xy1,screenObj.xy2])
-				break	#The object is already in the stack
+					self.stack[i] = myElement
+					self.updateArea(myElement.area)
+				break	#The Element is already in the stack
 		else:
-			# the object is not already in the stack
+			# the Element is not already in the stack
 			if not skipRegistration:
-				self.forceAddObj(screenObj)
+				self.forceAddElt(myElement)
 
-	def forceAddObj(self,screenObj):
+	def forceAddElt(self,myElement):
 		"""
-		Adds object to the stack and prints it, without checking if it is already here
+		Adds Element to the stack and prints it, without checking if it is already here
 		"""
-		self.stack.append(screenObj)
-		self.simplePrintObj(screenObj)
+		self.stack.append(myElement)
+		self.simplePrintElt(myElement)
 
 	def updateArea(self,area=None):
 		"""
-		Updates the object : updates the stack and prints the object and all the stack above it
+		Updates the Element : updates the stack and prints the Element and all the stack above it
 		while keeping the stack position
 		"""
 		self.printStack(area=area)
 
-	def removeObj(self,screenObjId,skipPrint=False,weAlreadyHaveTheObj=None):
+	def removeElt(self,myElementId,skipPrint=False,weAlreadyHaveTheElt=None):
 		"""
-		Removes the object from the stack and hides it from the screen
+		Removes the Element from the stack and hides it from the screen
 		"""
-		# First, we print the stack where the object useed to stand
+		# First, we print the stack where the Element useed to stand
 		if not skipPrint:
-			screenObj=self.findObjWithId(screenObjId)
-			self.printStack(skipObjId=screenObjId,area=[screenObj.xy1,screenObj.xy2])
+			myElement=self.findEltWithId(myElementId)
+			self.printStack(skipEltId=myElementId,area=[myElement.xy1,myElement.xy2])
 		# Then it can be removed from the stack
-		if weAlreadyHaveTheObj:
-			self.stack.remove(weAlreadyHaveTheObj)
+		if weAlreadyHaveTheElt:
+			self.stack.remove(weAlreadyHaveTheElt)
 		else :
-			obj = self.findObjWithId(screenObjId)
-			if obj:
-				self.stack.remove(obj)
+			elt = self.findEltWithId(myElementId)
+			if elt:
+				self.stack.remove(elt)
 
 	def getTagList(self):
 		"""
-		Returns the set of all tags from all objects in the stack
+		Returns the set of all tags from all Elements in the stack
 		"""
 		tags={}
-		for obj in self.stack:
-			tags.update(obj.tags)
+		for elt in self.stack:
+			tags.update(elt.tags)
 		return tags
 
 	def removeAllWithTag(self,tag):
 		"""
-		Removes every object from the stack which have the specified tag
+		Removes every Element from the stack which have the specified tag
 		"""
 		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
-		for obj in stackCopy:
-			if tag in obj.tags:
-				self.removeObj(obj.id,skipPrint=True,weAlreadyHaveTheObj=obj)
+		for elt in stackCopy:
+			if tag in elt.tags:
+				self.removeElt(elt.id,skipPrint=True,weAlreadyHaveTheElt=elt)
 		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
 		self.printStack()
 
 	def invertAllWithTag(self,tag,invertDuration=-1):
 		"""
-		Removes all the object which have a specific tag
+		Removes all the Element which have a specific tag
 		"""
 		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
-		for obj in stackCopy:
-			if tag in obj.tags:
-				self.invertObj(screenObjId=obj.id,invertDuration=-1,skipPrint=True)
+		for elt in stackCopy:
+			if tag in elt.tags:
+				self.invertElt(myElementId=elt.id,invertDuration=-1,skipPrint=True)
 		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
 		self.printStack()
 		# If an invert duration is given, then start a timer to go back to the original state
 		if invertDuration>0:
 			threading.Timer(invertDuration,self.invertAllWithTag,[tag,-1]).start()
 
-	def getStackLevel(self,screenObjId):
-		obj = self.findObjWithId(screenObjId)
-		return self.stack.index(obj)
+	def getStackLevel(self,myElementId):
+		elt = self.findEltWithId(myElementId)
+		return self.stack.index(elt)
 
-	def setStackLevel(self,screenObjId,stackLevel="last"):
+	def setStackLevel(self,myElementId,stackLevel="last"):
 		"""
-		Set the position of said object
-		Then prints every object above it (including itself)
+		Set the position of said Element
+		Then prints every Element above it (including itself)
 		"""
 		#TODO : Must be able to accept another stackLevel
 		if stackLevel=="last" or stackLevel==-1:
 			stackLevel=len(self.stack)
-			obj = self.findObjWithId(screenObjId)
-			self.removeObj(screenObjId,skipPrint=True)
-			self.stack.insert(stackLevel,obj)
-			self.printStack(area=[obj.xy,obj.xy2])
+			elt = self.findEltWithId(myElementId)
+			self.removeElt(myElementId,skipPrint=True)
+			self.stack.insert(stackLevel,elt)
+			self.printStack(area=[elt.xy,elt.xy2])
 			return True
 
-	def invertObj(self,screenObjId,invertDuration=-1,skipPrint=False):
+	def invertElt(self,myElementId,invertDuration=-1,skipPrint=False):
 		"""
-		Inverts an object
-		> screenObjId
+		Inverts an Element
+		> myElementId
 		> invertDuration (int) : -1 or 0 if permanent, else an integer
 		"""
-		screenObj = self.findObjWithId(screenObjId)
-		if screenObj==None:
+		myElement = self.findEltWithId(myElementId)
+		if myElement==None:
 			return False
-		# First, let's get the object's initial inverted state
-		object_initial_state = bool(screenObj.isInverted)
-		# Then, we change the object's state
-		screenObj.setInverted(not object_initial_state)
+		# First, let's get the Element's initial inverted state
+		Element_initial_state = bool(myElement.isInverted)
+		# Then, we change the Element's state
+		myElement.setInverted(not Element_initial_state)
 		if not skipPrint:
 			# Then we print the inverted version
-			area = [screenObj.xy1,screenObj.xy2]
-			self.printStack(skipObjId=None, area=area)
+			area = [myElement.xy1,myElement.xy2]
+			self.printStack(skipEltId=None, area=area)
 		# Then, if an invertDuration is given, we setup a timer to go back to the original state
 		if invertDuration and invertDuration>0:
 			#Then, we start a timer to set it back to its intial state
-			threading.Timer(invertDuration,screenObj.setInverted,[object_initial_state]).start()
-			threading.Timer(invertDuration,self.invertObj,[screenObjId,-1]).start()
+			threading.Timer(invertDuration,myElement.setInverted,[Element_initial_state]).start()
+			threading.Timer(invertDuration,self.invertElt,[myElementId,-1]).start()
 
 	def invertArea(self,area,invertDuration,isInverted=False):
 		"""
@@ -355,18 +350,22 @@ class ScreenStackManager:
 		n = len(self.stack)
 		for i in range(n):
 			j = n-1-i 	# We go through the stack in descending order
-			obj = self.stack[j]
-			if coordsInArea(x,y,[obj.xy1,obj.xy2]):
-				if obj.onclickInside != None:
+			elt = self.stack[j]
+			if elt.area == None:
+				# An object without area, it should not happen, but if it does,
+				# it can be skipped
+				continue
+			if coordsInArea(x,y,elt.area):
+				if elt.onclickInside != None:
 					self.lastX = x
 					self.lastY = y
-					obj.onclickInside(obj,(x,y))
+					if elt.subclass == "Layout":
+						if elt.onclickInside != None:
+							elt.onclickInside(elt,(x,y))
+						elt.dispatchClick((x,y))
+					else:
+						elt.onclickInside(elt,(x,y))
 					break 		# we quit the for loop
-			elif obj.onclickOutside != None:
-				self.lastX = x
-				self.lastY = y
-				obj.onclickOutside(obj,(x,y))
-				break 			# we quit the for loop
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False

@@ -8,8 +8,8 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 
-screen_width=600
-screen_height=800
+screen_width=800
+screen_height=1000
 view_width=screen_width
 view_height=screen_height
 h_offset = screen_height - view_height
@@ -29,11 +29,11 @@ def closePrintHandler():
 	#TODO : is there anything to do?
 	print("Closed")
 
-def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
+def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 	#TODO : honor is inverted
 	global last_printed_PIL
-	if length==None:
-		length = len(raw_data)
+	raw_data = imgData.tobytes("raw")
+	length = len(raw_data)
 	pil_image = Image.frombytes('L',(w,h),raw_data).convert("RGB")
 	last_printed_PIL.paste(pil_image,(x,y))
 	opencvImage = np.array(last_printed_PIL)
@@ -43,7 +43,7 @@ def print_raw(raw_data,x,y,w,h,length=None,isInverted=False):
 	cv2.waitKey(1)
 
 def do_screen_refresh(isInverted=False,isPermanent=True,area=[[0,0],[0,0]]):
-	#TODO: Honor inversion 
+	#TODO: Honor inversion
 	print("Screen refresh - Inversion (partial and full) are not yet supported on the emulator")
 
 def do_screen_clear():
