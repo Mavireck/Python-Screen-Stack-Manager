@@ -23,8 +23,11 @@ I can think of 2 ways to implement touch areas:
 import os,sys
 import struct
 from time import time
-import grabInput as grabber
 from fcntl import ioctl
+try:
+	import devices.kobo.grabInput as grabber
+except:
+	print("grabber grabbing failed")
 
 evAbs = 3
 evKey = 1
@@ -124,7 +127,7 @@ class inputObject:
 			#Now to decode :
 			for e in evPacket:
 				if e[2] == evKey:
-					if e[3] == bntTouch:
+					if e[3] == btnTouch:
 						if e[4] == 1:
 							touchPressed = True
 						else :
