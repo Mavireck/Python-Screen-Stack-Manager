@@ -291,6 +291,21 @@ class ScreenStackManager:
 		self.device.do_screen_clear()
 		return True
 
+	def convertDimension(self,dimension):
+		if isinstance(dimension,int):
+			return dimension
+		else:
+			t  = dimension[0]
+			op = dimension[1:]
+			if t == "p":
+				return eval("1" + op)
+			elif t== "w":
+				return eval(str(self.width) + op)
+			elif t== "h":
+				return eval(str(self.height) + op)
+			else:
+				return dimension
+
 	def startListenerThread(self,grabInput=False):
 		"""
 		Starts the touch listener as a separate thread
@@ -478,23 +493,31 @@ class Layout(Element):
 
     def calculate_remainingHeight(self):
         rows = self.extract_rowsHeight()
-        number_questionMarks = rows.count("?")
+		total_questionMarks_weight = 0
         total_height = 0
-        for row in rows:
-            if row != "?":
-                total_height += row
+        for dimension in rows:
+            converted_dimension = self.parentStackManager.convertDimension(dimension)
+			if isinstance(converted_dimension,int):
+				total_height += converted_dimension
+			else:
+				weight = eval("1" + converted_dimension[1:])
+				total_questionMarks_weight += weight
         layout_height = self.area[1][1]
-        return int((layout_height - total_height)/number_questionMarks)
+        return int((layout_height - total_height)/total_questionMarks_weight)
 
     def calculate_remainingWidth(self,rowIndex):
         cols = self.extract_colsWidth(rowIndex)
-        number_questionMarks = cols.count("?")
-        total_width = 0
-        for col in cols:
-            if col != "?":
-                total_width += col
+		total_width = 0
+		total_questionMarks_weight = 0
+		for dimension in cols:
+			converted_dimension = self.parentStackManager.convertDimension(dimension)
+			if isinstance(converted_dimension,int):
+				total_width += converted_dimension
+			else:
+				weight = eval("1" + converted_dimension[1:])
+				total_questionMarks_weight += weight
         layout_width = self.area[1][0]
-        return int((layout_width - total_width)/number_questionMarks)
+        return int((layout_width - total_width)/total_questionMarks_weight)
 
     def extract_rowsHeight(self):
         rows = []
