@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import socket
 import threading
 from time import sleep
 # Load the wrapper module, it's linked against FBInk, so the dynamic loader will take care of pulling in the actual FBInk library
@@ -10,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 sys.path.append('/mnt/onboard/.adds/mavireck/Kobo-Input-Python')
 import KIP
 
-
+path_to_pssm_device = os.path.dirname(os.path.abspath(__file__))
 
 fbink_cfg = ffi.new("FBInkConfig *")
 fbink_dumpcfg = ffi.new("FBInkDump *")
@@ -25,7 +26,67 @@ view_width=state.view_width
 view_height=state.view_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
-isEmulator=False
+isEmulator = False
+isRGB = False
+isEreader = True
+isWifiOn = True
+batteryCapacityFile = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity"
+batteryStatusFile"/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status"
+
+def setFrontlightLevel(level):
+	"""
+	:level (int) : A frontlight level between 0 (off) and 100 (maximum)
+	"""
+	os.system(path_to_pssm_device + "/frontlight " + str(level))
+
+def readBatteryPercentage():
+	with open(batteryCapacityFile) as state:
+		state.seek(0)
+		res = ""
+		for line in state:
+			res += str(line)
+	return res
+
+def readBatteryState():
+	res=""
+	with open(batteryStatusFile) as percentage:
+		percentage.seek(0)
+		isFirst = True
+		for line in percentage:
+			if isFirst:
+				res += str(line).rstrip()
+				isFirst=False
+	return res
+
+def get_ip():
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	try:
+		# isWifiOn = True
+		# doesn't even have to be reachable
+		s.connect(('10.255.255.255', 1))
+		IP = s.getsockname()[0]
+	except:
+		print("Error gettin IP")
+	finally:
+		s.close()
+	return IP
+
+def wifiDown():
+	try:
+		os.system("sh " + path_to_pssm_device "/disable-wifi.sh")
+		isWifiOn = False
+	except:
+		print("Failed to disabled Wifi")
+
+def wifiUp():
+	try:
+		os.system("sh " + path_to_pssm_device "/enable-wifi.sh")
+		# os.system("sh ./files/obtain-ip.sh")
+		# os.system(". ./files/nickel-usbms.sh && enable_wifi")
+		wait(1)
+		isWifiOn = True
+	except:
+		print(str(sys.exc_info()[0]),str(sys.exc_info()[1]))
 
 
 def wait(time_seconds):
