@@ -20,6 +20,11 @@ Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
 standard_font_size = 20
 
 
+def returnFalse(*args):
+	return False
+
+
+
 ############################# - StackManager 	- ##############################
 class ScreenStackManager:
 	def __init__(
@@ -30,9 +35,9 @@ class ScreenStackManager:
 			isInverted=False
 		):
 		if deviceName == "Kobo":
-			import pssm_kobo as pssm_device
+			import devices.kobo.device as pssm_device
 		else:
-			import pssm_opencv as pssm_device
+			import devices.emulator.device as pssm_device
 		self.device = pssm_device
 		self.width = self.device.screen_width
 		self.height = self.device.screen_height
@@ -117,7 +122,7 @@ class ScreenStackManager:
 		Creates a white Element at the bottom of the stack, displays it while refreshing the screen
 		"""
 		img = Image.new('L', (self.width,self.height), color=255)
-		background = pillowImgToElement(img,0,0,name="Canvas")
+		background = Static(img,0,0,name="Canvas")
 		background.tags.add("Canvas")
 		self.addElt(background)
 		return True
@@ -352,14 +357,14 @@ class ScreenStackManager:
 class Element:
 	def __init__(
 			self,
-			area=None,
-			imgData=None,
-			onclickInside=returnFalse,
-			isInverted=False,
-			data=[],
-			tags=set(),
-			invertOnClick = False,
-			invertDuration = 0.5
+			area 			= None,
+			imgData 		= None,
+			onclickInside 	= returnFalse,
+			isInverted 		= False,
+			data 			= [],
+			tags 			= set(),
+			invertOnClick 	= False,
+			invertDuration 	= 0.5
 		):
 		"""
 		If onclickInside == None, then the stack will keep searching for another Element under this one.
@@ -369,7 +374,7 @@ class Element:
 		global lastUsedId
 		self.id = lastUsedId
 		lastUsedId += 1
-		self.subclass = None
+		self.isLayout = False
 		self.imgData = imgData
 		self.area = area
 		self.onclickInside = onclickInside
@@ -408,105 +413,114 @@ class Element:
 
 ############################# - Layout Elements	- ##############################
 class Layout(Element):
-    """
-    A layout is a quite general kind of Element :
-    If must be given the working area, and a layout, and will generate every element of the layout
-    """
-    def __init__(self,layout,area=None,background_color=white,**kwargs):
-        super().__init__(area=area)
-        self.layout      = layout
+	"""
+	A layout is a quite general kind of Element :
+	If must be given the working area, and a layout, and will generate every element of the layout
+	"""
+	def __init__(self,layout,area=None,background_color=white,**kwargs):
+		super().__init__(area=area)
+		self.layout      = layout
 		self.background_color = background_color
-        self.areaMatrix = None
-        self.imgMatrix  = None
-        self.borders    = None
-        self.isLayout   = True
+		self.areaMatrix = None
+		self.imgMatrix  = None
+		self.borders    = None
+		self.isLayout   = True
 		for param in kwargs:
-            setattr(self, param, kwargs[param])
+			setattr(self, param, kwargs[param])
 
-    def generator(self,min_height=-1,min_width=-1,max_height=-1,max_width=-1,area=None):
-        """
-        Builds one img out of all the Elements it is being given
-        """
-        if area != None:
-            self.area = area
-        self.createAreaMatrix(min_height=min_height,min_width=min_width,max_height=max_height,max_width=max_width)
-        self.createImgMatrix()
-        [(x,y),(w,h)] = self.area
-        placeholder = Image.new('L', (w,h), color=self.background_color)
-        for i in range(len(self.areaMatrix)):
-            for j in range(len(self.areaMatrix[i])):
-                [(elt_x,elt_y),(elt_w,elt_h)] = self.areaMatrix[i][j]
-                relative_x = elt_x - x
-                relative_y = elt_y - y
-                elt_img = self.imgMatrix[i][j]
-                if elt_img != None:
-                    placeholder.paste(self.imgMatrix[i][j],(relative_x,relative_y))
-        self.imgData = placeholder
-        return self.imgData
+	def generator(self,min_height=-1,min_width=-1,max_height=-1,max_width=-1,area=None):
+		"""
+		Builds one img out of all the Elements it is being given
+		"""
+		if area != None:
+			self.area = area
+		self.createAreaMatrix(min_height=min_height,min_width=min_width,max_height=max_height,max_width=max_width)
+		self.createImgMatrix()
+		[(x,y),(w,h)] = self.area
+		placeholder = Image.new('L', (w,h), color=self.background_color)
+		for i in range(len(self.areaMatrix)):
+			for j in range(len(self.areaMatrix[i])):
+				[(elt_x,elt_y),(elt_w,elt_h)] = self.areaMatrix[i][j]
+				relative_x = elt_x - x
+				relative_y = elt_y - y
+				elt_img = self.imgMatrix[i][j]
+				if elt_img != None:
+					placeholder.paste(self.imgMatrix[i][j],(relative_x,relative_y))
+		self.imgData = placeholder
+		return self.imgData
 
-    def createImgMatrix(self):
-        matrix = []
-        if not self.areaMatrix:
-            print("Error, areaMatrix has to be defined first")
-            return None
-        for i in range(len(self.layout)):
-            row = []
-            for j in range(1,len(self.layout[i])):
-                myElement,_   = self.layout[i][j]
-                if myElement == None:
-                    myElement_area  = self.areaMatrix[i][j-1]
-                    myElement_img   = None
-                else:
-                    myElement_area  = self.areaMatrix[i][j-1]
-                    myElement_img   = myElement.generator(area=myElement_area)
-                row.append(myElement_img)
-            matrix.append(row)
-        self.imgMatrix = matrix
+	def createImgMatrix(self):
+		matrix = []
+		if not self.areaMatrix:
+			print("Error, areaMatrix has to be defined first")
+			return None
+		for i in range(len(self.layout)):
+			row = []
+			for j in range(1,len(self.layout[i])):
+				myElement,_   = self.layout[i][j]
+				if myElement == None:
+					myElement_area  = self.areaMatrix[i][j-1]
+					myElement_img   = None
+				else:
+					myElement_area  = self.areaMatrix[i][j-1]
+					myElement_img   = myElement.generator(area=myElement_area)
+				row.append(myElement_img)
+			matrix.append(row)
+		self.imgMatrix = matrix
 
-    def createAreaMatrix(self,min_height=-1,min_width=-1,max_height=-1,max_width=-1):
-        # TODO : must honor question_mark dimensions
-        matrix = []
-        n_rows = len(self.layout)
-        [(x,y),(w,h)] = self.area[:]
-        x0,y0=x,y
-        for i in range(len(self.layout)):     # Lets loop through the rows
-            row = self.layout[i]
-            row_cols = []           # All the columns of this particular row
-            row_height = row[0]
-            if row_height == "?":
-                row_height = self.calculate_remainingHeight()
-            n_cols = len(row)     # Do not forget that the first item of each row is an int indicating the row height
-            for j in range(1,n_cols):
-                (element,element_width) = row[j]
-                if element != None:
-                    self.layout[i][j][0].parentStackManager = self.parentStackManager
-                if element_width == "?":
-                    element_width = self.calculate_remainingWidth(i)
-                    self.layout[i][j] = (self.layout[i][j][0], element_width)
-                element_area = [(x0,y0),(element_width,row_height)]
-                x0 += element_width
-                row_cols.append(element_area)
-            y0 += row_height
-            x0 = x
-            matrix.append(row_cols)
-        self.areaMatrix = matrix
+	def createAreaMatrix(self,min_height=-1,min_width=-1,max_height=-1,max_width=-1):
+		# TODO : must honor min and max
+		matrix = []
+		n_rows = len(self.layout)
+		[(x,y),(w,h)] = self.area[:]
+		x0,y0=x,y
+		for i in range(len(self.layout)):     # Lets loop through the rows
+			row = self.layout[i]
+			row_cols = []           # All the columns of this particular row
+			row_height = row[0]
+			converted_height = self.parentStackManager.convertDimension(row_height)
+			if isinstance(converted_height,int):
+				true_row_height = converted_height
+			else:
+				remaining_height = self.calculate_remainingHeight()
+				true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
+			n_cols = len(row)     # Do not forget that the first item of each row is an int indicating the row height
+			for j in range(1,n_cols):
+				(element,element_width) = row[j]
+				converted_width = self.parentStackManager.convertDimension(element_width)
+				if element != None:
+					self.layout[i][j][0].parentStackManager = self.parentStackManager
+				if not isinstance(converted_width,int):
+					remaining_width = self.calculate_remainingWidth(i)
+					true_element_width = int(eval(str(remaining_width) + converted_width[1:]))
+					self.layout[i][j] = (self.layout[i][j][0], true_element_width)
+				else:
+					true_element_width = converted_width
+				element_area = [(x0,y0),(true_element_width,true_row_height)]
+				x0 += true_element_width
+				row_cols.append(element_area)
+			y0 += true_row_height
+			x0 = x
+			matrix.append(row_cols)
+		self.areaMatrix = matrix
 
-    def calculate_remainingHeight(self):
-        rows = self.extract_rowsHeight()
+	def calculate_remainingHeight(self):
+		rows = self.extract_rowsHeight()
 		total_questionMarks_weight = 0
-        total_height = 0
-        for dimension in rows:
-            converted_dimension = self.parentStackManager.convertDimension(dimension)
+		total_height = 0
+		for dimension in rows:
+			converted_dimension = self.parentStackManager.convertDimension(dimension)
 			if isinstance(converted_dimension,int):
 				total_height += converted_dimension
 			else:
 				weight = eval("1" + converted_dimension[1:])
 				total_questionMarks_weight += weight
-        layout_height = self.area[1][1]
-        return int((layout_height - total_height)/total_questionMarks_weight)
+		layout_height = self.area[1][1]
+		print(layout_height,total_height,total_questionMarks_weight)
+		return int((layout_height - total_height)/total_questionMarks_weight)
 
-    def calculate_remainingWidth(self,rowIndex):
-        cols = self.extract_colsWidth(rowIndex)
+	def calculate_remainingWidth(self,rowIndex):
+		cols = self.extract_colsWidth(rowIndex)
 		total_width = 0
 		total_questionMarks_weight = 0
 		for dimension in cols:
@@ -516,194 +530,190 @@ class Layout(Element):
 			else:
 				weight = eval("1" + converted_dimension[1:])
 				total_questionMarks_weight += weight
-        layout_width = self.area[1][0]
-        return int((layout_width - total_width)/total_questionMarks_weight)
+		layout_width = self.area[1][0]
+		return int((layout_width - total_width)/total_questionMarks_weight)
 
-    def extract_rowsHeight(self):
-        rows = []
-        for row in self.layout:
-            rows.append(row[0])
-        return rows
+	def extract_rowsHeight(self):
+		rows = []
+		for row in self.layout:
+			rows.append(row[0])
+		return rows
 
-    def extract_colsWidth(self,rowIndex):
-        cols = []
-        for col in self.layout[rowIndex]:
-            if isinstance(col,tuple):
-                cols.append(col[1])
-        return cols
+	def extract_colsWidth(self,rowIndex):
+		cols = []
+		for col in self.layout[rowIndex]:
+			if isinstance(col,tuple):
+				cols.append(col[1])
+		return cols
 
-    def dispatchClick(self,coords):
-        # TODO : use dichotomy search instead of linear search with extract_rowsHeight and extract_colsWidth
-        click_x,click_y = coords
-        [(x,y),(w,h)] = self.area[:]
-        is_found = False
-        for i in range(len(self.areaMatrix)):
-            for j in range(len(self.areaMatrix[i])):
-                if pssm.coordsInArea(click_x,click_y,self.areaMatrix[i][j]):
-                    row,col=i,j
-                    is_found = True
-                    break
-            if is_found:
-                break
-        if is_found:
-            elt,_ = self.layout[row][col+1]
-            if elt != None and elt.onclickInside != None:
-                if elt.isLayout:
-                    if elt.onclickInside != None:
-                        elt.onclickInside(elt,coords)
-                    if elt.invertOnClick:
-                        elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
-                    elt.dispatchClick(coords)
-                else:
-                    if elt.invertOnClick:
-                        elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
-                    elt.onclickInside(elt,coords)
-            return True
-        else:
-            return False
+	def dispatchClick(self,coords):
+		# TODO : use dichotomy search instead of linear search with extract_rowsHeight and extract_colsWidth
+		click_x,click_y = coords
+		[(x,y),(w,h)] = self.area[:]
+		is_found = False
+		for i in range(len(self.areaMatrix)):
+			for j in range(len(self.areaMatrix[i])):
+				if coordsInArea(click_x,click_y,self.areaMatrix[i][j]):
+					row,col=i,j
+					is_found = True
+					break
+			if is_found:
+				break
+		if is_found:
+			elt,_ = self.layout[row][col+1]
+			if elt != None and elt.onclickInside != None:
+				if elt.isLayout:
+					if elt.onclickInside != None:
+						elt.onclickInside(elt,coords)
+					if elt.invertOnClick:
+						elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
+					elt.dispatchClick(coords)
+				else:
+					if elt.invertOnClick:
+						elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
+					elt.onclickInside(elt,coords)
+			return True
+		else:
+			return False
 
 class ButtonList(Layout):
-    def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
-        """
-        Generates a Layout with one item per row, all the same type (buttons) and same height and width
-        :button : a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array
-        :borders : a [top,bottom,left,right]
-        """
-        self.buttons = buttons
-        self.margins = margins
-        self.spacing = spacing
-        layout = self.build_layoutFromButtons()
-        super().__init__(layout)
-        for param in kwargs:
-            setattr(self, param, kwargs[param])
+	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
+		"""
+		Generates a Layout with one item per row, all the same type (buttons) and same height and width
+		:button : a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array
+		:borders : a [top,bottom,left,right]
+		"""
+		self.buttons = buttons
+		self.margins = margins
+		self.spacing = spacing
+		layout = self.build_layoutFromButtons()
+		super().__init__(layout)
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
 
-    def build_layoutFromButtons(self):
-        #TODO : must honor min_width,max_width etc
-        [top,bottom,left,right] = self.margins
-        buttonLayout = [[top-self.spacing]]
-        for button in self.buttons:
-            buttonElt = Button(text=button['text'])
-            for param in button:
-                setattr(buttonElt, param, button[param])
-            row_height = "?"
-            buttonLayout.append([self.spacing])
-            row = [row_height,(None,left),(buttonElt,"?"),(None,right)]
-            buttonLayout.append(row)
-        buttonLayout.append([bottom])
-        return buttonLayout
+	def build_layoutFromButtons(self):
+		#TODO : must honor min_width,max_width etc
+		[top,bottom,left,right] = self.margins
+		buttonLayout = [[top-self.spacing]]
+		for button in self.buttons:
+			buttonElt = Button(text=button['text'])
+			for param in button:
+				setattr(buttonElt, param, button[param])
+			row_height = "?"
+			buttonLayout.append([self.spacing])
+			row = [row_height,(None,left),(buttonElt,"?"),(None,right)]
+			buttonLayout.append(row)
+		buttonLayout.append([bottom])
+		return buttonLayout
 
 
 ############################# - Simple Elements	- ##############################
 class Rectangle(Element):
-    def __init__(self,background_color=255,outline=50):
-        super().__init__()
-        self.background_color = background_color
-        self.outline = outline
+	def __init__(self,background_color=255,outline=50):
+		super().__init__()
+		self.background_color = background_color
+		self.outline = outline
 
-    def generator(self,area):
-        [(x,y),(w,h)] = area
-        self.area = area
-        img = Image.new('L', (w+1,h+1), color=white)
-        rect = ImageDraw.Draw(img, 'L')
-        rect.rectangle([(0,0),(w,h)],fill=self.background_color,outline=self.outline)
-        self.imgData = img
-        return self.imgData
+	def generator(self,area):
+		[(x,y),(w,h)] = area
+		self.area = area
+		img = Image.new('L', (w+1,h+1), color=white)
+		rect = ImageDraw.Draw(img, 'L')
+		rect.rectangle([(0,0),(w,h)],fill=self.background_color,outline=self.outline)
+		self.imgData = img
+		return self.imgData
 
 class RectangleRounded(Element):
-    def __init__(self,radius=20,background_color=255,outline=0):
-        super().__init__()
-        self.radius = radius
-        self.background_color = background_color
-        self.outline = outline
+	def __init__(self,radius=20,background_color=255,outline=0):
+		super().__init__()
+		self.radius = radius
+		self.background_color = background_color
+		self.outline = outline
 
-    def generator(self,area):
-        [(x,y),(w,h)] = area
-        self.area = area
-        rectangle = Image.new('L', (w,h), white)
-        draw = ImageDraw.Draw(rectangle)
-        draw.rectangle([(0,0),(w,h)],fill=self.background_color,outline=self.outline)
-        draw.line([(self.radius,h-1),(w-self.radius,h-1)],fill=self.outline,width=1)
-        draw.line([(w-1,self.radius),(w-1,h-self.radius)],fill=self.outline,width=1)
-        corner = roundedCorner(self.radius, self.background_color,self.outline)
-        rectangle.paste(corner, (0, 0))
-        rectangle.paste(corner.rotate(90), (0, h - self.radius)) # Rotate the corner and paste it
-        rectangle.paste(corner.rotate(180), (w - self.radius, h - self.radius))
-        rectangle.paste(corner.rotate(270), (w - self.radius, 0))
-        self.imgData = rectangle
-        return self.imgData
+	def generator(self,area):
+		[(x,y),(w,h)] = area
+		self.area = area
+		rectangle = Image.new('L', (w,h), white)
+		draw = ImageDraw.Draw(rectangle)
+		draw.rectangle([(0,0),(w,h)],fill=self.background_color,outline=self.outline)
+		draw.line([(self.radius,h-1),(w-self.radius,h-1)],fill=self.outline,width=1)
+		draw.line([(w-1,self.radius),(w-1,h-self.radius)],fill=self.outline,width=1)
+		corner = roundedCorner(self.radius, self.background_color,self.outline)
+		rectangle.paste(corner, (0, 0))
+		rectangle.paste(corner.rotate(90), (0, h - self.radius)) # Rotate the corner and paste it
+		rectangle.paste(corner.rotate(180), (w - self.radius, h - self.radius))
+		rectangle.paste(corner.rotate(270), (w - self.radius, 0))
+		self.imgData = rectangle
+		return self.imgData
 
 class Button(Element):
-    def __init__(
-            self,
-            text,
-            font=Merri_regular,
-            font_size=standard_font_size,
-            background_color=255,
-            outline=0,
-            radius=0,
-            text_color=0,
-            **kwargs
-        ):
-        super().__init__()
-        self.background_color   = background_color
-        self.outline    = outline
-        self.text       = text
-        self.font       = font
-        self.font_size  = font_size
-        self.radius     = radius
-        self.text_color = text_color
-        for param in kwargs:
-            setattr(self, param, kwargs[param])
+	def __init__(
+			self,
+			text,
+			font=Merri_regular,
+			font_size=standard_font_size,
+			background_color=255,
+			outline=0,
+			radius=0,
+			text_color=0,
+			**kwargs
+		):
+		super().__init__()
+		self.background_color   = background_color
+		self.outline    = outline
+		self.text       = text
+		self.font       = font
+		self.font_size  = font_size
+		self.radius     = radius
+		self.text_color = text_color
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
 
-    def generator(self,area=None):
-        loaded_font = ImageFont.truetype(self.font, self.font_size)
-        if area==None:
-            area = self.area
-        [(x,y),(w,h)] = area
-        self.area = area
-        if self.radius>0:
-            rect = RectangleRounded(radius=self.radius,background_color=self.background_color,outline=self.outline)
-        else:
-            rect = Rectangle(background_color=self.background_color,outline=self.outline)
-        rect_img = rect.generator(self.area)
-        imgDraw = ImageDraw.Draw(rect_img, 'L')
-        text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
-        x = tools_convertXArgsToPX("center",w,text_w)
-        y = tools_convertYArgsToPX("center",h,text_h)
-        imgDraw.text((x,y),self.text,font=loaded_font,fill=self.text_color)
-        self.imgData = rect_img
-        return self.imgData
+	def generator(self,area=None):
+		loaded_font = ImageFont.truetype(self.font, self.font_size)
+		if area==None:
+			area = self.area
+		[(x,y),(w,h)] = area
+		self.area = area
+		if self.radius>0:
+			rect = RectangleRounded(radius=self.radius,background_color=self.background_color,outline=self.outline)
+		else:
+			rect = Rectangle(background_color=self.background_color,outline=self.outline)
+		rect_img = rect.generator(self.area)
+		imgDraw = ImageDraw.Draw(rect_img, 'L')
+		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
+		x = tools_convertXArgsToPX("center",w,text_w)
+		y = tools_convertYArgsToPX("center",h,text_h)
+		imgDraw.text((x,y),self.text,font=loaded_font,fill=self.text_color)
+		self.imgData = rect_img
+		return self.imgData
 
 class Icon(Element):
-    def __init__(self,file):
-        super().__init__()
-        self.file = file
+	def __init__(self,file):
+		super().__init__()
+		self.file = file
 
-    def generator(self,area):
-        """
-        Returns a  PIL image with the icon corresponding to the path you give as argument.
-        If you pass "back", "delete" or another known image, it will fetch the integrated icons
-        """
-        path_to_file = tools_parseKnownImageFile(file)
-        iconImg = Image.open(path_to_file).convert("L").resize((icon_size,icon_size))
-        self.imgData = iconImg
-        return iconImg
+	def generator(self,area):
+		"""
+		Returns a  PIL image with the icon corresponding to the path you give as argument.
+		If you pass "back", "delete" or another known image, it will fetch the integrated icons
+		"""
+		path_to_file = tools_parseKnownImageFile(file)
+		iconImg = Image.open(path_to_file).convert("L").resize((icon_size,icon_size))
+		self.imgData = iconImg
+		return iconImg
 
 class Static(Element):
 	def __init__(self,pil_image,x,y,**kwargs):
-        super().__init__()
-        self.pil_image = pil_image
+		super().__init__()
+		self.imgData = pil_image
 		self.area = [(x,y),(pil_image.width,pil_image.height)]
 		for param in kwargs:
-            setattr(self, param, kwargs[param])
+			setattr(self, param, kwargs[param])
 
 
 
 ############################# - 	Tools 		- ##############################
-def returnFalse(*args):
-	pass
-	return False
-
 def coordsInArea(click_x,click_y,area):
 	[(x,y),(w,h)] = area
 	if click_x>=x and click_x<x+w and click_y>=y and click_y<y+h:
@@ -726,74 +736,74 @@ def getRectanglesIntersection(area1,area2):
 		return None
 
 def roundedCorner(radius, fill=255,outline=50):
-    """
-    Draw a round corner
-    """
-    corner = Image.new('L', (radius, radius), white)
-    draw = ImageDraw.Draw(corner)
-    draw.pieslice((0, 0, radius * 2, radius * 2), 180, 270, fill=fill,outline=outline)
-    return corner
+	"""
+	Draw a round corner
+	"""
+	corner = Image.new('L', (radius, radius), white)
+	draw = ImageDraw.Draw(corner)
+	draw.pieslice((0, 0, radius * 2, radius * 2), 180, 270, fill=fill,outline=outline)
+	return corner
 
 def tools_convertXArgsToPX(xPosition,objw,textw):
-    """
-    Converts xPosition string arguments to numerical values
-    """
-    if xPosition == "left":
-        x = 0
-    elif xPosition == "center":
-        x = int(0.5*objw-0.5*textw)
-    elif xPosition == "right":
-        x = int(objw-textw)
-    else:
-        try:
-            x = int(xPosition)
-        except:
-            print("[PSSMOL] Invalid input for xPosition")
-            return False
-    return x
+	"""
+	Converts xPosition string arguments to numerical values
+	"""
+	if xPosition == "left":
+		x = 0
+	elif xPosition == "center":
+		x = int(0.5*objw-0.5*textw)
+	elif xPosition == "right":
+		x = int(objw-textw)
+	else:
+		try:
+			x = int(xPosition)
+		except:
+			print("[PSSMOL] Invalid input for xPosition")
+			return False
+	return x
 
 def tools_convertYArgsToPX(yPosition,objh,texth):
-    """
-    Converts yPosition string arguments to numerical values
-    """
-    if yPosition == "top":
-        y = 0
-    elif yPosition == "center":
-        y = int(0.5*objh-0.5*texth)
-    elif yPosition == "bottom":
-        y = int(objh-texth)
-    else:
-        try:
-            y = int(yPosition)
-        except:
-            print("[PSSMOL] Invalid input for yPosition")
-            return False
-    return y
+	"""
+	Converts yPosition string arguments to numerical values
+	"""
+	if yPosition == "top":
+		y = 0
+	elif yPosition == "center":
+		y = int(0.5*objh-0.5*texth)
+	elif yPosition == "bottom":
+		y = int(objh-texth)
+	else:
+		try:
+			y = int(yPosition)
+		except:
+			print("[PSSMOL] Invalid input for yPosition")
+			return False
+	return y
 
 def tools_parseKnownImageFile(file):
-    if file=="back":
-        return path_to_pssm + "/icons/back.png"
-    elif file=="delete":
-        return path_to_pssm + "/icons/delete.jpg"
-    elif file=="frontlight-down":
-        return path_to_pssm + "/icons/frontlight-down.jpg"
-    elif file=="frontlight-up":
-        return path_to_pssm + "/icons/frontlight-up.jpg"
-    elif file=="invert":
-        return path_to_pssm + "/icons/invert.jpg"
-    elif file=="reboot":
-        return path_to_pssm + "/icons/reboot.jpg"
-    elif file=="save":
-        return path_to_pssm + "/icons/save.png"
-    elif file=="touch-off":
-        return path_to_pssm + "/icons/touch-off.png"
-    elif file=="touch-on":
-        return path_to_pssm + "/icons/touch-on.png"
-    elif file=="wifi-lock":
-        return path_to_pssm + "/icons/wifi-lock.jpg"
-    elif file=="wifi-on":
-        return path_to_pssm + "/icons/wifi-on.jpg"
-    elif file=="wifi-off":
-        return path_to_pssm + "/icons/wifi-off.jpg"
-    else:
-        return file
+	if file=="back":
+		return path_to_pssm + "/icons/back.png"
+	elif file=="delete":
+		return path_to_pssm + "/icons/delete.jpg"
+	elif file=="frontlight-down":
+		return path_to_pssm + "/icons/frontlight-down.jpg"
+	elif file=="frontlight-up":
+		return path_to_pssm + "/icons/frontlight-up.jpg"
+	elif file=="invert":
+		return path_to_pssm + "/icons/invert.jpg"
+	elif file=="reboot":
+		return path_to_pssm + "/icons/reboot.jpg"
+	elif file=="save":
+		return path_to_pssm + "/icons/save.png"
+	elif file=="touch-off":
+		return path_to_pssm + "/icons/touch-off.png"
+	elif file=="touch-on":
+		return path_to_pssm + "/icons/touch-on.png"
+	elif file=="wifi-lock":
+		return path_to_pssm + "/icons/wifi-lock.jpg"
+	elif file=="wifi-on":
+		return path_to_pssm + "/icons/wifi-on.jpg"
+	elif file=="wifi-off":
+		return path_to_pssm + "/icons/wifi-off.jpg"
+	else:
+		return file
