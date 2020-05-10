@@ -8,7 +8,7 @@ from time import sleep
 from _fbink import ffi, lib as FBInk
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
-import KIP
+import devices.kobo.KIP as KIP
 
 path_to_pssm_device = os.path.dirname(os.path.abspath(__file__))
 
@@ -25,12 +25,12 @@ view_width=state.view_width
 view_height=state.view_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
-isEmulator = False
-isRGB = False
+isEmulator= False
+isRGB     = False
 isEreader = True
-isWifiOn = True
+isWifiOn  = True
 batteryCapacityFile = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity"
-batteryStatusFile"/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status"
+batteryStatusFile   = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status"
 
 def setFrontlightLevel(level):
 	"""
@@ -72,14 +72,14 @@ def get_ip():
 
 def wifiDown():
 	try:
-		os.system("sh " + path_to_pssm_device "/disable-wifi.sh")
+		os.system("sh " + path_to_pssm_device + "/disable-wifi.sh")
 		isWifiOn = False
 	except:
 		print("Failed to disabled Wifi")
 
 def wifiUp():
 	try:
-		os.system("sh " + path_to_pssm_device "/enable-wifi.sh")
+		os.system("sh " + path_to_pssm_device + "/enable-wifi.sh")
 		# os.system("sh ./files/obtain-ip.sh")
 		# os.system(". ./files/nickel-usbms.sh && enable_wifi")
 		wait(1)
