@@ -27,7 +27,7 @@ from fcntl import ioctl
 try:
 	import devices.kobo.grabInput as grabber
 except:
-	print("grabber grabbing failed")
+	print("[PSSM_KIP] Grabber import failed. Continuing nonetheless, however expect errors when trying to grab Input")
 
 evAbs = 3
 evKey = 1
