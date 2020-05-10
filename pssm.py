@@ -24,7 +24,6 @@ def returnFalse(*args):
 	return False
 
 
-
 ############################# - StackManager 	- ##############################
 class ScreenStackManager:
 	def __init__(

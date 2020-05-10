@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 import os
 import pssm
-# Load Pillow
-from PIL import Image, ImageDraw, ImageFont
-from copy import deepcopy
 import json
 
 path_to_pssmOSK = os.path.dirname(os.path.abspath(__file__))
 default_keymap_path = os.path.join(path_to_pssmOSK,"config", "default-keymap-en_us.json")
-with open(default_keymap_path) as json_file:
-	default_km = json.load(json_file)
 
 # Constants:
 KTstandardChar   = 0
@@ -21,7 +16,10 @@ KTcontrol        = 5
 KTalt            = 6
 
 class OSK(pssm.Layout):
-    def __init__(self,keymap=default_km,onkeyPress = None, area=None,**kwargs):
+    def __init__(self,keymapPath=default_keymap_path,onkeyPress = None, area=None,**kwargs):
+		self.keymapPath = keymapPath
+		with open(self.keymapPath) as json_file:
+			self.keymap = json.load(json_file)
         self.keymap   = keymap
         self.lang     = keymap["lang"]
         self.onkeyPress=onkeyPress
