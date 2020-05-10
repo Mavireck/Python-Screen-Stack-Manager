@@ -11,7 +11,16 @@ from PIL import Image, ImageDraw, ImageFont
 import devices.kobo.KIP as KIP
 
 path_to_pssm_device = os.path.dirname(os.path.abspath(__file__))
+isEmulator= False
+isRGB     = False
+isEreader = True
+isWifiOn  = True
+touchPath 			= "/dev/input/event1"
+batteryCapacityFile = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity"
+batteryStatusFile   = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status"
 
+
+# Init FBInk :
 fbink_cfg = ffi.new("FBInkConfig *")
 fbink_dumpcfg = ffi.new("FBInkDump *")
 fbfd = FBInk.fbink_open()
@@ -25,12 +34,6 @@ view_width=state.view_width
 view_height=state.view_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
-isEmulator= False
-isRGB     = False
-isEreader = True
-isWifiOn  = True
-batteryCapacityFile = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity"
-batteryStatusFile   = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status"
 
 def setFrontlightLevel(level):
 	"""
@@ -145,7 +148,6 @@ isInputThreadStarted = False
 def initInteractionHandler(grabInput=False):
 	print("initInteractionHandler started")
 	global interactionHandler
-	touchPath = "/dev/input/event1"
 	interactionHandler = KIP.inputObject(touchPath, screen_width, screen_height,grabInput=grabInput)
 
 def eventBindings(callbackFct, isThread=False,grabInput=False):
