@@ -2,7 +2,6 @@
 import sys
 sys.path.append("../")
 import pssm
-import pssmElementsLibrairy as PEL
 import pssmOSK
 
 import platform

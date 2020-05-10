@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import pssm
-import pssmElementsLibrairy as PEL
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from copy import deepcopy
@@ -21,7 +20,7 @@ KTcapsLock       = 4
 KTcontrol        = 5
 KTalt            = 6
 
-class OSK(PEL.Layout):
+class OSK(pssm.Layout):
     def __init__(self,keymap=default_km,onkeyPress = None, area=None,**kwargs):
         self.keymap   = keymap
         self.lang     = keymap["lang"]
@@ -39,8 +38,8 @@ class OSK(PEL.Layout):
             buttonRow = ["?",(None,spacing)]
             for key in row:
                 label = self.getKeyLabel(key)
-                background_color = PEL.light_gray if key["isPadding"] else PEL.white
-                buttonElt = PEL.Button(text=label,background_color=background_color, onclickInside=self.handleKeyPress, user_data = key, invertOnClick=True)
+                background_color = pssm.light_gray if key["isPadding"] else pssm.white
+                buttonElt = pssm.Button(text=label,background_color=background_color, onclickInside=self.handleKeyPress, user_data = key, invertOnClick=True)
                 key_width = key["keyWidth"]
                 buttonRow.append((buttonElt,key_width))
                 buttonRow.append((None,spacing))
