@@ -8,7 +8,6 @@ from time import sleep
 from _fbink import ffi, lib as FBInk
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
-sys.path.append('/mnt/onboard/.adds/mavireck/Kobo-Input-Python')
 import KIP
 
 path_to_pssm_device = os.path.dirname(os.path.abspath(__file__))
