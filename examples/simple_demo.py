@@ -2,7 +2,6 @@
 import sys
 sys.path.append("../")
 import pssm
-import pssmElementsLibrairy as PEL
 
 import platform
 if platform.machine() in ["x86","AMD64","i686","x86_64"]:
@@ -30,26 +29,26 @@ def demo1():
     def reactFctn(elt,coords):
         print(coords," - ",elt.text)
 
-    button1 = PEL.Button("Hey", onclickInside=reactFctn)
-    button2 = PEL.Button("Hey2",onclickInside=reactFctn)
-    button3 = PEL.Button("Hey3",onclickInside=reactFctn)
+    button1 = pssm.Button("Hey", onclickInside=reactFctn)
+    button2 = pssm.Button("Hey2",onclickInside=reactFctn)
+    button3 = pssm.Button("Hey3",onclickInside=reactFctn)
     layout_demo = [
         [30                                                                             ],
-        [100, (None,20), (button1,200), (None,20)                                       ],
+        [100, (None,"?/2"), (button1,200), (None,"?/2")                                 ],
         [30                                                                             ],
         [100, (None,20), (button2,200), (None,20)                                       ],
         [30                                                                             ],
-        [100, (None,20), (button3,200), (None,20), (PEL.Button("nope"),300), (None,10)  ],
+        [100, (None,20), (button3,200), (None,20), (pssm.Button("nope"),300), (None,10)  ],
         [40]
     ]
-    myLayout = PEL.Layout(layout_demo,screen.area)
+    myLayout = pssm.Layout(layout_demo,screen.area)
     myLayout.tags.add("layout")
     screen.addElt(myLayout)
 
 
 def demo2():
     reactFctn = lambda elt,coords : print(coords," - ",elt.text)
-    myButtonList = PEL.ButtonList(
+    myButtonList = pssm.ButtonList(
         buttons = [
             {'text':'Yup1','onclickInside':reactFctn},
             {'text':'Yup2','onclickInside':reactFctn},
@@ -67,19 +66,19 @@ def demo2():
 def demo3():
     reactFctn   = lambda elt,coords : print(coords," - ",elt.text)
     buttons     = [{'text':'This is button number : ' + str(n), 'onclickInside':reactFctn} for n in range(8)]
-    buttonList  = PEL.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
-    button_welcome  = PEL.Button(text="Welcome !",radius=20, background_color = 220, font=PEL.Merri_bold, font_size = 35)
-    button_previous = PEL.Button("Previous",onclickInside = reactFctn)
-    button_reboot   = PEL.Button("Reboot")
-    button_next     = PEL.Button("Next")
+    buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
+    button_welcome  = pssm.Button(text="Welcome !",radius=20, background_color = 220, font=pssm.Merri_bold, font_size = 35)
+    button_previous = pssm.Button("Previous",onclickInside = reactFctn)
+    button_reboot   = pssm.Button("Reboot")
+    button_next     = pssm.Button("Next")
     menu = [
         [30                                                                                                             ],
         [100,            (None,80),                       (button_welcome,"?"),                    (None,80)            ],
         ["?",                                               (buttonList,"?")                                            ],
-        [100,(None,30), (button_previous,"?"), (None,30), (button_reboot,"?"), (None,30), (button_next,"?"), (None,30)  ],
+        [100,(None,30), (button_previous,"?*1"), (None,30), (button_reboot,"?*2"), (None,30), (button_next,"?*1"), (None,30)  ],
         [30                                                                                                             ]
     ]
-    myLayout = PEL.Layout(menu,screen.area)
+    myLayout = pssm.Layout(menu,screen.area)
     screen.addElt(myLayout)
 
 demo3()
