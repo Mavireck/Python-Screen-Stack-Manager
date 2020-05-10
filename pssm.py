@@ -298,11 +298,11 @@ class ScreenStackManager:
 			t  = dimension[0]
 			op = dimension[1:]
 			if t == "p":
-				return eval("1" + op)
+				return int(eval("1" + op))
 			elif t== "w":
-				return eval(str(self.width) + op)
+				return int(eval(str(self.width) + op))
 			elif t== "h":
-				return eval(str(self.height) + op)
+				return int(eval(str(self.height) + op))
 			else:
 				return dimension
 
