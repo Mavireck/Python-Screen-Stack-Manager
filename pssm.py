@@ -586,34 +586,36 @@ class Layout(Element):
 		return cols
 
 	def dispatchClick(self,coords):
-		# TODO : use dichotomy search instead of linear search with extract_rowsHeight and extract_colsWidth
 		click_x,click_y = coords
-		[(x,y),(w,h)] = self.area[:]
-		is_found = False
 		for i in range(len(self.areaMatrix)):
-			for j in range(len(self.areaMatrix[i])):
-				if coordsInArea(click_x,click_y,self.areaMatrix[i][j]):
-					row,col=i,j
-					is_found = True
-					break
-			if is_found:
-				break
-		if is_found:
-			elt,_ = self.layout[row][col+1]
-			if elt != None and elt.onclickInside != None:
-				if elt.isLayout:
-					if elt.onclickInside != None:
-						elt.onclickInside(elt,coords)
-					if elt.invertOnClick:
-						elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
-					elt.dispatchClick(coords)
-				else:
-					if elt.invertOnClick:
-						elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
-					elt.onclickInside(elt,coords)
-			return True
-		else:
-			return False
+			if len(self.areaMatrix[i]) == 0:
+				# That's a fake row (a margin row)
+				continue
+			first_row_elt = self.areaMatrix[i][0]
+			last_row_elt = self.areaMatrix[i][-1]
+			x = first_row_elt[0][0]
+			y = first_row_elt[0][1]
+			w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
+			h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
+			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):
+				# Click was in that row
+				for j in range(len(self.areaMatrix[i])):
+					if coordsInArea(click_x,click_y,self.areaMatrix[i][j]):
+						# Click was on that element
+						elt,_ = self.layout[i][j+1]
+						if elt != None and elt.onclickInside != None:
+							if elt.isLayout:
+								if elt.onclickInside != None:
+									elt.onclickInside(elt,coords)
+								if elt.invertOnClick:
+									elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
+								elt.dispatchClick(coords)
+							else:
+								if elt.invertOnClick:
+									elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
+								elt.onclickInside(elt,coords)
+						return True
+		return False
 
 class ButtonList(Layout):
 	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
