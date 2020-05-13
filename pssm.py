@@ -154,22 +154,10 @@ class ScreenStackManager:
 		else:
 			# the Element is not already in the stack
 			if not skipRegistration:
-				self.forceAddElt(myElement)
-
-	def forceAddElt(self,myElement):
-		"""
-		Adds Element to the stack and prints it, without checking if it is already here
-		"""
-		myElement.parentStackManager = self
-		self.stack.append(myElement)
-		self.simplePrintElt(myElement)
-
-	def updateArea(self,area=None):
-		"""
-		Updates the Element : updates the stack and prints the Element and all the stack above it
-		while keeping the stack position
-		"""
-		self.printStack(area=area)
+				# We append the element to the stack
+				myElement.parentStackManager = self
+				self.stack.append(myElement)
+				self.simplePrintElt(myElement)
 
 	def removeElt(self,myElementId,skipPrint=False,weAlreadyHaveTheElt=None):
 		"""
