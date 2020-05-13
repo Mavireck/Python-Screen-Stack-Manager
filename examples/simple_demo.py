@@ -28,13 +28,15 @@ print("just made canvas")
 def demo1():
     def reactFctn(elt,coords):
         print(coords," - ",elt.text)
+        print(elt.area)
+        print("")
 
     button1 = pssm.Button("Hey", onclickInside=reactFctn)
     button2 = pssm.Button("Hey2",onclickInside=reactFctn)
     button3 = pssm.Button("Hey3",onclickInside=reactFctn)
     layout_demo = [
         [30                                                                             ],
-        [100, (None,"?/2"), (button1,200), (None,"?/2")                                 ],
+        [100, (None,"?/2"), (button1,300), (None,"?/2")                                 ],
         [30                                                                             ],
         [100, (None,20), (button2,200), (None,20)                                       ],
         [30                                                                             ],
@@ -42,8 +44,13 @@ def demo1():
         [40]
     ]
     myLayout = pssm.Layout(layout_demo,screen.area)
-    myLayout.tags.add("layout")
     screen.addElt(myLayout)
+    print("waiting")
+    screen.device.wait(2)
+    print("done waiting")
+    button1.update(newAttributes={
+        'text':"Things can change"
+    })
 
 
 def demo2():
@@ -61,6 +68,7 @@ def demo2():
         area = screen.area
     )
     screen.addElt(myButtonList)
+
 
 
 def demo3():
@@ -81,4 +89,4 @@ def demo3():
     myLayout = pssm.Layout(menu,screen.area)
     screen.addElt(myLayout)
 
-demo3()
+demo1()
