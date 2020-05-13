@@ -72,30 +72,21 @@ class ScreenStackManager:
 					return search
 		return None
 
-	def printStack(self,skipEltId=None,area=None):
+	def printStack(self,area=None):
 		"""
 		Prints the stack Elements in the stack order
-		If a skipElt is specified, then the function will not display the skipElt.
 		If a area is set, then, we only display
 		the part of the stack which is in this area
-		> skipEltId : The ID of a PSSM Element
 		> area : a [(x,y),(w,h)] array
 		"""
-		if self.isPrintLocked:
-			return False
-		[(x,y),(w,h)] = area
-		mainIntersectionArea = [(x,y),(w,h)] if area else [(0,0),(self.width,self.height)]
-		placeholder = Image.new('L', (mainIntersectionArea[1][0]-mainIntersectionArea[0][0],mainIntersectionArea[1][1]-mainIntersectionArea[0][1]), color=255)
+		#TODO : Must be retought to work with the new nested structure
+		# for now it will just reprint the whole stack
+		placeholder = Image.new('L', (self.width, self.height), color=255)
 		for elt in self.stack:
-			if (not skipEltId) or (skipEltId and elt.id != skipEltId):
-				# We loop through the Elements behind the Element we are working on
-				rectIntersection = getRectanglesIntersection(mainIntersectionArea,elt.area)
-				if rectIntersection != None:
-					# The elt we are looking at is behind the myElement
-					intersectionImg = self.getPartialEltImg(elt,rectIntersection)
-					placeholder.paste(intersectionImg,(rectIntersection[0][0],rectIntersection[0][1]))
-		raw_data=placeholder
-		self.device.print_pil(raw_data,mainIntersectionArea[0][0], mainIntersectionArea[0][1],placeholder.width,placeholder.height,isInverted=self.isInverted)
+			[(x,y),(w,h)] = elt.area
+			placeholder.paste(elt.imgData, (x,y))
+		[(x,y),(w,h)] = self.area
+		self.device.print_pil(placeholder,x, y, w, h, isInverted=self.isInverted)
 
 	def getPartialEltImg(self,elt,rectIntersection):
 		"""
