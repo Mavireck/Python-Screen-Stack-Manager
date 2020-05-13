@@ -18,9 +18,6 @@ screen.startListenerThread(grabInput=True)
 #Clear and refresh the screen
 screen.clear()
 screen.refresh()
-# Create a blank canvas
-screen.createCanvas()
-
 
 keyboard_area = [(0,int(2*screen.view_height/3)),(screen.view_width,int(screen.view_height/3))]
 myOSK = pssmOSK.OSK(area = keyboard_area)
