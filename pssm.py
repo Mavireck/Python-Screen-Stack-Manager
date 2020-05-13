@@ -380,6 +380,7 @@ class Element:
 		self.invertOnClick = invertOnClick
 		self.tags=tags
 		self.default_invertDuration = invertDuration
+		self.parentLayouts = []
 		self.parentStackManager = None
 
 	def __hash__(self):
@@ -390,12 +391,23 @@ class Element:
 			return self.id == other.id
 		return NotImplemented
 
-	def updateAttributes(self,newParams):
+	def update(self,newAttributes,skipGeneration=False):
 		"""
 		Pass a dict as argument, and it will update the Element's attributes accordingly
 		"""
-		for param in newParams:
-			setattr(self, param, newParams[param])
+		# First, we set the attributes
+		for param in newAttributes:
+			setattr(self, param, newAttributes[param])
+		if not skipGeneration:
+			# Then we recreate the pillow image of this particular object
+			self.generator()
+			if len(self.parentLayouts) > 0:
+				# We recreate the pillow image of the oldest parent
+				# And it is not needed to regenerate standard objects, since
+				oldest_parent = self.parentLayouts[0]
+				oldest_parent.generator(skipNonLayoutEltGeneration=True)
+			#then, let's reprint the stack
+			self.parentStackManager.printStack(area=self.area)
 		return True
 
 	def generator(self):
