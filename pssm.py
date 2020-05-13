@@ -567,7 +567,6 @@ class Layout(Element):
 				weight = eval("1" + converted_dimension[1:])
 				total_questionMarks_weight += weight
 		layout_height = self.area[1][1]
-		print(layout_height,total_height,total_questionMarks_weight)
 		return int((layout_height - total_height)/total_questionMarks_weight)
 
 	def calculate_remainingWidth(self,rowIndex):
@@ -706,19 +705,23 @@ class Button(Element):
 			font=Merri_regular,
 			font_size=standard_font_size,
 			background_color=255,
-			outline=0,
+			outline_color=0,
 			radius=0,
 			text_color=0,
+			text_xPosition="center",
+			text_yPosition="center",
 			**kwargs
 		):
 		super().__init__()
 		self.background_color   = background_color
-		self.outline    = outline
+		self.outline_color    	= outline_color
 		self.text       = text
 		self.font       = font
 		self.font_size  = font_size
 		self.radius     = radius
 		self.text_color = text_color
+		self.text_xPosition = text_xPosition
+		self.text_yPosition = text_yPosition
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
 
@@ -729,14 +732,14 @@ class Button(Element):
 		[(x,y),(w,h)] = area
 		self.area = area
 		if self.radius>0:
-			rect = RectangleRounded(radius=self.radius,background_color=self.background_color,outline=self.outline)
+			rect = RectangleRounded(radius=self.radius,background_color=self.background_color,outline=self.outline_color)
 		else:
-			rect = Rectangle(background_color=self.background_color,outline=self.outline)
+			rect = Rectangle(background_color=self.background_color,outline=self.outline_color)
 		rect_img = rect.generator(self.area)
 		imgDraw = ImageDraw.Draw(rect_img, 'L')
 		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
-		x = tools_convertXArgsToPX("center",w,text_w)
-		y = tools_convertYArgsToPX("center",h,text_h)
+		x = tools_convertXArgsToPX(self.text_xPosition,w,text_w)
+		y = tools_convertYArgsToPX(self.text_yPosition,h,text_h)
 		imgDraw.text((x,y),self.text,font=loaded_font,fill=self.text_color)
 		self.imgData = rect_img
 		return self.imgData
@@ -801,6 +804,7 @@ def tools_convertXArgsToPX(xPosition,objw,textw):
 	"""
 	Converts xPosition string arguments to numerical values
 	"""
+	xPosition = xPosition.lower()
 	if xPosition == "left":
 		x = 0
 	elif xPosition == "center":
@@ -819,6 +823,7 @@ def tools_convertYArgsToPX(yPosition,objh,texth):
 	"""
 	Converts yPosition string arguments to numerical values
 	"""
+	yPosition = yPosition.lower()
 	if yPosition == "top":
 		y = 0
 	elif yPosition == "center":
