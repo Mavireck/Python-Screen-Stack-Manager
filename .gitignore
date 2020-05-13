@@ -3,3 +3,4 @@
 *.pyc
 *.pyc
 __pycache__/pssm_opencv.cpython-37.pyc
+*.pyc
