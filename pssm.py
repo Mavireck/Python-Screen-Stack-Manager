@@ -108,12 +108,14 @@ class ScreenStackManager:
 		else:
 			return img
 
-	def simplePrintElt(self,myElement):
+	def simplePrintElt(self,myElement,skipGeneration = False):
 		"""
 		Prints the Element without adding it to the stack
 		"""
-		# First, the element must be generated
-		myElement.generator()
+		if not skipGeneration:
+			# First, the element must be generated
+			myElement.generator()
+		# Then, we print it
 		if not self.isPrintLocked:
 			[(x,y),(w,h)] = myElement.area
 			self.device.print_pil(myElement.imgData,x, y, w, h, isInverted=myElement.isInverted)
