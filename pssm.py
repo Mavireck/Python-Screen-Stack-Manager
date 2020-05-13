@@ -430,6 +430,7 @@ class Layout(Element):
 	def __init__(self,layout,area=None,background_color=white,**kwargs):
 		super().__init__(area=area)
 		self.layout      = layout
+		self.isValid = self.isLayoutValid()
 		self.background_color = background_color
 		self.areaMatrix = None
 		self.imgMatrix  = None
@@ -438,7 +439,32 @@ class Layout(Element):
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
 
-	def generator(self,min_height=-1,min_width=-1,max_height=-1,max_width=-1,area=None):
+	def isLayoutValid(self):
+		# TODO : to be tested
+		l = self.layout
+		if not isinstance(l,list):
+			raise Exception("Layout Element is supposed to be a list")
+		for row in l:
+			if not isinstance(row,list):
+				raise Exception("A layout row is supposed to be a list")
+			elif len(row) == 0:
+				raise Exception("A layout row cannot be empty")
+			elif not isinstance(row[0],str) and not isinstance(row[0],int):
+				raise Exception("The first element of a row (its height) should be a string or an integer")
+			for j in range(1,len(row)):
+				eltTuple = row[j]
+				if not (isinstance(eltTuple,tuple) or isinstance(eltTuple,list)):
+					raise Exception("A layout row should be a list of Tuple (except for its first element)")
+				if len(eltTuple) != 2:
+					raise Exception("A layout element should be a Tuple : (Element, elementWidth)")
+				if not (isinstance(eltTuple[1],str) or isinstance(eltTuple[1],int)):
+					raise Exception("An element width should be a string or an integer")
+				if not (isinstance(eltTuple[0],Element) or eltTuple[0] == None):
+					raise Exception("A layout element should be a Tuple : (Element, elementWidth), with Element designating a PSSM Element")
+		print("[PSSM Layout Element] Layout is valid, going on")
+		return True
+
+	def generator(self,area=None, skipNonLayoutEltGeneration=False):
 		"""
 		Builds one img out of all the Elements it is being given
 		"""
