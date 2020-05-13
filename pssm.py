@@ -485,10 +485,10 @@ class Layout(Element):
 		self.imgData = placeholder
 		return self.imgData
 
-	def createImgMatrix(self):
+	def createImgMatrix(self,skipNonLayoutEltGeneration=False):
 		matrix = []
 		if not self.areaMatrix:
-			print("Error, areaMatrix has to be defined first")
+			print("[PSSM Layout Element] Error, areaMatrix has to be defined first")
 			return None
 		for i in range(len(self.layout)):
 			row = []
@@ -499,12 +499,15 @@ class Layout(Element):
 					myElement_img   = None
 				else:
 					myElement_area  = self.areaMatrix[i][j-1]
-					myElement_img   = myElement.generator(area=myElement_area)
+					if not myElement.isLayout and skipNonLayoutEltGeneration:
+						myElement_img = myElement.imgData
+					else:
+						myElement_img   = myElement.generator(area=myElement_area)
 				row.append(myElement_img)
 			matrix.append(row)
 		self.imgMatrix = matrix
 
-	def createAreaMatrix(self,min_height=-1,min_width=-1,max_height=-1,max_width=-1):
+	def createAreaMatrix(self):
 		# TODO : must honor min and max
 		matrix = []
 		n_rows = len(self.layout)
@@ -520,18 +523,18 @@ class Layout(Element):
 			else:
 				remaining_height = self.calculate_remainingHeight()
 				true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
-			n_cols = len(row)     # Do not forget that the first item of each row is an int indicating the row height
-			for j in range(1,n_cols):
+			for j in range(1,len(row)):
 				(element,element_width) = row[j]
 				converted_width = self.parentStackManager.convertDimension(element_width)
 				if element != None:
+					self.layout[i][j][0].parentLayouts.append(self)
 					self.layout[i][j][0].parentStackManager = self.parentStackManager
-				if not isinstance(converted_width,int):
+				if isinstance(converted_width,int):
+					true_element_width = converted_width
+				else:
 					remaining_width = self.calculate_remainingWidth(i)
 					true_element_width = int(eval(str(remaining_width) + converted_width[1:]))
 					self.layout[i][j] = (self.layout[i][j][0], true_element_width)
-				else:
-					true_element_width = converted_width
 				element_area = [(x0,y0),(true_element_width,true_row_height)]
 				x0 += true_element_width
 				row_cols.append(element_area)
