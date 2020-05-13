@@ -133,9 +133,7 @@ class ScreenStackManager:
 		"""
 		img = Image.new('L', (self.width,self.height), color=255)
 		background = Static(img,0,0,name="Canvas")
-		background.tags.add("Canvas")
 		self.addElt(background)
-		return True
 
 	def addElt(self,myElement,skipPrint=False,skipRegistration=False):
 		"""
