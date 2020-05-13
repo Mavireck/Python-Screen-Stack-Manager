@@ -20,22 +20,22 @@ cv2.namedWindow("PSSM_Emulator")
 last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)
 
 def setFrontlightLevel(level):
-	print("Not supported on the emulator")
+	print("setFrontlightLevel -  Not supported on the emulator")
 
 def readBatteryPercentage():
-	print("Not supported on the emulator")
+	print(" readBatteryPercentage - Not supported on the emulator")
 
 def readBatteryState():
-	print("Not supported on the emulator")
+	print("readBatteryState - Not supported on the emulator")
 
 def get_ip():
-	print("Not supported on the emulator")
+	print("get_ip - Not supported on the emulator")
 
 def wifiDown():
-	print("Not supported on the emulator")
+	print("wifiDown - Not supported on the emulator")
 
 def wifiUp():
-	print("Not supported on the emulator")
+	print("wifiUp - Not supported on the emulator")
 
 def wait(time_seconds):
 	#Reminder : When using 'wait' in the emulator, you can skip the wait by pressing any keyboard key
