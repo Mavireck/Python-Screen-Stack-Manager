@@ -543,6 +543,18 @@ class Layout(Element):
 			matrix.append(row_cols)
 		self.areaMatrix = matrix
 
+	def createEltList(self):
+		"""
+		Returns a list of all the elements the Layout Element contains
+		"""
+		eltList=[]
+		for row in self.layout:
+			for i in range(1,len(row)):
+				elt,_ = row[i]
+				if elt != None:
+					eltList.append(elt)
+		return eltList
+
 	def calculate_remainingHeight(self):
 		rows = self.extract_rowsHeight()
 		total_questionMarks_weight = 0
