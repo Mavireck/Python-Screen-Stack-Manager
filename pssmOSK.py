@@ -16,7 +16,12 @@ KTcontrol        = 5
 KTalt            = 6
 
 class OSK(pssm.Layout):
-    def __init__(self,keymapPath=default_keymap_path,onkeyPress = None, area=None,**kwargs):
+	def __init__(self,keymapPath=default_keymap_path,onkeyPress = None, area=None,**kwargs):
+		"""
+		A PSSM Layout element which builds an on-screen keyboard
+		: keymapPath (str) : a path to a PSSMOSK keymap (like the one included)
+		: onkeyPress (fct) : A callback function. Will be given keyType and keyChar as argument
+		"""
 		self.keymapPath = keymapPath
 		with open(self.keymapPath) as json_file:
 			self.keymap = json.load(json_file)
