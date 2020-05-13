@@ -412,7 +412,8 @@ class Element:
 
 	def generator(self):
 		"""
-		A basic Element has no generator
+		The generator is the function which is called when the container layout wants to
+		build an image. It therefore returns a pillow image
 		"""
 		return NotImplemented
 
