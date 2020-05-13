@@ -118,6 +118,11 @@ class ScreenStackManager:
 		# Then, we print it
 		if not self.isPrintLocked:
 			[(x,y),(w,h)] = myElement.area
+			# What follows is a Workaround :
+			# TODO : this Workaround must be investigated
+			if not myElement.isLayout:
+				w += 1
+				h += 1
 			self.device.print_pil(myElement.imgData,x, y, w, h, isInverted=myElement.isInverted)
 		else:
 			print("[PSSM] Print is locked, no image was updated")
