@@ -53,10 +53,23 @@ class ScreenStackManager:
 		self.lastX = -1
 		self.lastY = -1
 
-	def findEltWithId(self,myElementId):
-		for elt in self.stack:
+	def findEltWithId(self,myElementId,stack=None):
+		"""
+		Returns the element which has such an ID.
+		Avoid using this function as much as possible, as it is really not Performance-friendly
+		(Recursive search through all the elements of the stack)
+		And anyway there is no reason why you should use it.
+		"""
+		if stack == None:
+			stack = self.stack
+		for elt in stack:
 			if elt.id == myElementId:
 				return elt
+			elif elt.isLayout:
+				layoutEltList = elt.createEltList()
+				search = self.findEltWithId(myElementId,stack=layoutEltList)
+				if search != None:
+					return search
 		return None
 
 	def printStack(self,skipEltId=None,area=None):
