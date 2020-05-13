@@ -25,54 +25,63 @@ class OSK(pssm.Layout):
 		self.keymapPath = keymapPath
 		with open(self.keymapPath) as json_file:
 			self.keymap = json.load(json_file)
-        self.keymap   = keymap
-        self.lang     = keymap["lang"]
-        self.onkeyPress=onkeyPress
-        self.build_layout()
-        super().__init__(self.layout)
-        self.area     = area
-        for param in kwargs:
-            setattr(self, param, kwargs[param])
+		self.lang     	= self.keymap["lang"]
+		self.onkeyPress	= onkeyPress
+		self.isCaps		= False
+		self.build_layout()
+		super().__init__(self.layout)
+		self.area     	= area
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
 
-    def build_layout(self):
-        oskLayout = []
-        spacing = self.keymap["spacing"]
-        for row in self.keymap["rows"]:
-            buttonRow = ["?",(None,spacing)]
-            for key in row:
-                label = self.getKeyLabel(key)
-                background_color = pssm.light_gray if key["isPadding"] else pssm.white
-                buttonElt = pssm.Button(text=label,background_color=background_color, onclickInside=self.handleKeyPress, user_data = key, invertOnClick=True)
-                key_width = key["keyWidth"]
-                buttonRow.append((buttonElt,key_width))
-                buttonRow.append((None,spacing))
-            oskLayout.append(buttonRow)
-            oskLayout.append([spacing])
-        self.layout = oskLayout
-        return self.layout
+	def build_layout(self):
+		oskLayout = []
+		spacing = self.keymap["spacing"]
+		for row in self.keymap["rows"]:
+			buttonRow = ["?",(None,spacing)]
+			for key in row:
+				label = self.getKeyLabel(key).upper() if self.isCaps else self.getKeyLabel(key)
+				color_condition = key["isPadding"] or (key["keyType"] == KTcapsLock and self.isCaps)
+				background_color = pssm.light_gray if color_condition else pssm.white
+				buttonElt = pssm.Button(text=label,background_color=background_color, onclickInside=self.handleKeyPress, user_data = key, invertOnClick=True)
+				key_width = key["keyWidth"]
+				buttonRow.append((buttonElt,key_width))
+				buttonRow.append((None,spacing))
+			oskLayout.append(buttonRow)
+			oskLayout.append([spacing])
+		self.layout = oskLayout
+		return self.layout
 
-    def handleKeyPress(self,elt,coords):
-        keyType = elt.user_data["keyType"]
-        keyChar = elt.user_data["char"]
-        if self.onkeyPress:
-            self.onkeyPress(keyType,keyChar)
-        else:
-            pass
+	def handleKeyPress(self,elt,coords):
+		keyType = elt.user_data["keyType"]
+		keyChar = elt.user_data["char"]
+		keyChar = keyChar.upper() if self.isCaps else keyChar
+		if keyType == KTcapsLock:
+			# regenerate to print the keyboard with caps lock
+			# TODO : make it more efficient, in order not to have to regenerate everything and reprint everything
+			self.isCaps = not self.isCaps
+			self.build_layout()
+			self.update(newAttributes={})
+		if self.onkeyPress:
+			self.onkeyPress(keyType,keyChar)
+		else:
+			pass
 
-    def getKeyLabel(self,key):
-        kt = key["keyType"]
-        if kt == KTstandardChar:
-            return key["char"]
-        elif kt == KTalt:
-            return "ALT"
-        elif kt == KTbackspace:
-            return "BACK"
-        elif kt == KTcapsLock:
-            return "CAPS"
-        elif kt == KTcarriageReturn:
-            return "RET"
-        elif kt == KTcontrol:
-            return "CTRL"
-        elif kt == KTdelete:
-            return "DEL"
-        return ""
+	def getKeyLabel(self,key):
+		kt = key["keyType"]
+		if kt == KTstandardChar:
+			keyChar = key["char"].upper() if self.isCaps else key["char"]
+			return keyChar
+		elif kt == KTalt:
+			return "ALT"
+		elif kt == KTbackspace:
+			return "BACK"
+		elif kt == KTcapsLock:
+			return "CAPS"
+		elif kt == KTcarriageReturn:
+			return "RET"
+		elif kt == KTcontrol:
+			return "CTRL"
+		elif kt == KTdelete:
+			return "DEL"
+		return ""
