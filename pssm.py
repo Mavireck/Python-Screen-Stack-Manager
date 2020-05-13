@@ -470,8 +470,8 @@ class Layout(Element):
 		"""
 		if area != None:
 			self.area = area
-		self.createAreaMatrix(min_height=min_height,min_width=min_width,max_height=max_height,max_width=max_width)
-		self.createImgMatrix()
+		self.createAreaMatrix()
+		self.createImgMatrix(skipNonLayoutEltGeneration=skipNonLayoutEltGeneration)
 		[(x,y),(w,h)] = self.area
 		placeholder = Image.new('L', (w,h), color=self.background_color)
 		for i in range(len(self.areaMatrix)):
@@ -811,7 +811,7 @@ def tools_convertXArgsToPX(xPosition,objw,textw):
 		try:
 			x = int(xPosition)
 		except:
-			print("[PSSMOL] Invalid input for xPosition")
+			print("[PSSM] Invalid input for xPosition")
 			return False
 	return x
 
@@ -829,7 +829,7 @@ def tools_convertYArgsToPX(yPosition,objh,texth):
 		try:
 			y = int(yPosition)
 		except:
-			print("[PSSMOL] Invalid input for yPosition")
+			print("[PSSM] Invalid input for yPosition")
 			return False
 	return y
 
