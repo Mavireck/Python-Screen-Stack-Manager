@@ -361,7 +361,7 @@ class Element:
 			data 			= [],
 			tags 			= set(),
 			invertOnClick 	= False,
-			invertDuration 	= 0.5
+			invertDuration 	= 0.2
 		):
 		"""
 		If onclickInside == None, then the stack will keep searching for another Element under this one.
