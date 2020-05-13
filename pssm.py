@@ -255,7 +255,6 @@ class ScreenStackManager:
 		"""
 		# TODO: To be tested
 		initial_mode = isInverted
-		print("invertArea called ", isInverted)
 		self.device.do_screen_refresh(
 			isInverted	= not isInverted,
 			area		= area,
