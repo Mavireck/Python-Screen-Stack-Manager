@@ -391,7 +391,7 @@ class Element:
 			return self.id == other.id
 		return NotImplemented
 
-	def update(self,newAttributes,skipGeneration=False):
+	def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False):
 		"""
 		Pass a dict as argument, and it will update the Element's attributes accordingly
 		"""
@@ -400,7 +400,8 @@ class Element:
 			setattr(self, param, newAttributes[param])
 		if not skipGeneration:
 			# Then we recreate the pillow image of this particular object
-			self.generator()
+			if not skipThisEltGeneration:
+				self.generator()
 			if len(self.parentLayouts) > 0:
 				# We recreate the pillow image of the oldest parent
 				# And it is not needed to regenerate standard objects, since
