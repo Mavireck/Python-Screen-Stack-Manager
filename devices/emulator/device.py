@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 
+delay_emulateEInk_Sluggishness = 0.02
 screen_width=600
 screen_height=800
 view_width=screen_width
@@ -47,6 +48,7 @@ def closePrintHandler():
 	print("Closed")
 
 def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
+	sleep(delay_emulateEInk_Sluggishness)
 	#TODO : honor is inverted
 	global last_printed_PIL
 	raw_data = imgData.tobytes("raw")
