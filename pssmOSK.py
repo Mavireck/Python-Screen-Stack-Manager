@@ -57,11 +57,16 @@ class OSK(pssm.Layout):
 		keyChar = elt.user_data["char"]
 		keyChar = keyChar.upper() if self.isCaps else keyChar
 		if keyType == KTcapsLock:
-			# regenerate to print the keyboard with caps lock
-			# TODO : make it more efficient, in order not to have to regenerate everything and reprint everything
+			## regenerate to print the keyboard with caps lock
 			self.isCaps = not self.isCaps
 			self.build_layout()
-			self.update(newAttributes={})
+			## In this particular case, we can assume the keyboard will always be on top
+			## Therefore, no need to print everything, let's just print the keyboard
+			self.update(
+		        newAttributes={},
+		        skipGeneration = True
+		    )
+		    screen.simplePrintElt(text)
 		if self.onkeyPress:
 			self.onkeyPress(keyType,keyChar)
 		else:
