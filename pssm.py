@@ -332,17 +332,27 @@ class ScreenStackManager:
 				if elt.onclickInside != None:
 					self.lastX = x
 					self.lastY = y
-					if elt.isLayout:
-						if elt.onclickInside != None:
-							elt.onclickInside(elt,(x,y))
-						if elt.invertOnClick:
-							self.invertArea(elt.area,elt.default_invertDuration)
-						elt.dispatchClick((x,y))
-					else:
-						if elt.invertOnClick:
-							self.invertArea(elt.area,elt.default_invertDuration)
-						elt.onclickInside(elt,(x,y))
-					break 		# we quit the for loop
+					if elt != None:
+						self.dispatchClickToElt((x,y),elt)
+				break 		# we quit the for loop
+
+	def dispatchClickToElt(self,coords,elt):
+		"""
+		Once given an object on which the user clicked, this function calls the
+		appropriate function on the object (ie elt.onclickInside or elt.dispatchClick)
+		It also handles inversion.
+		"""
+		if elt.isLayout:
+			if elt.onclickInside != None:
+				elt.onclickInside(elt,(x,y))
+			if elt.invertOnClick:
+				self.invertArea(elt.area,elt.default_invertDuration)
+			elt.dispatchClick((x,y))
+		else:
+			if elt.invertOnClick:
+				self.invertArea(elt.area,elt.default_invertDuration)
+			elt.onclickInside(elt,(x,y))
+
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
@@ -598,6 +608,9 @@ class Layout(Element):
 		return cols
 
 	def dispatchClick(self,coords):
+		"""
+		Finds the element on which the user clicked
+		"""
 		click_x,click_y = coords
 		for i in range(len(self.areaMatrix)):
 			if len(self.areaMatrix[i]) == 0:
@@ -616,18 +629,14 @@ class Layout(Element):
 						# Click was on that element
 						elt,_ = self.layout[i][j+1]
 						if elt != None and elt.onclickInside != None:
-							if elt.isLayout:
-								if elt.onclickInside != None:
-									elt.onclickInside(elt,coords)
-								if elt.invertOnClick:
-									elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
-								elt.dispatchClick(coords)
-							else:
-								if elt.invertOnClick:
-									elt.parentStackManager.invertArea(elt.area,elt.default_invertDuration)
-								elt.onclickInside(elt,coords)
+							self.parentStackManager.dispatchClickToElt(coords,elt)
 						return True
 		return False
+
+	def dispatchClickToElt(self,coords,elt):
+		"""
+
+		"""
 
 class ButtonList(Layout):
 	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
