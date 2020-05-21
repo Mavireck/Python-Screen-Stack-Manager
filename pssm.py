@@ -633,10 +633,6 @@ class Layout(Element):
 						return True
 		return False
 
-	def dispatchClickToElt(self,coords,elt):
-		"""
-
-		"""
 
 class ButtonList(Layout):
 	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
