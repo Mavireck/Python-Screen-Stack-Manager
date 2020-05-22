@@ -428,6 +428,7 @@ class Element:
 		return NotImplemented
 
 	def setInverted(self,mode):
+		# TODO : actually invert it ? or delete this function
 		self.isInverted = mode
 
 
@@ -642,6 +643,7 @@ class Layout(Element):
 		Linear search through the rows, dichotomy for the columns
 		(Because of the empty rows, a dichotomy for the rows doesn't work)
 		"""
+		# TODO : to be thouroughly tested
 		click_x,click_y = coords
 		for i in range(len(self.areaMatrix)):						# Linear search though the rows
 			if len(self.areaMatrix[i]) == 0:
