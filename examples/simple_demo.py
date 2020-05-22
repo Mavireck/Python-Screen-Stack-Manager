@@ -53,6 +53,7 @@ def demo1():
     })
 
 
+
 def demo2():
     reactFctn = lambda elt,coords : print(coords," - ",elt.text)
     myButtonList = pssm.ButtonList(
