@@ -820,18 +820,20 @@ class Button(Element):
 			text_color=0,
 			text_xPosition="center",
 			text_yPosition="center",
+			wrap_textOverflow = True,
 			**kwargs
 		):
 		super().__init__()
 		self.background_color   = background_color
 		self.outline_color    	= outline_color
-		self.text       = text
-		self.font       = font
-		self.font_size  = font_size
-		self.radius     = radius
-		self.text_color = text_color
-		self.text_xPosition = text_xPosition
-		self.text_yPosition = text_yPosition
+		self.text       		= text
+		self.font       		= font
+		self.font_size  		= font_size
+		self.radius     		= radius
+		self.text_color 		= text_color
+		self.text_xPosition 	= text_xPosition
+		self.text_yPosition 	= text_yPosition
+		self.wrap_textOverflow 	= wrap_textOverflow
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
 
@@ -846,13 +848,51 @@ class Button(Element):
 		else:
 			rect = Rectangle(background_color=self.background_color,outline=self.outline_color)
 		rect_img = rect.generator(self.area)
-		imgDraw = ImageDraw.Draw(rect_img, 'L')
+		imgDraw  = ImageDraw.Draw(rect_img, 'L')
+		myText 	 = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
 		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
 		x = tools_convertXArgsToPX(self.text_xPosition,w,text_w)
 		y = tools_convertYArgsToPX(self.text_yPosition,h,text_h)
-		imgDraw.text((x,y),self.text,font=loaded_font,fill=self.text_color)
+		imgDraw.text((x,y),myText,font=loaded_font,fill=self.text_color)
 		self.imgData = rect_img
 		return self.imgData
+
+	def wrapText(self,text,loaded_font,imgDraw):
+		def get_text_width(text):
+			return imgDraw.textsize(text=text,font=loaded_font)[0]
+
+		[(x,y),(max_width,h)] = self.area
+		text_lines = [
+			' '.join([w.strip() for w in l.split(' ') if w])
+			for l in text.split('\n')
+			if l
+		]
+		space_width = get_text_width(" ")
+		wrapped_lines = []
+		buf = []
+		buf_width = 0
+
+		for line in text_lines:
+			for word in line.split(' '):
+				word_width = get_text_width(word)
+
+				expected_width = word_width if not buf else \
+					buf_width + space_width + word_width
+
+				if expected_width <= max_width:
+					# word fits in line
+					buf_width = expected_width
+					buf.append(word)
+				else:
+					# word doesn't fit in line
+					wrapped_lines.append(' '.join(buf))
+					buf = [word]
+					buf_width = word_width
+			if buf:
+				wrapped_lines.append(' '.join(buf))
+				buf = []
+				buf_width = 0
+		return '\n'.join(wrapped_lines)
 
 class Icon(Element):
 	def __init__(self,file):
