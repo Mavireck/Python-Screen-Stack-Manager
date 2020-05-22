@@ -28,11 +28,12 @@ class OSK(pssm.Layout):
 		self.lang     	= self.keymap["lang"]
 		self.onkeyPress	= onkeyPress
 		self.isCaps		= False
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
 		self.build_layout()
 		super().__init__(self.layout)
 		self.area     	= area
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
+
 
 	def build_layout(self):
 		oskLayout = []
