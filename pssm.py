@@ -741,7 +741,7 @@ class Layout(Element):
 class ButtonList(Layout):
 	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
 		"""
-		Generates a Layout with one item per row, all the same type (buttons) and same height and width
+		Generates a Layout with only one item per row, all the same type (buttons) and same height and width
 		:button : a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array
 		:borders : a [top,bottom,left,right]
 		"""
@@ -809,6 +809,9 @@ class RectangleRounded(Element):
 		return self.imgData
 
 class Button(Element):
+	"""
+	Basically a rectangle (or rounded rectangle) with text printed on it
+	"""
 	def __init__(
 			self,
 			text,
@@ -895,27 +898,34 @@ class Button(Element):
 		return '\n'.join(wrapped_lines)
 
 class Icon(Element):
+	"""
+	Returns a  PIL image with the icon corresponding to the path you give as argument.
+	If you pass "back", "delete" or another known image, it will fetch the integrated icons
+	"""
 	def __init__(self,file):
 		super().__init__()
 		self.file = file
 
 	def generator(self,area):
-		"""
-		Returns a  PIL image with the icon corresponding to the path you give as argument.
-		If you pass "back", "delete" or another known image, it will fetch the integrated icons
-		"""
 		path_to_file = tools_parseKnownImageFile(file)
 		iconImg = Image.open(path_to_file).convert("L").resize((icon_size,icon_size))
 		self.imgData = iconImg
 		return iconImg
 
 class Static(Element):
+	"""
+	A very simple element which only displays a pillow image
+	"""
 	def __init__(self,pil_image,x,y,**kwargs):
 		super().__init__()
 		self.imgData = pil_image
 		self.area = [(x,y),(pil_image.width,pil_image.height)]
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
+
+	def generator(self,area):
+		# TODO : crop or resize the image to make it fit the area
+		return self.imgData
 
 
 
