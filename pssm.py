@@ -344,15 +344,14 @@ class ScreenStackManager:
 		"""
 		if elt.isLayout:
 			if elt.onclickInside != None:
-				elt.onclickInside(elt,(x,y))
+				elt.onclickInside(elt,coords)
 			if elt.invertOnClick:
 				self.invertArea(elt.area,elt.default_invertDuration)
-			elt.dispatchClick((x,y))
+			elt.dispatchClick(coords)
 		else:
 			if elt.invertOnClick:
 				self.invertArea(elt.area,elt.default_invertDuration)
-			elt.onclickInside(elt,(x,y))
-
+			elt.onclickInside(elt,coords)
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
@@ -611,8 +610,14 @@ class Layout(Element):
 		"""
 		Finds the element on which the user clicked
 		"""
+		self.dispatchClick_DICHOTOMY_colsOnly(coords)
+
+	def dispatchClick_LINEAR(self,coords):
+		"""
+		Linear search throuh both the rows and the columns
+		"""
 		click_x,click_y = coords
-		for i in range(len(self.areaMatrix)):
+		for i in range(len(self.areaMatrix)):			# Linear search though the rows
 			if len(self.areaMatrix[i]) == 0:
 				# That's a fake row (a margin row)
 				continue
@@ -622,9 +627,8 @@ class Layout(Element):
 			y = first_row_elt[0][1]
 			w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
 			h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
-			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):
-				# Click was in that row
-				for j in range(len(self.areaMatrix[i])):
+			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):		# CLick was in that row
+				for j in range(len(self.areaMatrix[i])):			# Linear search through the columns
 					if coordsInArea(click_x,click_y,self.areaMatrix[i][j]):
 						# Click was on that element
 						elt,_ = self.layout[i][j+1]
@@ -632,6 +636,106 @@ class Layout(Element):
 							self.parentStackManager.dispatchClickToElt(coords,elt)
 						return True
 		return False
+
+	def dispatchClick_DICHOTOMY_colsOnly(self,coords):
+		"""
+		Linear search through the rows, dichotomy for the columns
+		(Because of the empty rows, a dichotomy for the rows doesn't work)
+		"""
+		click_x,click_y = coords
+		for i in range(len(self.areaMatrix)):						# Linear search though the rows
+			if len(self.areaMatrix[i]) == 0:
+				# That's a fake row (a margin row)
+				continue
+			first_row_elt = self.areaMatrix[i][0]
+			last_row_elt = self.areaMatrix[i][-1]
+			x = first_row_elt[0][0]
+			y = first_row_elt[0][1]
+			w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
+			h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
+			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):		# CLick was in that row
+				row_A = i
+				break
+		col_A = 0
+		col_C = max(len(self.areaMatrix[row_A]) - 1,0)
+		xA = self.areaMatrix[row_A][col_A][0][0]
+		xC = self.areaMatrix[row_A][col_C][0][0]
+		if click_x < xA:
+			return None
+		if click_x > xC + self.areaMatrix[row_A][col_C][1][0]:
+			return None
+		while col_C > col_A +1:
+			col_B = int(0.5*(col_A+col_C))  	# The average of the two
+			xB = self.areaMatrix[row_A][col_B][0][0]
+			if click_x >= xB or col_B==col_C:
+				col_A = col_B
+				xA = xB
+			else:
+				col_C = col_B
+				xC = xB
+		## Element is at indexes row_A, col_A
+		elt,_ = self.layout[row_A][col_A+1]
+		if elt != None and elt.onclickInside != None:
+			self.parentStackManager.dispatchClickToElt(coords,elt)
+		return True
+
+	def dispatchClick_DICHOTOMY_Full_ToBeFixed(self,coords):
+		"""
+		Finds the element on which the user clicked
+		Implemented with dichotomy search (with the hope of making things faster,
+		especially the integrated keyboard)
+		"""
+		# TODO : To be fixed
+		# For now it does not work, because there are empty rows which break the loop
+		click_x,click_y = coords
+		row_A = 0
+		row_C = max(len(self.areaMatrix) - 1,0)
+		print(self.areaMatrix[row_C])
+		while len(self.areaMatrix[row_A])==0:
+			row_A += 1
+		while len(self.areaMatrix[row_C])==0:
+			row_C -= 1
+		yA = self.areaMatrix[row_A][0][0][1]  # First column THEN first row , [(x,y),(w,h)] THUS first tuple of list THEN second coordinate of tuple
+		yC = self.areaMatrix[row_C][0][0][1]
+		if click_y < yA:
+			return None
+		if click_y > yC + self.areaMatrix[row_C][0][1][1]:
+			return None
+		while row_C > row_A+1:
+			row_B = int(0.5*(row_A+row_C))  	# The average of the two
+			while len(self.areaMatrix[row_B])==0:
+				row_B += 1
+			yB = self.areaMatrix[row_B][0][0][1]
+			if click_y >= yB or row_B==row_C:
+				row_A = row_B
+				yA = yB
+			else:
+				row_C = row_B
+				yC = yB
+		# User clicked on element ar row of index row_A
+		# Let's do the same for the column
+		col_A = 0
+		col_C = max(len(self.areaMatrix[row_A]) - 1,0)
+		xA = self.areaMatrix[row_A][col_A][0][0]
+		xC = self.areaMatrix[row_A][col_C][0][0]
+		if click_x < xA:
+			return None
+		if click_x > xC + self.areaMatrix[row_A][col_C][1][0]:
+			return None
+		while col_C > col_A +1:
+			col_B = int(0.5*(col_A+col_C))  	# The average of the two
+			xB = self.areaMatrix[row_A][col_B][0][0]
+			if click_x >= xB or col_B==col_C:
+				col_A = col_B
+				xA = xB
+			else:
+				col_C = col_B
+				xC = xB
+		## Element is at indexes row_A, col_A
+		elt,_ = self.layout[row_A-2][col_A+1]
+		if elt != None and elt.onclickInside != None:
+			self.parentStackManager.dispatchClickToElt(coords,elt)
+		return True
 
 
 class ButtonList(Layout):
