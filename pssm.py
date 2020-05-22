@@ -643,8 +643,8 @@ class Layout(Element):
 		Linear search through the rows, dichotomy for the columns
 		(Because of the empty rows, a dichotomy for the rows doesn't work)
 		"""
-		# TODO : to be thouroughly tested
 		click_x,click_y = coords
+		row_A = -1
 		for i in range(len(self.areaMatrix)):						# Linear search though the rows
 			if len(self.areaMatrix[i]) == 0:
 				# That's a fake row (a margin row)
@@ -658,6 +658,8 @@ class Layout(Element):
 			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):		# CLick was in that row
 				row_A = i
 				break
+		if row_A ==-1:
+			return None
 		col_A = 0
 		col_C = max(len(self.areaMatrix[row_A]) - 1,0)
 		xA = self.areaMatrix[row_A][col_A][0][0]
