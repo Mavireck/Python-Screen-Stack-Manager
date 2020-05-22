@@ -80,67 +80,67 @@
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "q"
+        "char": "@"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "w"
+        "char": "#"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "e"
+        "char": "\u20ac"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "r"
+        "char": "&"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "t"
+        "char": "_"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "y"
+        "char": "-"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "u"
+        "char": "("
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "i"
+        "char": ")"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "o"
+        "char": "="
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "p"
+        "char": "%"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "!"
+        "char": "$"
       }
     ],
     [
@@ -154,55 +154,19 @@
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "a"
+        "char": "\""
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "s"
+        "char": "*"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "d"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": "?",
-        "char": "f"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": "?",
-        "char": "g"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": "?",
-        "char": "h"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": "?",
-        "char": "j"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": "?",
-        "char": "k"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": "?",
-        "char": "l"
+        "char": "'"
       },
       {
         "isPadding": false,
@@ -214,7 +178,43 @@
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "'"
+        "char": ";"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "/"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\\"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "!"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "?"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "+"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "^"
       }
     ],
     [
@@ -228,67 +228,67 @@
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "/"
+        "char": "~"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "z"
+        "char": "{"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "x"
+        "char": "}"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "c"
+        "char": "`"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "v"
+        "char": "|"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "b"
+        "char": "\u00B0"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "n"
+        "char": "\u00A3"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "m"
+        "char": "\u00A7"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": ","
+        "char": "\u005B"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "."
+        "char": "\u005D"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "?"
+        "char": "\u00BF"
       }
     ],
     [
@@ -296,49 +296,79 @@
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "+"
+        "char": "\u00E0"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "-"
+        "char": "\u00E1"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "<"
+        "char": "\u00E2"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": ">"
-      },
-      {
-        "isPadding": false,
-        "keyType": 0,
-        "keyWidth": 300,
-        "char": " "
+        "char": "\u00E8"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "&"
+        "char": "\u00E9"
       },
       {
         "isPadding": false,
         "keyType": 0,
         "keyWidth": "?",
-        "char": "*"
+        "char": "\u00EA"
       },
       {
         "isPadding": false,
-        "keyType": 1,
-        "keyWidth": 80,
-        "char": ""
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00EB"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E6"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E7"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F1"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F2"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F3"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F6"
       }
     ]
   ]
