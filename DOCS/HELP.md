@@ -1,8 +1,10 @@
 # Python-Screen-Stack-Manager - Help
 
-
-You should (and I may say you MUST) check the examples in the 'example' folder.
+**Read first**
+- You should (and I may say you MUST) check the examples in the 'example' folder.  
 It contains a few examples and useful comments. Make sure it works before testing anything else.
+- Read the main file (pssm.py), it has a few helpful comments and you can read all the arguments each function expects here.
+
 
 
 ## Table of contents
@@ -60,10 +62,9 @@ screen.startListenerThread(grabInput = False)
 ```Python
 screen.clear()        # Clears the screen
 screen.refresh()      # Refreshes the screen
-screen.createCanvas() # Create a white canvas
-screen.addElt(myElement)          # Adds an object to the stack
-screen.invertElt(myElement.id,5)  # Inverts an object for 5 seconds (Please do not edit that object in the meantime, it may break quite a few things)
-screen.removeElt(myElement.id)    # Removes the object from the screen
+screen.addElt(myElement)          # Adds an element to the stack
+screen.invertElt(myElement.id,5)  # Inverts an element for 5 seconds (Please do not edit that object in the meantime, it may break quite a few things)
+screen.removeElt(myElement.id)    # Removes the element from the screen
 screen.removeAllWithTag("MyTag")  # Removes all the objects which have the tag "MyTag"
 ```
 

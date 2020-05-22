@@ -17,9 +17,6 @@ screen.startListenerThread()
 #Clear and refresh the screen
 screen.clear()
 screen.refresh()
-# Create a blank canvas
-screen.createCanvas()
-print("just made canvas")
 
 
 
@@ -90,4 +87,18 @@ def demo3():
     myLayout = pssm.Layout(menu,screen.area)
     screen.addElt(myLayout)
 
-demo1()
+def demo4():
+    layout_demo = [
+        [30                                                                                         ],
+        ["h*0.1", (None,"?/2"),        (pssm.Button("But1"),200),        (None,"?/2")               ],
+        ["?"                                                                                        ],
+        ["p*100", (None,"w*0.3"),       (pssm.Button("But2"),200),        (None,"w*0.3")            ],
+        [30                                                                                         ],
+        [100, (None,20), (pssm.Button("But3"),200), (None,20), (pssm.Button("nope"),300), (None,10) ],
+        [40                                                                                         ]
+    ]
+    # You can then add the main layout to the screen:
+    myLayout = pssm.Layout(layout_demo,screen.area)
+    screen.addElt(myLayout)
+
+demo4()
