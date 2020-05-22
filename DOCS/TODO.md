@@ -3,8 +3,7 @@
 
 
 - Find a license
-- Alternative views for the OSK (caps, capsLock, alt,...) 
 - Handle RGB Image (and use a boolean like screen.is_rgb for instance)
 - Handle rotation
-- More docs
+- More documentation
 - Rewrite my dashboard with PSSM
