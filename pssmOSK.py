@@ -44,7 +44,14 @@ class OSK(pssm.Layout):
 				label = self.getKeyLabel(key).upper() if self.isCaps else self.getKeyLabel(key)
 				color_condition = key["isPadding"] or (key["keyType"] == KTcapsLock and self.isCaps)
 				background_color = pssm.light_gray if color_condition else pssm.white
-				buttonElt = pssm.Button(text=label,background_color=background_color, onclickInside=self.handleKeyPress, user_data = key, invertOnClick=True)
+				buttonElt = pssm.Button(
+					text				= label,
+					background_color	= background_color,
+					onclickInside		= self.handleKeyPress,
+					user_data 			= key,
+					wrap_textOverflow 	= False,
+					invertOnClick		= True
+				)
 				key_width = key["keyWidth"]
 				buttonRow.append((buttonElt,key_width))
 				buttonRow.append((None,spacing))
@@ -58,16 +65,16 @@ class OSK(pssm.Layout):
 		keyChar = elt.user_data["char"]
 		keyChar = keyChar.upper() if self.isCaps else keyChar
 		if keyType == KTcapsLock:
-			## regenerate to print the keyboard with caps lock
-			self.isCaps = not self.isCaps
-			self.build_layout()
 			## In this particular case, we can assume the keyboard will always be on top
 			## Therefore, no need to print everything, let's just print the keyboard
 			self.update(
-		        newAttributes={},
-		        skipGeneration = True
-		    )
-		    screen.simplePrintElt(text)
+			    newAttributes={
+					'isCaps' : not self.isCaps
+				},
+			    skipGeneration = True
+			)
+			self.build_layout()
+			self.parentStackManager.simplePrintElt(self)
 		if self.onkeyPress:
 			self.onkeyPress(keyType,keyChar)
 		else:
