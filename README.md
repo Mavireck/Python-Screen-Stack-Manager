@@ -41,7 +41,7 @@ myLayout = pssm.Layout(layout_demo,screen.area)
 screen.addElt(myLayout)
 ```
 And here is what you get :
-![PSSMLayout](DOCS/PSSM_Layout.png)
+![PSSMLayout](DOCS/PSSM_Layout.PNG)
 
 The code is probably not very clear on the first look.  
 Basically, it is a row x columns matrix.  
