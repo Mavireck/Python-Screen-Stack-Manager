@@ -82,6 +82,7 @@ class OSK(pssm.Layout):
 				background_color = "gray14" if color_condition else "white"
 				buttonElt = pssm.Button(
 					text				= label,
+					font_size 			= "h*0.02",
 					background_color	= background_color,
 					onclickInside		= self.handleKeyPress,
 					user_data 			= key,
