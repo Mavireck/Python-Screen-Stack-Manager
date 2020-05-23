@@ -38,6 +38,7 @@ class PSSMScreen:
 		else:
 			import devices.emulator.device as pssm_device
 		self.device = pssm_device
+		self.colorType = self.device.colorType
 		self.width = self.device.screen_width
 		self.height = self.device.screen_height
 		self.view_width = self.device.view_width
@@ -81,7 +82,8 @@ class PSSMScreen:
 		"""
 		#TODO : Must be retought to work with the new nested structure
 		# for now it will just reprint the whole stack
-		placeholder = Image.new('L', (self.width, self.height), color=255)
+		white = get_Color("white",self.colorType)
+		placeholder = Image.new(self.colorType, (self.width, self.height), color="white")
 		for elt in self.stack:
 			[(x,y),(w,h)] = elt.area
 			placeholder.paste(elt.imgData, (x,y))
@@ -127,11 +129,12 @@ class PSSMScreen:
 		else:
 			print("[PSSM] Print is locked, no image was updated")
 
-	def createCanvas(self,color=255):
+	def createCanvas(self,color="white"):
 		"""
 		Creates a white Element at the bottom of the stack, displays it while refreshing the screen
 		"""
-		img = Image.new('L', (self.width,self.height), color=255)
+		color = get_Color(color,self.colorType)
+		img = Image.new(self.colorType, (self.width,self.height), color=color)
 		background = Static(img,0,0,name="Canvas")
 		self.addElt(background)
 
@@ -438,7 +441,7 @@ class Layout(Element):
 	A layout is a quite general kind of Element :
 	If must be given the working area, and a layout, and will generate every element of the layout
 	"""
-	def __init__(self,layout,area=None,background_color=white,**kwargs):
+	def __init__(self,layout,area=None,background_color="white",**kwargs):
 		super().__init__(area=area)
 		self.layout      = layout
 		self.isValid = self.isLayoutValid()
@@ -484,7 +487,11 @@ class Layout(Element):
 		self.createAreaMatrix()
 		self.createImgMatrix(skipNonLayoutEltGeneration=skipNonLayoutEltGeneration)
 		[(x,y),(w,h)] = self.area
-		placeholder = Image.new('L', (w,h), color=self.background_color)
+		placeholder = Image.new(
+			self.parentStackManager.colorType,
+			(w,h),
+			color=get_Color(self.background_color,self.parentStackManager.colorType)
+		)
 		for i in range(len(self.areaMatrix)):
 			for j in range(len(self.areaMatrix[i])):
 				[(elt_x,elt_y),(elt_w,elt_h)] = self.areaMatrix[i][j]
@@ -775,22 +782,31 @@ class ButtonList(Layout):
 
 ############################# - Simple Elements	- ##############################
 class Rectangle(Element):
-	def __init__(self,background_color=255,outline=50):
+	def __init__(self,background_color="white",outline="gray3",parentStackManager=None):
 		super().__init__()
 		self.background_color = background_color
 		self.outline = outline
+		self.parentStackManager = parentStackManager
 
 	def generator(self,area):
 		[(x,y),(w,h)] = area
 		self.area = area
-		img = Image.new('L', (w+1,h+1), color=white)
-		rect = ImageDraw.Draw(img, 'L')
-		rect.rectangle([(0,0),(w,h)],fill=self.background_color,outline=self.outline)
+		img = Image.new(
+			self.parentStackManager.colorType,
+			(w+1,h+1),
+			color=get_Color("white",self.parentStackManager.colorType)
+		)
+		rect = ImageDraw.Draw(img, self.parentStackManager.colorType)
+		rect.rectangle(
+			[(0,0),(w,h)],
+			fill=get_Color(self.background_color,self.parentStackManager.colorType),
+			outline=get_Color(self.outline,self.parentStackManager.colorType)
+		)
 		self.imgData = img
 		return self.imgData
 
 class RectangleRounded(Element):
-	def __init__(self,radius=20,background_color=255,outline=0):
+	def __init__(self,radius=20,background_color="white",outline="black"):
 		super().__init__()
 		self.radius = radius
 		self.background_color = background_color
@@ -799,12 +815,37 @@ class RectangleRounded(Element):
 	def generator(self,area):
 		[(x,y),(w,h)] = area
 		self.area = area
-		rectangle = Image.new('L', (w,h), white)
+		rectangle = Image.new(
+			self.parentStackManager.colorType,
+			(w,h),
+			get_Color(self.background_color,self.parentStackManager.colorType),
+			parentStackManager = self.parentStackManager
+		)
 		draw = ImageDraw.Draw(rectangle)
-		draw.rectangle([(0,0),(w,h)],fill=self.background_color,outline=self.outline)
-		draw.line([(self.radius,h-1),(w-self.radius,h-1)],fill=self.outline,width=1)
-		draw.line([(w-1,self.radius),(w-1,h-self.radius)],fill=self.outline,width=1)
-		corner = roundedCorner(self.radius, self.background_color,self.outline)
+		draw.rectangle(
+			[(0,0),(w,h)],
+			fill = get_Color(self.background_color, self.parentStackManager.colorType),
+			outline = get_Color(self.outline, self.parentStackManager.colorType),
+			parentStackManager = self.parentStackManager
+		)
+		draw.line(
+			[(self.radius,h-1),
+			(w-self.radius,h-1)],
+			fill  = get_Color(self.outline, self.parentStackManager.colorType),
+			width = 1
+		)
+		draw.line(
+			[(w-1,self.radius),
+			(w-1,h-self.radius)],
+			fill  = get_Color(self.outline, self.parentStackManager.colorType),
+			width = 1
+		)
+		corner = roundedCorner(
+			self.radius,
+			get_Color(self.background_color, self.parentStackManager.colorType),
+			get_Color(self.outline, self.parentStackManager.colorType),
+			self.parentStackManager.colorType
+		)
 		rectangle.paste(corner, (0, 0))
 		rectangle.paste(corner.rotate(90), (0, h - self.radius)) # Rotate the corner and paste it
 		rectangle.paste(corner.rotate(180), (w - self.radius, h - self.radius))
@@ -821,10 +862,10 @@ class Button(Element):
 			text,
 			font=Merri_regular,
 			font_size=standard_font_size,
-			background_color=255,
-			outline_color=0,
+			background_color="white",
+			outline_color="black",
 			radius=0,
-			text_color=0,
+			text_color="black",
 			text_xPosition="center",
 			text_yPosition="center",
 			wrap_textOverflow = True,
@@ -854,19 +895,32 @@ class Button(Element):
 			if not isinstance(self.font_size,int):
 				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
 				self.font_size = self.parentStackManager.convertDimension(standard_font_size)
-		print(self.font_size)
 		loaded_font = ImageFont.truetype(self.font, self.font_size)
 		if self.radius>0:
-			rect = RectangleRounded(radius=self.radius,background_color=self.background_color,outline=self.outline_color)
+			rect = RectangleRounded(
+				radius=self.radius,
+				background_color=get_Color(self.background_color, self.parentStackManager.colorType),
+				outline=get_Color(self.outline_color, self.parentStackManager.colorType),
+				parentStackManager = self.parentStackManager
+			)
 		else:
-			rect = Rectangle(background_color=self.background_color,outline=self.outline_color)
+			rect = Rectangle(
+				background_color=get_Color(self.background_color, self.parentStackManager.colorType),
+				outline=get_Color(self.outline_color, self.parentStackManager.colorType),
+				parentStackManager = self.parentStackManager
+			)
 		rect_img = rect.generator(self.area)
-		imgDraw  = ImageDraw.Draw(rect_img, 'L')
+		imgDraw  = ImageDraw.Draw(rect_img, self.parentStackManager.colorType)
 		myText 	 = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
 		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
 		x = tools_convertXArgsToPX(self.text_xPosition,w,text_w)
 		y = tools_convertYArgsToPX(self.text_yPosition,h,text_h)
-		imgDraw.text((x,y),myText,font=loaded_font,fill=self.text_color)
+		imgDraw.text(
+			(x,y),
+			myText,
+			font=loaded_font,
+			fill=get_Color(self.text_color, self.parentStackManager.colorType)
+		)
 		self.imgData = rect_img
 		return self.imgData
 
@@ -918,7 +972,7 @@ class Icon(Element):
 
 	def generator(self,area):
 		path_to_file = tools_parseKnownImageFile(file)
-		iconImg = Image.open(path_to_file).convert("L").resize((icon_size,icon_size))
+		iconImg = Image.open(path_to_file).convert(self.parentStackManager.colorType).resize((icon_size,icon_size))
 		self.imgData = iconImg
 		return iconImg
 
@@ -961,13 +1015,19 @@ def getRectanglesIntersection(area1,area2):
 	else:
 		return None
 
-def roundedCorner(radius, fill=255,outline=50):
+def roundedCorner(radius, fill="white",outline="gray3",colorType='L'):
 	"""
 	Draw a round corner
 	"""
-	corner = Image.new('L', (radius, radius), white)
+	corner = Image.new(colorType, (radius, radius), "white")
 	draw = ImageDraw.Draw(corner)
-	draw.pieslice((0, 0, radius * 2, radius * 2), 180, 270, fill=fill,outline=outline)
+	draw.pieslice(
+		(0, 0, radius * 2, radius * 2),
+		180,
+		270,
+		fill=get_Color(fill,colorType),
+		outline=get_Color(outline,colorType)
+	)
 	return corner
 
 def tools_convertXArgsToPX(xPosition,objw,textw):
@@ -1027,3 +1087,39 @@ def tools_parseKnownImageFile(file):
 		return files[file]
 	else:
 		return file
+
+
+def get_Color(color,deviceColorType):
+	colorsL = {'black':0,'white':255}
+	colorsRGBA = {'black':(0,0,0,0),'white':(255,255,255,1)}
+	for i in range(16):
+		s = int(i*255/15)
+		colorsL['gray' + str(i)] 	= s
+		colorsRGBA['gray' + str(i)] = (s,s,s,1)
+	if isinstance(color,str):
+		if deviceColorType == "L":
+			try:
+				return colorsL[color]
+			except:
+				print("Invalid color, ",color)
+				return color
+		elif deviceColorType == "RGBA":
+			try:
+				return colorsRGBA[color]
+			except:
+				print("Invalid color, ",color)
+				return color
+	elif isinstance(color,list) or isinstance(color,tuple):
+		if deviceColorType == "RGBA":
+			if len(color) == 4:
+				return color
+			else:
+				#That's probably RGB
+				try:
+					return color + [1]
+				except:
+					return color + (1)
+		else:
+			r, g, b = color[0], color[1], color[2]
+			gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+			return gray

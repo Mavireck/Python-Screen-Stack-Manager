@@ -13,6 +13,7 @@ import devices.kobo.KIP as KIP
 path_to_pssm_device = os.path.dirname(os.path.abspath(__file__))
 isEmulator= False
 isRGB     = False
+colorType = "L"
 isEreader = True
 isWifiOn  = True
 touchPath 			= "/dev/input/event1"

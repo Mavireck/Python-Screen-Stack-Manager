@@ -79,7 +79,7 @@ class OSK(pssm.Layout):
 			for key in row:
 				label = self.getKeyLabel(key)
 				color_condition = key["isPadding"] or (key["keyType"] != KTstandardChar)
-				background_color = pssm.light_gray if color_condition else pssm.white
+				background_color = "gray14" if color_condition else "white"
 				buttonElt = pssm.Button(
 					text				= label,
 					background_color	= background_color,

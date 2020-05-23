@@ -8,14 +8,16 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 
-delay_emulateEInk_Sluggishness = 0.02
+delay_emulateEInk_Sluggishness = 0.1
 screen_width=600
 screen_height=800
 view_width=screen_width
 view_height=screen_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
-isEmulator=True
+isEmulator= True
+isRGB 	  = True
+colorType = "RGBA"
 cv2.namedWindow("PSSM_Emulator")
 
 last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)
@@ -53,7 +55,7 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 	global last_printed_PIL
 	raw_data = imgData.tobytes("raw")
 	length = len(raw_data)
-	pil_image = Image.frombytes('L',(w,h),raw_data).convert("RGB")
+	pil_image = Image.frombytes(colorType,(w,h),raw_data).convert("RGB")
 	last_printed_PIL.paste(pil_image,(x,y))
 	opencvImage = np.array(last_printed_PIL)
 	# Convert RGB to BGR
