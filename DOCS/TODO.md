@@ -3,6 +3,8 @@
 
 
 - Find a license
+- Test the performance gain when drawing in batch (with FBInk's no_refresh) when printing a whole layout instead of doing the operation with pillow
+- learn more about HW dithering modes
 - Handle RGB Image (and use a boolean like screen.is_rgb for instance)
 - Handle rotation
 - More documentation
