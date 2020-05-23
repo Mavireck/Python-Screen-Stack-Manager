@@ -17,7 +17,7 @@ gray = 128
 black = 0
 Merri_regular = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
 Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
-standard_font_size = 30
+standard_font_size = "h*0.036"
 
 
 def returnFalse(*args):
@@ -845,11 +845,17 @@ class Button(Element):
 			setattr(self, param, kwargs[param])
 
 	def generator(self,area=None):
-		loaded_font = ImageFont.truetype(self.font, self.font_size)
 		if area==None:
 			area = self.area
 		[(x,y),(w,h)] = area
 		self.area = area
+		if not isinstance(self.font_size,int):
+			self.font_size = self.parentStackManager.convertDimension(self.font_size)
+			if not isinstance(self.font_size,int):
+				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
+				self.font_size = self.parentStackManager.convertDimension(standard_font_size)
+		print(self.font_size)
+		loaded_font = ImageFont.truetype(self.font, self.font_size)
 		if self.radius>0:
 			rect = RectangleRounded(radius=self.radius,background_color=self.background_color,outline=self.outline_color)
 		else:
@@ -927,7 +933,7 @@ class Static(Element):
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
 
-	def generator(self,area):
+	def generator(self,area=None):
 		# TODO : crop or resize the image to make it fit the area
 		return self.imgData
 
