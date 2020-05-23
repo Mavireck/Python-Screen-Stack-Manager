@@ -11,10 +11,6 @@ from copy import deepcopy
 lastUsedId=0
 
 path_to_pssm = os.path.dirname(os.path.abspath(__file__))
-white = 255
-light_gray = 230
-gray = 128
-black = 0
 Merri_regular = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
 Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
 standard_font_size = "h*0.036"
@@ -22,7 +18,6 @@ standard_font_size = "h*0.036"
 
 def returnFalse(*args):
 	return False
-
 
 ############################# - StackManager 	- ##############################
 class PSSMScreen:
@@ -83,7 +78,7 @@ class PSSMScreen:
 		#TODO : Must be retought to work with the new nested structure
 		# for now it will just reprint the whole stack
 		white = get_Color("white",self.colorType)
-		placeholder = Image.new(self.colorType, (self.width, self.height), color="white")
+		placeholder = Image.new(self.colorType, (self.width, self.height), color=white)
 		for elt in self.stack:
 			[(x,y),(w,h)] = elt.area
 			placeholder.paste(elt.imgData, (x,y))
@@ -158,7 +153,7 @@ class PSSMScreen:
 			# the Element is not already in the stack
 			if not skipRegistration:
 				# We append the element to the stack
-				myElement.parentStackManager = self
+				myElement.parentPSSMScreen = self
 				self.stack.append(myElement)
 				self.simplePrintElt(myElement)
 
@@ -393,7 +388,7 @@ class Element:
 		self.tags=tags
 		self.default_invertDuration = invertDuration
 		self.parentLayouts = []
-		self.parentStackManager = None
+		self.parentPSSMScreen = None
 
 	def __hash__(self):
 		return hash(self.id)
@@ -420,7 +415,7 @@ class Element:
 				oldest_parent = self.parentLayouts[0]
 				oldest_parent.generator(skipNonLayoutEltGeneration=True)
 			#then, let's reprint the stack
-			self.parentStackManager.printStack(area=self.area)
+			self.parentPSSMScreen.printStack(area=self.area)
 		return True
 
 	def generator(self):
@@ -488,9 +483,9 @@ class Layout(Element):
 		self.createImgMatrix(skipNonLayoutEltGeneration=skipNonLayoutEltGeneration)
 		[(x,y),(w,h)] = self.area
 		placeholder = Image.new(
-			self.parentStackManager.colorType,
+			self.parentPSSMScreen.colorType,
 			(w,h),
-			color=get_Color(self.background_color,self.parentStackManager.colorType)
+			color=get_Color(self.background_color,self.parentPSSMScreen.colorType)
 		)
 		for i in range(len(self.areaMatrix)):
 			for j in range(len(self.areaMatrix[i])):
@@ -535,7 +530,7 @@ class Layout(Element):
 			row = self.layout[i]
 			row_cols = []           # All the columns of this particular row
 			row_height = row[0]
-			converted_height = self.parentStackManager.convertDimension(row_height)
+			converted_height = self.parentPSSMScreen.convertDimension(row_height)
 			if isinstance(converted_height,int):
 				true_row_height = converted_height
 			else:
@@ -543,10 +538,10 @@ class Layout(Element):
 				true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
 			for j in range(1,len(row)):
 				(element,element_width) = row[j]
-				converted_width = self.parentStackManager.convertDimension(element_width)
+				converted_width = self.parentPSSMScreen.convertDimension(element_width)
 				if element != None:
 					self.layout[i][j][0].parentLayouts.append(self)
-					self.layout[i][j][0].parentStackManager = self.parentStackManager
+					self.layout[i][j][0].parentPSSMScreen = self.parentPSSMScreen
 				if isinstance(converted_width,int):
 					true_element_width = converted_width
 				else:
@@ -578,7 +573,7 @@ class Layout(Element):
 		total_questionMarks_weight = 0
 		total_height = 0
 		for dimension in rows:
-			converted_dimension = self.parentStackManager.convertDimension(dimension)
+			converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
 			if isinstance(converted_dimension,int):
 				total_height += converted_dimension
 			else:
@@ -592,7 +587,7 @@ class Layout(Element):
 		total_width = 0
 		total_questionMarks_weight = 0
 		for dimension in cols:
-			converted_dimension = self.parentStackManager.convertDimension(dimension)
+			converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
 			if isinstance(converted_dimension,int):
 				total_width += converted_dimension
 			else:
@@ -641,7 +636,7 @@ class Layout(Element):
 						# Click was on that element
 						elt,_ = self.layout[i][j+1]
 						if elt != None and elt.onclickInside != None:
-							self.parentStackManager.dispatchClickToElt(coords,elt)
+							self.parentPSSMScreen.dispatchClickToElt(coords,elt)
 						return True
 		return False
 
@@ -687,7 +682,7 @@ class Layout(Element):
 		## Element is at indexes row_A, col_A
 		elt,_ = self.layout[row_A][col_A+1]
 		if elt != None and elt.onclickInside != None:
-			self.parentStackManager.dispatchClickToElt(coords,elt)
+			self.parentPSSMScreen.dispatchClickToElt(coords,elt)
 		return True
 
 	def dispatchClick_DICHOTOMY_Full_ToBeFixed(self,coords):
@@ -745,7 +740,7 @@ class Layout(Element):
 		## Element is at indexes row_A, col_A
 		elt,_ = self.layout[row_A-2][col_A+1]
 		if elt != None and elt.onclickInside != None:
-			self.parentStackManager.dispatchClickToElt(coords,elt)
+			self.parentPSSMScreen.dispatchClickToElt(coords,elt)
 		return True
 
 
@@ -782,69 +777,74 @@ class ButtonList(Layout):
 
 ############################# - Simple Elements	- ##############################
 class Rectangle(Element):
-	def __init__(self,background_color="white",outline="gray3",parentStackManager=None):
+	def __init__(self,background_color="white",outline_color="gray3",parentPSSMScreen=None):
 		super().__init__()
 		self.background_color = background_color
-		self.outline = outline
-		self.parentStackManager = parentStackManager
+		self.outline_color = outline_color
+		self.parentPSSMScreen = parentPSSMScreen
 
 	def generator(self,area):
 		[(x,y),(w,h)] = area
 		self.area = area
 		img = Image.new(
-			self.parentStackManager.colorType,
+			self.parentPSSMScreen.colorType,
 			(w+1,h+1),
-			color=get_Color("white",self.parentStackManager.colorType)
+			color=get_Color("white",self.parentPSSMScreen.colorType)
 		)
-		rect = ImageDraw.Draw(img, self.parentStackManager.colorType)
+		rect = ImageDraw.Draw(img, self.parentPSSMScreen.colorType)
 		rect.rectangle(
 			[(0,0),(w,h)],
-			fill=get_Color(self.background_color,self.parentStackManager.colorType),
-			outline=get_Color(self.outline,self.parentStackManager.colorType)
+			fill=get_Color(self.background_color,self.parentPSSMScreen.colorType),
+			outline=get_Color(self.outline_color,self.parentPSSMScreen.colorType)
 		)
 		self.imgData = img
 		return self.imgData
 
 class RectangleRounded(Element):
-	def __init__(self,radius=20,background_color="white",outline="black"):
+	def __init__(
+			self,
+			radius=20,
+			background_color="white",
+			outline_color="gray3",
+			parentPSSMScreen=None
+		):
 		super().__init__()
 		self.radius = radius
 		self.background_color = background_color
-		self.outline = outline
+		self.outline_color = outline_color
+		self.parentPSSMScreen = parentPSSMScreen
 
 	def generator(self,area):
 		[(x,y),(w,h)] = area
 		self.area = area
 		rectangle = Image.new(
-			self.parentStackManager.colorType,
+			self.parentPSSMScreen.colorType,
 			(w,h),
-			get_Color(self.background_color,self.parentStackManager.colorType),
-			parentStackManager = self.parentStackManager
+			color=get_Color("white",self.parentPSSMScreen.colorType)
 		)
 		draw = ImageDraw.Draw(rectangle)
 		draw.rectangle(
 			[(0,0),(w,h)],
-			fill = get_Color(self.background_color, self.parentStackManager.colorType),
-			outline = get_Color(self.outline, self.parentStackManager.colorType),
-			parentStackManager = self.parentStackManager
+			fill=get_Color(self.background_color,self.parentPSSMScreen.colorType),
+			outline=get_Color(self.outline_color,self.parentPSSMScreen.colorType)
 		)
 		draw.line(
 			[(self.radius,h-1),
 			(w-self.radius,h-1)],
-			fill  = get_Color(self.outline, self.parentStackManager.colorType),
+			fill  = get_Color(self.outline_color, self.parentPSSMScreen.colorType),
 			width = 1
 		)
 		draw.line(
 			[(w-1,self.radius),
 			(w-1,h-self.radius)],
-			fill  = get_Color(self.outline, self.parentStackManager.colorType),
+			fill  = get_Color(self.outline_color, self.parentPSSMScreen.colorType),
 			width = 1
 		)
 		corner = roundedCorner(
 			self.radius,
-			get_Color(self.background_color, self.parentStackManager.colorType),
-			get_Color(self.outline, self.parentStackManager.colorType),
-			self.parentStackManager.colorType
+			get_Color(self.background_color, self.parentPSSMScreen.colorType),
+			get_Color(self.outline_color, self.parentPSSMScreen.colorType),
+			self.parentPSSMScreen.colorType
 		)
 		rectangle.paste(corner, (0, 0))
 		rectangle.paste(corner.rotate(90), (0, h - self.radius)) # Rotate the corner and paste it
@@ -856,6 +856,8 @@ class RectangleRounded(Element):
 class Button(Element):
 	"""
 	Basically a rectangle (or rounded rectangle) with text printed on it
+	:text_xPosition (str or int) : can be left, center, right, or an integer value, or a pssm string dimension
+	:text_yPosition (str or int) : can be left, center, right, or an integer value, or a pssm string dimension
 	"""
 	def __init__(
 			self,
@@ -891,35 +893,35 @@ class Button(Element):
 		[(x,y),(w,h)] = area
 		self.area = area
 		if not isinstance(self.font_size,int):
-			self.font_size = self.parentStackManager.convertDimension(self.font_size)
+			self.font_size = self.parentPSSMScreen.convertDimension(self.font_size)
 			if not isinstance(self.font_size,int):
 				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
-				self.font_size = self.parentStackManager.convertDimension(standard_font_size)
+				self.font_size = self.parentPSSMScreen.convertDimension(standard_font_size)
 		loaded_font = ImageFont.truetype(self.font, self.font_size)
 		if self.radius>0:
 			rect = RectangleRounded(
 				radius=self.radius,
-				background_color=get_Color(self.background_color, self.parentStackManager.colorType),
-				outline=get_Color(self.outline_color, self.parentStackManager.colorType),
-				parentStackManager = self.parentStackManager
+				background_color 	= self.background_color,
+				outline_color 		= self.outline_color,
+				parentPSSMScreen 	= self.parentPSSMScreen
 			)
 		else:
 			rect = Rectangle(
-				background_color=get_Color(self.background_color, self.parentStackManager.colorType),
-				outline=get_Color(self.outline_color, self.parentStackManager.colorType),
-				parentStackManager = self.parentStackManager
+				background_color	= self.background_color,
+				outline_color		= self.outline_color,
+				parentPSSMScreen 	= self.parentPSSMScreen
 			)
 		rect_img = rect.generator(self.area)
-		imgDraw  = ImageDraw.Draw(rect_img, self.parentStackManager.colorType)
+		imgDraw  = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
 		myText 	 = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
 		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
-		x = tools_convertXArgsToPX(self.text_xPosition,w,text_w)
-		y = tools_convertYArgsToPX(self.text_yPosition,h,text_h)
+		x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , parentPSSMScreen = self.parentPSSMScreen)
+		y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , parentPSSMScreen = self.parentPSSMScreen)
 		imgDraw.text(
 			(x,y),
 			myText,
 			font=loaded_font,
-			fill=get_Color(self.text_color, self.parentStackManager.colorType)
+			fill=get_Color(self.text_color, self.parentPSSMScreen.colorType)
 		)
 		self.imgData = rect_img
 		return self.imgData
@@ -972,7 +974,7 @@ class Icon(Element):
 
 	def generator(self,area):
 		path_to_file = tools_parseKnownImageFile(file)
-		iconImg = Image.open(path_to_file).convert(self.parentStackManager.colorType).resize((icon_size,icon_size))
+		iconImg = Image.open(path_to_file).convert(self.parentPSSMScreen.colorType).resize((icon_size,icon_size))
 		self.imgData = iconImg
 		return iconImg
 
@@ -1015,7 +1017,7 @@ def getRectanglesIntersection(area1,area2):
 	else:
 		return None
 
-def roundedCorner(radius, fill="white",outline="gray3",colorType='L'):
+def roundedCorner(radius, fill="white",outline_color="gray3",colorType='L'):
 	"""
 	Draw a round corner
 	"""
@@ -1026,11 +1028,11 @@ def roundedCorner(radius, fill="white",outline="gray3",colorType='L'):
 		180,
 		270,
 		fill=get_Color(fill,colorType),
-		outline=get_Color(outline,colorType)
+		outline=get_Color(outline_color,colorType)
 	)
 	return corner
 
-def tools_convertXArgsToPX(xPosition,objw,textw):
+def tools_convertXArgsToPX(xPosition,objw,textw,parentPSSMScreen=None):
 	"""
 	Converts xPosition string arguments to numerical values
 	"""
@@ -1043,13 +1045,14 @@ def tools_convertXArgsToPX(xPosition,objw,textw):
 		x = int(objw-textw)
 	else:
 		try:
-			x = int(xPosition)
+			converted = parentPSSMScreen.convertDimension(xPosition)
+			x = int(converted)
 		except:
 			print("[PSSM] Invalid input for xPosition")
 			return False
 	return x
 
-def tools_convertYArgsToPX(yPosition,objh,texth):
+def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
 	"""
 	Converts yPosition string arguments to numerical values
 	"""
@@ -1062,7 +1065,8 @@ def tools_convertYArgsToPX(yPosition,objh,texth):
 		y = int(objh-texth)
 	else:
 		try:
-			y = int(yPosition)
+			converted = parentPSSMScreen.convertDimension(xPosition)
+			y = int(converted)
 		except:
 			print("[PSSM] Invalid input for yPosition")
 			return False
@@ -1089,13 +1093,15 @@ def tools_parseKnownImageFile(file):
 		return file
 
 
+
+colorsL = {'black':0,'white':255}
+colorsRGBA = {'black':(0,0,0,0),'white':(255,255,255,1)}
+for i in range(16):
+	s = int(i*255/15)
+	colorsL['gray' + str(i)] 	= s
+	colorsRGBA['gray' + str(i)] = (s,s,s,1)
+
 def get_Color(color,deviceColorType):
-	colorsL = {'black':0,'white':255}
-	colorsRGBA = {'black':(0,0,0,0),'white':(255,255,255,1)}
-	for i in range(16):
-		s = int(i*255/15)
-		colorsL['gray' + str(i)] 	= s
-		colorsRGBA['gray' + str(i)] = (s,s,s,1)
 	if isinstance(color,str):
 		if deviceColorType == "L":
 			try:

@@ -43,14 +43,16 @@ def onkeyPress(keyType,keyChar):
     screen.simplePrintElt(text)
 
 
+# Here I chose to display two different elements : the text, which is embedded inside its own layout, and the keyboard.
+# I could have made one big container layout
 text = pssm.Button(
     text            = typed_text,
-    outline_color   = pssm.light_gray,
+    outline_color   = "white",
     text_xPosition  = "left",
     text_yPosition  = "top"
 )
 mainLayout_array = [
-    ["p*20"                     ],
+    ["p*20"                                                   ],
     ["h*0.62", (None,"p*5"),    (text, "?"), (None,"p*5")     ]
 ]
 mainLayout = pssm.Layout(mainLayout_array,screen.area)

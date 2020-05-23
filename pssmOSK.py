@@ -8,9 +8,9 @@ default_keymap_path_STANDARD = os.path.join(path_to_pssmOSK,"config", "default-k
 default_keymap_path_CAPS 	 = os.path.join(path_to_pssmOSK,"config", "default-keymap-en_us_CAPS.json")
 default_keymap_path_ALT      = os.path.join(path_to_pssmOSK,"config", "default-keymap-en_us_ALT.json")
 default_keymap_path = {
-	'standard' : default_keymap_path_STANDARD,
-	'caps' : default_keymap_path_CAPS,
-	'alt' : default_keymap_path_ALT
+	'standard' 	: default_keymap_path_STANDARD,
+	'caps' 		: default_keymap_path_CAPS,
+	'alt' 		: default_keymap_path_ALT
 }
 
 # Constants:
@@ -78,12 +78,14 @@ class OSK(pssm.Layout):
 			buttonRow = ["?",(None,spacing)]
 			for key in row:
 				label = self.getKeyLabel(key)
-				color_condition = key["isPadding"] or (key["keyType"] != KTstandardChar)
-				background_color = "gray14" if color_condition else "white"
+				color_condition 	= key["keyType"] != KTstandardChar
+				background_color 	= "gray12" if color_condition else "white"
+				outline_color 		= "white" if key["isPadding"] else "black"
 				buttonElt = pssm.Button(
 					text				= label,
 					font_size 			= "h*0.02",
 					background_color	= background_color,
+					outline_color		= outline_color,
 					onclickInside		= self.handleKeyPress,
 					user_data 			= key,
 					wrap_textOverflow 	= False,
@@ -109,7 +111,7 @@ class OSK(pssm.Layout):
 			    newAttributes={},
 			    skipGeneration = True
 			)
-			self.parentStackManager.simplePrintElt(self)
+			self.parentPSSMScreen.simplePrintElt(self)
 		elif keyType == KTalt:
 			## In this particular case, we can assume the keyboard will always be on top
 			## Therefore, no need to print everything, let's just print the keyboard
@@ -120,7 +122,7 @@ class OSK(pssm.Layout):
 			    newAttributes={},
 			    skipGeneration = True
 			)
-			self.parentStackManager.simplePrintElt(self)
+			self.parentPSSMScreen.simplePrintElt(self)
 		if self.onkeyPress:
 			self.onkeyPress(keyType,keyChar)
 
