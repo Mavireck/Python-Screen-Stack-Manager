@@ -1009,29 +1009,21 @@ def tools_convertYArgsToPX(yPosition,objh,texth):
 	return y
 
 def tools_parseKnownImageFile(file):
-	if file=="back":
-		return path_to_pssm + "/icons/back.png"
-	elif file=="delete":
-		return path_to_pssm + "/icons/delete.jpg"
-	elif file=="frontlight-down":
-		return path_to_pssm + "/icons/frontlight-down.jpg"
-	elif file=="frontlight-up":
-		return path_to_pssm + "/icons/frontlight-up.jpg"
-	elif file=="invert":
-		return path_to_pssm + "/icons/invert.jpg"
-	elif file=="reboot":
-		return path_to_pssm + "/icons/reboot.jpg"
-	elif file=="save":
-		return path_to_pssm + "/icons/save.png"
-	elif file=="touch-off":
-		return path_to_pssm + "/icons/touch-off.png"
-	elif file=="touch-on":
-		return path_to_pssm + "/icons/touch-on.png"
-	elif file=="wifi-lock":
-		return path_to_pssm + "/icons/wifi-lock.jpg"
-	elif file=="wifi-on":
-		return path_to_pssm + "/icons/wifi-on.jpg"
-	elif file=="wifi-off":
-		return path_to_pssm + "/icons/wifi-off.jpg"
+	files={
+		'back' 		: path_to_pssm + "/icons/back.png",
+		'delete' 	: path_to_pssm + "/icons/delete.jpg",
+		"frontlight-down"	: path_to_pssm + "/icons/frontlight-down.jpg",
+		"frontlight-up"		: path_to_pssm + "/icons/frontlight-up.jpg",
+		"invert"	: path_to_pssm + "/icons/invert.jpg",
+		"reboot"	: path_to_pssm + "/icons/reboot.jpg",
+		"save"		: path_to_pssm + "/icons/save.png",
+		"touch-off"	: path_to_pssm + "/icons/touch-off.png",
+		"touch-on"	: path_to_pssm + "/icons/touch-on.png",
+		"wifi-lock"	: path_to_pssm + "/icons/wifi-lock.jpg",
+		"wifi-on"	: path_to_pssm + "/icons/wifi-on.jpg",
+		"wifi-off"	: path_to_pssm + "/icons/wifi-off.jpg"
+	}
+	if file in files:
+		return files[file]
 	else:
 		return file
