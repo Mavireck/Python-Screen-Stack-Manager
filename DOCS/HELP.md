@@ -11,7 +11,7 @@ It contains a few examples and useful comments. Make sure it works before testin
 1. Setup
 2. Initializing PSSM
 3. Basic functions
-4. The ScreenStackManager class
+4. The PSSMScreen class
 5. The Element class
 6. The Layout subclass
 
@@ -40,7 +40,7 @@ import pssm  #The core logic
 # "Kobo" points out to what kind of device to use. For the emulator, type "Emulator".
 # Kindles should work well with "Kobo" too, thanks to FBInk, but I doubt touch input will work.
 # 'Main' is the name of the screen manager (it is quite useless actually)
-screen = pssm.ScreenStackManager("Kobo",'Main')
+screen = pssm.PSSMScreen("Kobo",'Main')
 # Some interesting variables are available : width, height, offset, view_height...
 # You should look at pssm.py for more.
 screen.width
@@ -69,9 +69,9 @@ screen.removeAllWithTag("MyTag")  # Removes all the objects which have the tag "
 ```
 
 
-## 4. The ScreenStackManager class
+## 4. The PSSMScreen class
 PSSM contains two different class of objects :
-- The ScreenStackManager class  (usually, you have only 1 and call it 'screen' : screen = pssm.ScreenStackManager())
+- The PSSMScreen class  (usually, you have only 1 and call it 'screen' : screen = pssm.PSSMScreen())
 - The Element class
 The first is the one which will perform most of the heavy operations.
 The second is a GUI Element, something which is to be displayed on screen.

@@ -33,7 +33,7 @@ layout_demo = [
     [40                                                                                         ]
 ]
 # Intialize PSSM
-screen = pssm.ScreenStackManager("Kobo",'Main')
+screen = pssm.PSSMScreen("Kobo",'Main')
 screen.clear()        # Clears the screen
 screen.refresh()      # Refreshes the screen
 # You can then add the main layout to the screen:

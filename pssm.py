@@ -25,7 +25,7 @@ def returnFalse(*args):
 
 
 ############################# - StackManager 	- ##############################
-class ScreenStackManager:
+class PSSMScreen:
 	def __init__(
 			self,
 			deviceName,

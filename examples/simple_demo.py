@@ -11,7 +11,7 @@ else:
 
 
 #Declare the Screen Stack Manager
-screen = pssm.ScreenStackManager(device,'Main')
+screen = pssm.PSSMScreen(device,'Main')
 #Start Touch listener, as a separate thread
 screen.startListenerThread()
 #Clear and refresh the screen
