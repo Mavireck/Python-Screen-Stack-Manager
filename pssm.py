@@ -371,9 +371,11 @@ class Element:
 			invertDuration 	= 0.2
 		):
 		"""
-		If onclickInside == None, then the stack will keep searching for another Element under this one.
-		Use onclickInside == returnFalse if you want the stack to do nothing when touhching the Element.
-		OnclickInside and onclickOutside will be given as argument : x,y,data
+		:data (list, or whatever) : An attribute for you, to store whatever you want
+		:area (list) : PSSM parameter, do not use if you don't know what it is for
+		:imgData (PIL Image): the PIL image of the object
+		:onclickInside (function) : The function to be executed when the user clicks
+		...
 		"""
 		global lastUsedId
 		self.id = lastUsedId
@@ -401,6 +403,10 @@ class Element:
 	def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
 		"""
 		Pass a dict as argument, and it will update the Element's attributes accordingly
+		:newAttributes (dict): The element's new attributes
+		:skipGeneration (bool) : Just update the element's attribute, but do not do any generation or printing
+		:skipThisEltGeneration (bool) : Do not regenerate this element but do update the parent layouts
+		:skipPrint (bool) : Do not update the screen, but do regenerate.
 		"""
 		# First, we set the attributes
 		for param in newAttributes:
@@ -471,7 +477,6 @@ class Layout(Element):
 					raise Exception("An element width should be a string or an integer")
 				if not (isinstance(eltTuple[0],Element) or eltTuple[0] == None):
 					raise Exception("A layout element should be a Tuple : (Element, elementWidth), with Element designating a PSSM Element")
-		print("[PSSM Layout Element] Layout is valid, going on")
 		return True
 
 	def generator(self,area=None, skipNonLayoutEltGeneration=False):
@@ -752,6 +757,7 @@ class ButtonList(Layout):
 		"""
 		Generates a Layout with only one item per row, all the same type (buttons) and same height and width
 		:button : a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array
+			each dict will contain the parameters of each button of the button list
 		:borders : a [top,bottom,left,right]
 		"""
 		self.buttons = buttons
