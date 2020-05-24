@@ -832,14 +832,12 @@ class RectangleRounded(Element):
 			outline=get_Color(self.outline_color,self.parentPSSMScreen.colorType)
 		)
 		draw.line(
-			[(self.radius,h-1),
-			(w-self.radius,h-1)],
+			[(self.radius,h-1),(w-self.radius,h-1)],
 			fill  = get_Color(self.outline_color, self.parentPSSMScreen.colorType),
 			width = 1
 		)
 		draw.line(
-			[(w-1,self.radius),
-			(w-1,h-self.radius)],
+			[(w-1,self.radius),(w-1,h-self.radius)],
 			fill  = get_Color(self.outline_color, self.parentPSSMScreen.colorType),
 			width = 1
 		)
