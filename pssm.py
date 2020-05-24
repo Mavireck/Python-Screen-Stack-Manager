@@ -843,8 +843,8 @@ class RectangleRounded(Element):
 		)
 		corner = roundedCorner(
 			self.radius,
-			get_Color(self.background_color, self.parentPSSMScreen.colorType),
-			get_Color(self.outline_color, self.parentPSSMScreen.colorType),
+			self.background_color,
+			self.outline_color,
 			self.parentPSSMScreen.colorType
 		)
 		rectangle.paste(corner, (0, 0))
