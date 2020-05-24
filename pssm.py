@@ -398,7 +398,7 @@ class Element:
 			return self.id == other.id
 		return NotImplemented
 
-	def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False):
+	def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
 		"""
 		Pass a dict as argument, and it will update the Element's attributes accordingly
 		"""
@@ -415,7 +415,8 @@ class Element:
 				oldest_parent = self.parentLayouts[0]
 				oldest_parent.generator(skipNonLayoutEltGeneration=True)
 			#then, let's reprint the stack
-			self.parentPSSMScreen.printStack(area=self.area)
+			if not skipPrint:
+				self.parentPSSMScreen.printStack(area=self.area)
 		return True
 
 	def generator(self):
@@ -968,31 +969,114 @@ class Icon(Element):
 	Returns a  PIL image with the icon corresponding to the path you give as argument.
 	If you pass "back", "delete" or another known image, it will fetch the integrated icons
 	"""
-	def __init__(self,file):
+	def __init__(self,file,centered=True,**kwargs):
 		super().__init__()
 		self.file = file
+		self.centered = centered
+		self.path_to_file = tools_parseKnownImageFile(self.file)
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
 
 	def generator(self,area):
-		path_to_file = tools_parseKnownImageFile(file)
-		iconImg = Image.open(path_to_file).convert(self.parentPSSMScreen.colorType).resize((icon_size,icon_size))
-		self.imgData = iconImg
-		return iconImg
+		self.area = area
+		[(x,y),(w,h)] = area
+		icon_size = min(area[1][0],area[1][1])
+		iconImg = Image.open(self.path_to_file).convert(self.parentPSSMScreen.colorType).resize((icon_size,icon_size))
+		if not self.centered:
+			self.imgData = iconImg
+			return iconImg
+		else:
+			img = Image.new(
+				self.parentPSSMScreen.colorType,
+				(w+1,h+1),
+				color=get_Color("white",self.parentPSSMScreen.colorType)
+			)
+			img.paste(iconImg, (int(0.5*w-0.5*icon_size), int(0.5*h-0.5*icon_size)))
+			self.imgData = img
+			return img
 
 class Static(Element):
 	"""
 	A very simple element which only displays a pillow image
+	:pil_image (str or pil image) : path to an image or a pillow image
+	:centered (bool)
+	:resize (bool) : Make it fit the area ? (proportions are respected)
+	:rotation (int) : an integer rotation angle
+	:resize (bool) : resize the image to make it fit the area ?
+	:background_color (pssm color)
 	"""
-	def __init__(self,pil_image,x,y,**kwargs):
+	def __init__(self,pil_image,centered=True,resize=True,background_color="white",rotation=0,**kwargs):
 		super().__init__()
-		self.imgData = pil_image
-		self.area = [(x,y),(pil_image.width,pil_image.height)]
+		if isinstance(pil_image,str):
+			self.pil_image = Image.open(pil_image)
+		else:
+			self.pil_image = pil_image
+		self.background_color = background_color
+		self.centered = centered
+		self.resize   = resize
+		self.rotation = rotation
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
 
 	def generator(self,area=None):
 		# TODO : crop or resize the image to make it fit the area
-		return self.imgData
+		(x,y),(w,h) = area
+		pil_image = self.pil_image.convert(self.parentPSSMScreen.colorType)
+		if self.resize:
+			r = min(w/pil_image.width, h/pil_image.height)
+			size = (int(pil_image.width*r), int(pil_image.height*r))
+			pil_image = self.pil_image.resize(size)
+		if self.rotation != 0:
+			pil_image = pil_image.rotate(self.rotation,fillcolor=self.background_color)
+		if not self.centered:
+			return pil_image
+		else:
+			img = Image.new(
+				self.parentPSSMScreen.colorType,
+				(w+1,h+1),
+				color=get_Color(self.background_color,self.parentPSSMScreen.colorType)
+			)
+			img.paste(pil_image, (int(0.5*w-0.5*pil_image.width), int(0.5*h-0.5*pil_image.height)))
+			self.imgData = img
+			return img
 
+class Line(Element):
+	"""
+	A simple line
+	:color
+	:width
+	:type (str) : can be "horizontal", "vertical", "diagonal1" (top-left to bottom right) or "diagonal2" (top-right to bottom-left)
+	"""
+	def __init__(self,color="black",width=1,type="horizontal"):
+		super().__init__()
+		self.color = color
+		self.width = width
+		self.type  = type
+
+	def generator(self,area):
+		(x,y),(w,h) = area
+		self.area = area
+		if self.type == "horizontal":
+			coo = [(0,0),(w,0)]
+		elif self.type == "vertical":
+			coo = [(0,0),(0,h)]
+		elif self.type == "diagonal1":
+			coo = [(0,0),(w,h)]
+		else: # Assuming diagonal2
+			coo = [(w,0),(0,h)]
+		rectangle = Image.new(
+			self.parentPSSMScreen.colorType,
+			(w,h),
+			color=get_Color("white",self.parentPSSMScreen.colorType)
+		)
+		draw = ImageDraw.Draw(rectangle)
+		draw.line(
+			coo,
+			fill  = get_Color(self.color, self.parentPSSMScreen.colorType),
+			width = self.width
+		)
+		self.imgData = rectangle
+		return self.imgData
 
 
 ############################# - 	Tools 		- ##############################
