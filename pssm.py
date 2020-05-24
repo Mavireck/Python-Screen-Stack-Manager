@@ -868,7 +868,7 @@ class Button(Element):
 			background_color="white",
 			outline_color="black",
 			radius=0,
-			text_color="black",
+			font_color="black",
 			text_xPosition="center",
 			text_yPosition="center",
 			wrap_textOverflow = True,
@@ -881,7 +881,7 @@ class Button(Element):
 		self.font       		= font
 		self.font_size  		= font_size
 		self.radius     		= radius
-		self.text_color 		= text_color
+		self.font_color 		= font_color
 		self.text_xPosition 	= text_xPosition
 		self.text_yPosition 	= text_yPosition
 		self.wrap_textOverflow 	= wrap_textOverflow
@@ -922,7 +922,7 @@ class Button(Element):
 			(x,y),
 			myText,
 			font=loaded_font,
-			fill=get_Color(self.text_color, self.parentPSSMScreen.colorType)
+			fill=get_Color(self.font_color, self.parentPSSMScreen.colorType)
 		)
 		self.imgData = rect_img
 		return self.imgData
