@@ -541,6 +541,8 @@ class Layout(Element):
 				(element,element_width) = row[j]
 				converted_width = self.parentPSSMScreen.convertDimension(element_width)
 				if element != None:
+					for parent in self.parentLayouts:
+						self.layout[i][j][0].parentLayouts.append(parent)
 					self.layout[i][j][0].parentLayouts.append(self)
 					self.layout[i][j][0].parentPSSMScreen = self.parentPSSMScreen
 				if isinstance(converted_width,int):
