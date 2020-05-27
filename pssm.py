@@ -1,23 +1,43 @@
 #!/usr/bin/env python
 import sys
 import os
+import json
 import threading
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
 from copy import deepcopy
 
-
 ############################ - VARIABLES - #####################################
 lastUsedId=0
 
-path_to_pssm = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_FONT = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
-Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
+PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_FONT = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Regular.ttf")
+DEFAULT_FONTBOLD = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Bold.ttf")
 STANDARD_FONT_SIZE = "h*0.036"
 
-def returnFalse(*args):
-	return False
+
+# Constants for the on-screen-keyboard:
+DEFAULT_KEYMAP_PATH_STANDARD = os.path.join(PATH_TO_PSSM,"config", "default-keymap-en_us.json")
+DEFAULT_KEYMAP_PATH_CAPS 	 = os.path.join(PATH_TO_PSSM,"config", "default-keymap-en_us_CAPS.json")
+DEFAULT_KEYMAP_PATH_ALT      = os.path.join(PATH_TO_PSSM,"config", "default-keymap-en_us_ALT.json")
+DEFAULT_KEYMAP_PATH = {
+	'standard' 	: DEFAULT_KEYMAP_PATH_STANDARD,
+	'caps' 		: DEFAULT_KEYMAP_PATH_CAPS,
+	'alt' 		: DEFAULT_KEYMAP_PATH_ALT
+}
+
+KTstandardChar   = 0
+KTcarriageReturn = 1
+KTbackspace      = 2
+KTdelete         = 3
+KTcapsLock       = 4
+KTcontrol        = 5
+KTalt            = 6
+
+
+############################# - One lines - ####################################
+def returnFalse(*args): return False
 
 ############################# - StackManager 	- ##############################
 class PSSMScreen:
@@ -57,10 +77,12 @@ class PSSMScreen:
 		self.name = name
 		self.stack = stack
 		self.isInverted = isInverted
-		self.isPrintLocked = False
 		self.isInputThreadStarted = False
 		self.lastX = -1
 		self.lastY = -1
+		self.osk = None
+		self.onKeyPress = None
+		self.elementOnTop = False
 
 	def findEltWithId(self,myElementId,stack=None):
 		"""
@@ -88,6 +110,7 @@ class PSSMScreen:
 		the part of the stack which is in this area
 		"""
 		#TODO : Must be retought to work with the new nested structure
+		#TODO : Must honor the 'area' argument
 		# for now it will just reprint the whole stack
 		white = get_Color("white",self.colorType)
 		placeholder = Image.new(self.colorType, (self.width, self.height), color=white)
@@ -128,16 +151,13 @@ class PSSMScreen:
 			# First, the element must be generated
 			myElement.generator()
 		# Then, we print it
-		if not self.isPrintLocked:
-			[(x,y),(w,h)] = myElement.area
-			# What follows is a Workaround :
-			# TODO : this Workaround must be investigated
-			if not myElement.isLayout:
-				w += 1
-				h += 1
-			self.device.print_pil(myElement.imgData,x, y, w, h, isInverted=myElement.isInverted)
-		else:
-			print("[PSSM] Print is locked, no image was updated")
+		[(x,y),(w,h)] = myElement.area
+		# What follows is a Workaround :
+		# TODO : this Workaround must be investigated
+		if not myElement.isLayout:
+			w += 1
+			h += 1
+		self.device.print_pil(myElement.imgData,x, y, w, h, isInverted=myElement.isInverted)
 
 	def createCanvas(self,color="white"):
 		"""
@@ -163,7 +183,7 @@ class PSSMScreen:
 				# Let's update the Element in the stack
 				if not skipPrint:
 					self.stack[i] = myElement
-					self.updateArea(myElement.area)
+					self.printStack(area=myElement.area)
 				break	#The Element is already in the stack
 		else:
 			# the Element is not already in the stack
@@ -171,23 +191,31 @@ class PSSMScreen:
 				# We append the element to the stack
 				myElement.parentPSSMScreen = self
 				self.stack.append(myElement)
-				self.simplePrintElt(myElement)
+				if not skipPrint:
+					if self.elementOnTop:
+						#TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything
+						myElement.generator()
+						self.printStack(area=myElement.area)
+					else:
+						#No keyboard on the horizon, let's do it
+						self.simplePrintElt(myElement)
 
-	def removeElt(self,myElementId,skipPrint=False,weAlreadyHaveTheElt=None):
+	def removeElt(self,elt=None,eltid=None,skipPrint=False):
 		"""
 		Removes the Element from the stack and hides it from the screen
 		"""
-		# First, we print the stack where the Element useed to stand
-		if not skipPrint:
-			myElement=self.findEltWithId(myElementId)
-			self.printStack(skipEltId=myElementId,area=myElement.area)
-		# Then it can be removed from the stack
-		if weAlreadyHaveTheElt:
-			self.stack.remove(weAlreadyHaveTheElt)
-		else :
+		if elt:
+			self.stack.remove(elt)
+			if not skipPrint:
+				self.printStack(area=elt.area)
+		elif eltid :
 			elt = self.findEltWithId(myElementId)
 			if elt:
 				self.stack.remove(elt)
+				if not skipPrint:
+					self.printStack(area=elt.area)
+		else:
+			print('No element given')
 
 	def getTagList(self):
 		"""
@@ -319,6 +347,28 @@ class PSSMScreen:
 				return int(eval(str(self.height) + op))
 			else:
 				return dimension
+
+	def OSKInit(
+			self,
+			onKeyPress = None,
+			area = None,
+			keymapPath = None
+		):
+		if not area:
+			area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
+		self.onKeyPress = onKeyPress
+		self.osk = OSK(onkeyPress = self.onKeyPress, area = area, keymapPath = keymapPath)
+
+	def OSKShow(self):
+		if not self.osk:
+			print("OSK not initialized, it can't be shown")
+			return None
+		self.addElt(self.osk) 	# It has already been generated
+		self.elementOnTop = True
+
+	def OSKHide(self):
+		self.removeElt(elt=self.osk)
+		self.elementOnTop = False
 
 	def startListenerThread(self,grabInput=False):
 		"""
@@ -826,6 +876,132 @@ class ButtonList(Layout):
 		return buttonLayout
 
 
+class OSK(Layout):
+	"""
+	A PSSM Layout element which builds an on-screen keyboard
+	Args:
+		keymapPath (str): a path to a PSSMOSK keymap (like the one included)
+		onkeyPress (function): A callback function. Will be given keyType and keyChar as argument
+	"""
+	def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onkeyPress = None, area=None,**kwargs):
+		if not keymapPath:
+			keymapPath = DEFAULT_KEYMAP_PATH
+		self.keymapPaths = keymapPath
+		self.keymap = {'standard':None,'caps':None,'alt':None}
+		self.keymap_layouts = {'standard':None,'caps':None,'alt':None}
+		self.keymap_imgs = {'standard':None,'caps':None,'alt':None}
+		with open(self.keymapPaths['standard']) as json_file:
+			self.keymap['standard'] = json.load(json_file)
+		with open(self.keymapPaths['caps']) as json_file:
+			self.keymap['caps'] = json.load(json_file)
+		with open(self.keymapPaths['alt']) as json_file:
+			self.keymap['alt'] = json.load(json_file)
+		self.lang     	= self.keymap['standard']["lang"]
+		self.onkeyPress	= onkeyPress
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
+		self.view = 'standard'
+		self.keymap_layouts['standard'] = self.build_layout(self.keymap['standard'])
+		self.keymap_layouts['caps'] = self.build_layout(self.keymap['caps'])
+		self.keymap_layouts['alt'] = self.build_layout(self.keymap['alt'])
+		# Initialize layout with standard view
+		self.layout = self.keymap_layouts['standard']
+		super().__init__(self.layout)
+		self.area     	= area
+
+	def generator(self, area=None, forceRegenerate = False):
+		"""
+		This generator is a bit special : we don't want it to regenerate everything
+		everytime we change view. So we will generate all the views at once the first time.
+		Then, unless asked to, we will only return the appropriate image
+		"""
+		if forceRegenerate or (not self.keymap_imgs['standard']) or (not self.keymap_imgs['caps']) or (not self.keymap_imgs['alt']):
+			print("[PSSM OSK] Regenration started")
+			# Let's create all the Images
+			# Standard view is created last, because it is the one which is to be displayed
+			self.layout = self.keymap_layouts['caps']
+			self.keymap_imgs['caps'] = super(OSK, self).generator(area=area)
+			self.layout = self.keymap_layouts['alt']
+			self.keymap_imgs['alt'] = super(OSK, self).generator(area=area)
+			self.layout = self.keymap_layouts['standard']
+			self.keymap_imgs['standard'] = super(OSK, self).generator(area=area)
+		self.imgData = self.keymap_imgs[self.view]
+		return self.keymap_imgs[self.view]
+
+	def build_layout(self,keymap):
+		oskLayout = []
+		spacing = keymap["spacing"]
+		for row in keymap["rows"]:
+			buttonRow = ["?",(None,spacing)]
+			for key in row:
+				label = self.getKeyLabel(key)
+				color_condition 	= key["keyType"] != KTstandardChar
+				background_color 	= "gray12" if color_condition else "white"
+				outline_color 		= "white" if key["isPadding"] else "black"
+				buttonElt = Button(
+					text				= label,
+					font_size 			= "h*0.02",
+					background_color	= background_color,
+					outline_color		= outline_color,
+					onclickInside		= self.handleKeyPress,
+					user_data 			= key,
+					wrap_textOverflow 	= False,
+					invertOnClick		= True
+				)
+				key_width = key["keyWidth"]
+				buttonRow.append((buttonElt,key_width))
+				buttonRow.append((None,spacing))
+			oskLayout.append(buttonRow)
+			oskLayout.append([spacing])
+		return oskLayout
+
+	def handleKeyPress(self,elt,coords):
+		keyType = elt.user_data["keyType"]
+		keyChar = elt.user_data["char"]
+		if keyType == KTcapsLock:
+			## In this particular case, we can assume the keyboard will always be on top
+			## Therefore, no need to print everything, let's just print the keyboard
+			self.view = 'caps' if self.view != 'caps' else 'standard'
+			self.layout = self.keymap_layouts[self.view]
+			self.createAreaMatrix()
+			self.update(
+			    newAttributes={},
+			    skipGeneration = True
+			)
+			self.parentPSSMScreen.simplePrintElt(self)
+		elif keyType == KTalt:
+			## In this particular case, we can assume the keyboard will always be on top
+			## Therefore, no need to print everything, let's just print the keyboard
+			self.view = 'alt' if self.view != 'alt' else 'standard'
+			self.layout = self.keymap_layouts[self.view]
+			self.createAreaMatrix()
+			self.update(
+			    newAttributes={},
+			    skipGeneration = True
+			)
+			self.parentPSSMScreen.simplePrintElt(self)
+		if self.onkeyPress:
+			self.onkeyPress(keyType,keyChar)
+
+
+	def getKeyLabel(self,key):
+		kt = key["keyType"]
+		if kt == KTstandardChar:
+			return key["char"]
+		elif kt == KTalt:
+			return "ALT"
+		elif kt == KTbackspace:
+			return "BACK"
+		elif kt == KTcapsLock:
+			return "CAPS"
+		elif kt == KTcarriageReturn:
+			return "RET"
+		elif kt == KTcontrol:
+			return "CTRL"
+		elif kt == KTdelete:
+			return "DEL"
+		return ""
+
 ############################# - Simple Elements	- ##############################
 class Rectangle(Element):
 	"""
@@ -1233,18 +1409,18 @@ def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
 
 def tools_parseKnownImageFile(file):
 	files={
-		'back' 		: path_to_pssm + "/icons/back.png",
-		'delete' 	: path_to_pssm + "/icons/delete.jpg",
-		"frontlight-down"	: path_to_pssm + "/icons/frontlight-down.jpg",
-		"frontlight-up"		: path_to_pssm + "/icons/frontlight-up.jpg",
-		"invert"	: path_to_pssm + "/icons/invert.jpg",
-		"reboot"	: path_to_pssm + "/icons/reboot.jpg",
-		"save"		: path_to_pssm + "/icons/save.png",
-		"touch-off"	: path_to_pssm + "/icons/touch-off.png",
-		"touch-on"	: path_to_pssm + "/icons/touch-on.png",
-		"wifi-lock"	: path_to_pssm + "/icons/wifi-lock.jpg",
-		"wifi-on"	: path_to_pssm + "/icons/wifi-on.jpg",
-		"wifi-off"	: path_to_pssm + "/icons/wifi-off.jpg"
+		'back' 		: PATH_TO_PSSM + "/icons/back.png",
+		'delete' 	: PATH_TO_PSSM + "/icons/delete.jpg",
+		"frontlight-down"	: PATH_TO_PSSM + "/icons/frontlight-down.jpg",
+		"frontlight-up"		: PATH_TO_PSSM + "/icons/frontlight-up.jpg",
+		"invert"	: PATH_TO_PSSM + "/icons/invert.jpg",
+		"reboot"	: PATH_TO_PSSM + "/icons/reboot.jpg",
+		"save"		: PATH_TO_PSSM + "/icons/save.png",
+		"touch-off"	: PATH_TO_PSSM + "/icons/touch-off.png",
+		"touch-on"	: PATH_TO_PSSM + "/icons/touch-on.png",
+		"wifi-lock"	: PATH_TO_PSSM + "/icons/wifi-lock.jpg",
+		"wifi-on"	: PATH_TO_PSSM + "/icons/wifi-on.jpg",
+		"wifi-off"	: PATH_TO_PSSM + "/icons/wifi-off.jpg"
 	}
 	if file in files:
 		return files[file]
