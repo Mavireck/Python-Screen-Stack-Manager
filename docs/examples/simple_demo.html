@@ -108,7 +108,7 @@ def demo3():
     reactFctn   = lambda elt,coords : print(coords,&#34; - &#34;,elt.text)
     buttons     = [{&#39;text&#39;:&#39;This is button number : &#39; + str(n), &#39;onclickInside&#39;:reactFctn} for n in range(8)]
     buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
-    button_welcome  = pssm.Button(text=&#34;Welcome !&#34;,radius=20, font=pssm.Merri_bold, font_size = &#34;h*0.05&#34;, background_color=&#34;gray10&#34;)
+    button_welcome  = pssm.Button(text=&#34;Welcome !&#34;,radius=20, font=pssm.DEFAULT_FONTBOLD, font_size = &#34;h*0.05&#34;, background_color=&#34;gray10&#34;)
     button_previous = pssm.Button(&#34;Previous&#34;,onclickInside = reactFctn)
     button_reboot   = pssm.Button(&#34;Reboot&#34;)
     button_next     = pssm.Button(&#34;Next&#34;)
@@ -139,7 +139,7 @@ def demo4():
     myLayout = pssm.Layout(layout_demo,screen.area)
     screen.addElt(myLayout)
 
-demo4()</code></pre>
+demo3()</code></pre>
 </details>
 </section>
 <section>
@@ -234,7 +234,7 @@ demo4()</code></pre>
     reactFctn   = lambda elt,coords : print(coords,&#34; - &#34;,elt.text)
     buttons     = [{&#39;text&#39;:&#39;This is button number : &#39; + str(n), &#39;onclickInside&#39;:reactFctn} for n in range(8)]
     buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
-    button_welcome  = pssm.Button(text=&#34;Welcome !&#34;,radius=20, font=pssm.Merri_bold, font_size = &#34;h*0.05&#34;, background_color=&#34;gray10&#34;)
+    button_welcome  = pssm.Button(text=&#34;Welcome !&#34;,radius=20, font=pssm.DEFAULT_FONTBOLD, font_size = &#34;h*0.05&#34;, background_color=&#34;gray10&#34;)
     button_previous = pssm.Button(&#34;Previous&#34;,onclickInside = reactFctn)
     button_reboot   = pssm.Button(&#34;Reboot&#34;)
     button_next     = pssm.Button(&#34;Next&#34;)

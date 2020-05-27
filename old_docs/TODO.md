@@ -1,23 +1,14 @@
 # TODO
 (This is my own TODO list for the future)
 
-- [WIP] Rewrite all docstrings so that they are p
 
 - [Element] Add a Text class (a button with no outline basically)
 - Make size parameters easier to use : "H+W" = screen.height+screen.width, "h+H" = area.height+screen.height, "1+w*0.1",...
-- Capitalize global variables : DEFAULT_FONT  
-
 - [Element] Add an Input class to enter text
-- [OSK] Import PSSMOsk in PSSM
-- [OSK] Rewrite OSK integration : I want to use it like so :  
-        screen = pssm.PSSMScreen(device, 'Main', skipOSKInit=False)  
-        screen.displayOSK()  
-        screen.onKeyPress()  
-        screen.hideOSK()  
-- [OSK] Allow the use of the computer keyboard on the emulator  
-- [Emulator] Properly exit PSSM when the user closes the window  
 
+- [Emulator] Rewrite it using a proper librairy and not openCV (will be more flexible to handle touch events and keypress)
 - [Emulator] Handle partial screen inversion
+
 - [Enhancement] Add a tools_parseKnownFonts and add Free fonts + update pssm.Button class accordingly
 - [Enhancement] Handle rotation, on initialization at least:  
                 screen = pssm.PSSMScreen(device, 'Main', rotation=90)  

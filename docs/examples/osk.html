@@ -28,14 +28,47 @@
 import sys
 sys.path.append(&#34;../&#34;)
 import pssm
-import pssmOSK
-
 import platform
 if platform.machine() in [&#34;x86&#34;,&#34;AMD64&#34;,&#34;i686&#34;,&#34;x86_64&#34;]:
     device = &#34;Emulator&#34;
 else:
     device = &#34;Kobo&#34;
 
+
+########################## - TOOLS - ######################################
+typed_text = &#34;&#34;
+
+def keyPressFct(keyType,keyChar):
+    &#34;&#34;&#34;
+    Example of an onKeyPress callback function, will be executed when the user press on a key.
+    See demo here :
+    ![Demo](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-osk_advanced.jpg)
+    &#34;&#34;&#34;
+    global isCaps
+    global typed_text
+    if keyType == pssm.KTstandardChar:
+        typed_text += keyChar
+    elif keyType == pssm.KTbackspace:
+        typed_text = typed_text[:-1]
+    elif keyType == pssm.KTcarriageReturn:
+        typed_text += &#34;\n&#34;
+    else:
+        print(&#34;other keyType&#34;)
+    # In this particular example, updating the button will lead in terrible performance
+    # (a lot of funcitons will be called). So we update it without generating the parent layouts
+    # Then, as we know this button is on top of the screeen, we candisplay it the most simple way, with simplePrintElt
+    # The natural way to do it (without perforamcen concern) would be to run:
+    #text.update(newAttributes={&#39;text&#39;:typed_text})
+    text.update(
+        newAttributes={
+            &#39;text&#39;:typed_text
+        },
+        skipPrint = True
+    )
+    screen.simplePrintElt(text,skipGeneration=True)
+
+
+######################### - Main logic - ##################################
 
 #Declare the Screen Stack Manager
 screen = pssm.PSSMScreen(device,&#39;Main&#39;)
@@ -44,10 +77,34 @@ screen.startListenerThread(grabInput=True)
 #Clear and refresh the screen
 screen.clear()
 screen.refresh()
+# Now to initialize the keybaord
+screen.OSKInit(area = None,onKeyPress = keyPressFct)
 
-keyboard_area = [(0,int(2*screen.view_height/3)),(screen.view_width,int(screen.view_height/3))]
-myOSK = pssmOSK.OSK(area = keyboard_area)
-screen.addElt(myOSK)</code></pre>
+
+
+text = pssm.Button(
+    text            = typed_text,
+    outline_color   = &#34;white&#34;,
+    text_xPosition  = &#34;left&#34;,
+    text_yPosition  = &#34;top&#34;
+)
+mainLayout_array = [
+    [&#34;p*20&#34;                                                   ],
+    [&#34;h*0.62&#34;, (None,&#34;p*5&#34;),    (text, &#34;?&#34;), (None,&#34;p*5&#34;)     ]
+]
+mainLayout = pssm.Layout(mainLayout_array,screen.area)
+screen.addElt(mainLayout)
+
+# And to display the keyboard
+#screen.OSKShow()
+
+# You can also hide it
+#screen.device.wait(5)
+#screen.OSKHide()
+
+# And display it again
+#screen.device.wait(5)
+#screen.OSKShow()</code></pre>
 </details>
 </section>
 <section>
@@ -55,6 +112,50 @@ screen.addElt(myOSK)</code></pre>
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="Python-Screen-Stack-Manager.examples.osk.keyPressFct"><code class="name flex">
+<span>def <span class="ident">keyPressFct</span></span>(<span>keyType, keyChar)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Example of an onKeyPress callback function, will be executed when the user press on a key.
+See demo here :
+<img alt="Demo" src="https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-osk_advanced.jpg"></p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def keyPressFct(keyType,keyChar):
+    &#34;&#34;&#34;
+    Example of an onKeyPress callback function, will be executed when the user press on a key.
+    See demo here :
+    ![Demo](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-osk_advanced.jpg)
+    &#34;&#34;&#34;
+    global isCaps
+    global typed_text
+    if keyType == pssm.KTstandardChar:
+        typed_text += keyChar
+    elif keyType == pssm.KTbackspace:
+        typed_text = typed_text[:-1]
+    elif keyType == pssm.KTcarriageReturn:
+        typed_text += &#34;\n&#34;
+    else:
+        print(&#34;other keyType&#34;)
+    # In this particular example, updating the button will lead in terrible performance
+    # (a lot of funcitons will be called). So we update it without generating the parent layouts
+    # Then, as we know this button is on top of the screeen, we candisplay it the most simple way, with simplePrintElt
+    # The natural way to do it (without perforamcen concern) would be to run:
+    #text.update(newAttributes={&#39;text&#39;:typed_text})
+    text.update(
+        newAttributes={
+            &#39;text&#39;:typed_text
+        },
+        skipPrint = True
+    )
+    screen.simplePrintElt(text,skipGeneration=True)</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -68,6 +169,11 @@ screen.addElt(myOSK)</code></pre>
 <li><h3>Super-module</h3>
 <ul>
 <li><code><a title="Python-Screen-Stack-Manager.examples" href="index.html">Python-Screen-Stack-Manager.examples</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="Python-Screen-Stack-Manager.examples.osk.keyPressFct" href="#Python-Screen-Stack-Manager.examples.osk.keyPressFct">keyPressFct</a></code></li>
 </ul>
 </li>
 </ul>
