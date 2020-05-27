@@ -23,6 +23,9 @@ screen.refresh()
 
 
 def demo1():
+    """
+    ![Demo1](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo1.jpg)
+    """
     def reactFctn(elt,coords):
         print(coords," - ",elt.text)
         print(elt.area)
@@ -52,6 +55,9 @@ def demo1():
 
 
 def demo2():
+    """
+    ![Demo2](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo2.jpg)
+    """
     reactFctn = lambda elt,coords : print(coords," - ",elt.text)
     myButtonList = pssm.ButtonList(
         buttons = [
@@ -70,6 +76,9 @@ def demo2():
 
 
 def demo3():
+    """
+    ![Demo3](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo3.jpg)
+    """
     reactFctn   = lambda elt,coords : print(coords," - ",elt.text)
     buttons     = [{'text':'This is button number : ' + str(n), 'onclickInside':reactFctn} for n in range(8)]
     buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
@@ -88,6 +97,9 @@ def demo3():
     screen.addElt(myLayout)
 
 def demo4():
+    """
+    ![Demo4](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo4.jpg)
+    """
     layout_demo = [
         [30                                                                                         ],
         ["h*0.1", (None,"?/2"),        (pssm.Button("But1"),200),        (None,"?/2")               ],
