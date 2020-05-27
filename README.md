@@ -18,7 +18,7 @@ PSSM handles that for you. I drew inspiration from PySimpleGUI, because I really
 Have a look here :
 [Documentation](https://mavireck.github.io/Python-Screen-Stack-Manager/index.html)  
 And here :
-[Examples](examples/)
+[Examples](https://mavireck.github.io/Python-Screen-Stack-Manager/examples/index.html)
 
 ### Images are worth thousands words
 Here is a demo code :
