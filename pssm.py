@@ -190,7 +190,11 @@ class PSSMScreen:
 			if not skipRegistration:
 				# We append the element to the stack
 				myElement.parentPSSMScreen = self
-				self.stack.append(myElement)
+				if self.elementOnTop:
+					# There is something on top, addnig it at position -2 (before the last one)
+					self.stack.insert(-2,myElement)
+				else:
+					self.stack.append(myElement)
 				if not skipPrint:
 					if self.elementOnTop:
 						#TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything

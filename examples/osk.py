@@ -71,6 +71,10 @@ screen.addElt(mainLayout)
 
 # And to display the keyboard
 screen.OSKShow()
+## IMPORTANT NOTE :
+# The keyboard will *always* be on top. if you try to print something over it, pssm will print it underneath
+# To overwrite this behaviour, set screen.elementOnTop = False after the keyboard is shown.
+
 
 # You can also hide it
 #screen.device.wait(5)
