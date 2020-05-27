@@ -7,20 +7,33 @@ from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageOps import invert as PILInvert
 from copy import deepcopy
 
+
 ############################ - VARIABLES - #####################################
 lastUsedId=0
 
 path_to_pssm = os.path.dirname(os.path.abspath(__file__))
-Merri_regular = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
+DEFAULT_FONT = os.path.join(path_to_pssm,"fonts", "Merriweather-Regular.ttf")
 Merri_bold = os.path.join(path_to_pssm,"fonts", "Merriweather-Bold.ttf")
-standard_font_size = "h*0.036"
-
+STANDARD_FONT_SIZE = "h*0.036"
 
 def returnFalse(*args):
 	return False
 
 ############################# - StackManager 	- ##############################
 class PSSMScreen:
+	"""
+	This is the class which handles most of the logic.
+
+	Args:
+		deviceName (str): "Kobo" for Kobo ereaders (and probably all FBInk supported devices)
+		name (str): The name of the class instance (deprecated, I will eventually remove it)
+		stack (list): Do not use it unless you know what you are doing. It is the list of all the pssm Elements which are on the screen
+		isInverted (bool)
+
+	Example of usage:
+		screen = pssm.PSSMScreen("Kobo","Main"))
+
+	"""
 	def __init__(
 			self,
 			deviceName,
@@ -73,7 +86,6 @@ class PSSMScreen:
 		Prints the stack Elements in the stack order
 		If a area is set, then, we only display
 		the part of the stack which is in this area
-		> area : a [(x,y),(w,h)] array
 		"""
 		#TODO : Must be retought to work with the new nested structure
 		# for now it will just reprint the whole stack
@@ -89,8 +101,8 @@ class PSSMScreen:
 		"""
 		Returns a PIL image of the the interesection of the Element image and the
 		rectangle coordinated given as parameter.
-		> elt : a PSSM Element
-		> rectIntersection : a [[x1,y1],[x2,y2]] array
+			elt : a PSSM Element
+			rectIntersection : a [[x1,y1],[x2,y2]] array
 		"""
 		#TODO : MUST HONOR INVERSION
 		# We crop and print a part of the Element
@@ -107,7 +119,10 @@ class PSSMScreen:
 
 	def simplePrintElt(self,myElement,skipGeneration = False):
 		"""
-		Prints the Element without adding it to the stack
+		Prints the Element without adding it to the stack.
+		Args:
+			myElement (PSSM Element): The element you want to display
+			skipGeneration (bool): Do you want to regenerate the image?
 		"""
 		if not skipGeneration:
 			# First, the element must be generated
@@ -126,7 +141,8 @@ class PSSMScreen:
 
 	def createCanvas(self,color="white"):
 		"""
-		Creates a white Element at the bottom of the stack, displays it while refreshing the screen
+		(Deprecated)
+		Creates a white Element at the bottom of the stack, displays it while refreshing the screen.
 		"""
 		color = get_Color(color,self.colorType)
 		img = Image.new(self.colorType, (self.width,self.height), color=color)
@@ -136,9 +152,9 @@ class PSSMScreen:
 	def addElt(self,myElement,skipPrint=False,skipRegistration=False):
 		"""
 		Adds Element to the stack and prints it
-		> myElement : (PSSM Element)
-		> skipPrint : (boolean) True if you don't want to update the screen
-		> skipRegistration : (boolean) True if you don't want to add the Element to the stack
+			myElement (PSSM Element): The Element you want to add
+			skipPrint (bool): True if you don't want to update the screen
+			skipRegistration (bool): True if you don't want to add the Element to the stack
 		"""
 		for i in range(len(self.stack)):
 			elt=self.stack[i]
@@ -359,24 +375,30 @@ class PSSMScreen:
 
 ############################# - Core Element	- ##############################
 class Element:
+	"""
+	Everything which is going to be displayed on the screen is an Element.
+
+	Args:
+		isInverted (bool): Is the element inverted
+		data (dict, or whatever): A parameter for you to store whatever you want
+		area (list): a [(x,y),(w,h)] list. If used in a Layout, the layout will take care of calculating the area.
+		imgData (PILImage): the PIL image of the object (None by default, the generator function takes care of generating one on supported Elements)
+		onclickInside (function): A function to be executed when the user clicks on the Element
+		tags (set): A set of tags the element has. (deprecated)
+		invertOnClick (bool): Invert the element when a click is registered ?
+		invertDuration (int): Duration in seconds of the element invertion after a click is registered (use 0 for infinite)
+	"""
 	def __init__(
 			self,
 			area 			= None,
 			imgData 		= None,
 			onclickInside 	= returnFalse,
 			isInverted 		= False,
-			data 			= [],
+			data 			= {},
 			tags 			= set(),
 			invertOnClick 	= False,
 			invertDuration 	= 0.2
 		):
-		"""
-		:data (list, or whatever) : An attribute for you, to store whatever you want
-		:area (list) : PSSM parameter, do not use if you don't know what it is for
-		:imgData (PIL Image): the PIL image of the object
-		:onclickInside (function) : The function to be executed when the user clicks
-		...
-		"""
 		global lastUsedId
 		self.id = lastUsedId
 		lastUsedId += 1
@@ -403,10 +425,11 @@ class Element:
 	def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
 		"""
 		Pass a dict as argument, and it will update the Element's attributes accordingly
-		:newAttributes (dict): The element's new attributes
-		:skipGeneration (bool) : Just update the element's attribute, but do not do any generation or printing
-		:skipThisEltGeneration (bool) : Do not regenerate this element but do update the parent layouts
-		:skipPrint (bool) : Do not update the screen, but do regenerate.
+		Args :
+			newAttributes (dict): The element's new attributes
+			skipGeneration (bool): Just update the element's attribute, but do not do any generation or printing
+			skipThisEltGeneration (bool): Do not regenerate this element but do update the parent layouts
+			skipPrint (bool): Do not update the screen, but do regenerate.
 		"""
 		# First, we set the attributes
 		for param in newAttributes:
@@ -428,7 +451,7 @@ class Element:
 	def generator(self):
 		"""
 		The generator is the function which is called when the container layout wants to
-		build an image. It therefore returns a pillow image
+		build an image. It therefore returns a pillow image.
 		"""
 		return NotImplemented
 
@@ -442,6 +465,25 @@ class Layout(Element):
 	"""
 	A layout is a quite general kind of Element :
 	If must be given the working area, and a layout, and will generate every element of the layout
+
+	Args:
+		layout (list): The given layout (see example below). It is basically a list of rows. Each row is a list containing : the height of the row, then as many tuples as you want, each tuple being a (pssm.Element, width) instance
+		background_color
+		area
+		... all other arguments from the pssm.Element class
+
+	Example of usage:
+		layout_demo = [
+	        [30                                                                                         ],
+	        ["h*0.1", (None,"?/2"),        (pssm.Button("But1"),200),        (None,"?/2")               ],
+	        ["?"                                                                                        ],
+	        ["p*100", (None,"w*0.3"),       (pssm.Button("But2"),200),        (None,"w*0.3")            ],
+	        [30                                                                                         ],
+	        [100, (None,20), (pssm.Button("But3"),200), (None,20), (pssm.Button("nope"),300), (None,10) ],
+	        [40                                                                                         ]
+	    ]
+	    myLayout = pssm.Layout(layout_demo,screen.area)
+	    screen.addElt(myLayout)
 	"""
 	def __init__(self,layout,area=None,background_color="white",**kwargs):
 		super().__init__(area=area)
@@ -753,13 +795,13 @@ class Layout(Element):
 
 
 class ButtonList(Layout):
+	"""
+	Generates a Layout with only one item per row, all the same type (buttons) and same height and width
+	Args:
+		button (list): a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array. Each dict will contain the parameters of each button of the button list
+		borders (list): a [top,bottom,left,right] array
+	"""
 	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
-		"""
-		Generates a Layout with only one item per row, all the same type (buttons) and same height and width
-		:button : a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array
-			each dict will contain the parameters of each button of the button list
-		:borders : a [top,bottom,left,right]
-		"""
 		self.buttons = buttons
 		self.margins = margins
 		self.spacing = spacing
@@ -786,6 +828,12 @@ class ButtonList(Layout):
 
 ############################# - Simple Elements	- ##############################
 class Rectangle(Element):
+	"""
+	A rectangle
+	Args:
+		background_color (str): The background color
+		outline_color (str): The border color
+	"""
 	def __init__(self,background_color="white",outline_color="gray3",parentPSSMScreen=None):
 		super().__init__()
 		self.background_color = background_color
@@ -810,6 +858,9 @@ class Rectangle(Element):
 		return self.imgData
 
 class RectangleRounded(Element):
+	"""
+	A rectangle, but with rounded corners
+	"""
 	def __init__(
 			self,
 			radius=20,
@@ -863,14 +914,22 @@ class RectangleRounded(Element):
 class Button(Element):
 	"""
 	Basically a rectangle (or rounded rectangle) with text printed on it
-	:text_xPosition (str or int) : can be left, center, right, or an integer value, or a pssm string dimension
-	:text_yPosition (str or int) : can be left, center, right, or an integer value, or a pssm string dimension
+	Args:
+		font (str): Path to a font file
+		font_size (int): The font size
+		font_color (str): The color of the font : "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
+		wrap_textOverflow (bool): (True by default) Wrap text in order to avoid it overflowing. The cuts are made between words.
+		text_xPosition (str or int): can be left, center, right, or an integer value, or a pssm string dimension
+		text_yPosition (str or int): can be left, center, right, or an integer value, or a pssm string dimension
+		background_color (str): The background color
+		outline_color (str): The border color
+		radius (int): If not 0, then add rounded corners of this radius
 	"""
 	def __init__(
 			self,
 			text,
-			font=Merri_regular,
-			font_size=standard_font_size,
+			font=DEFAULT_FONT,
+			font_size=STANDARD_FONT_SIZE,
 			background_color="white",
 			outline_color="black",
 			radius=0,
@@ -903,7 +962,7 @@ class Button(Element):
 			self.font_size = self.parentPSSMScreen.convertDimension(self.font_size)
 			if not isinstance(self.font_size,int):
 				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
-				self.font_size = self.parentPSSMScreen.convertDimension(standard_font_size)
+				self.font_size = self.parentPSSMScreen.convertDimension(STANDARD_FONT_SIZE)
 		loaded_font = ImageFont.truetype(self.font, self.font_size)
 		if self.radius>0:
 			rect = RectangleRounded(
@@ -972,8 +1031,10 @@ class Button(Element):
 
 class Icon(Element):
 	"""
-	Returns a  PIL image with the icon corresponding to the path you give as argument.
-	If you pass "back", "delete" or another known image, it will fetch the integrated icons
+	An icon, built from an image
+	Args:
+		file (str): Path to a file, or one of the integrated image (see the icon folder for the name of each image). 'reboot' for instance points to the integrated reboot image.
+		centered (bool): Center the icon?
 	"""
 	def __init__(self,file,centered=True,**kwargs):
 		super().__init__()
@@ -1004,12 +1065,12 @@ class Icon(Element):
 class Static(Element):
 	"""
 	A very simple element which only displays a pillow image
-	:pil_image (str or pil image) : path to an image or a pillow image
-	:centered (bool)
-	:resize (bool) : Make it fit the area ? (proportions are respected)
-	:rotation (int) : an integer rotation angle
-	:resize (bool) : resize the image to make it fit the area ?
-	:background_color (pssm color)
+	Args:
+		pil_image (str or pil image): path to an image or a pillow image
+		centered (bool): Center the image ?
+		resize (bool): Make it fit the area ? (proportions are respected)
+		rotation (int): an integer rotation angle
+		background_color (str): "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
 	"""
 	def __init__(self,pil_image,centered=True,resize=True,background_color="white",rotation=0,**kwargs):
 		super().__init__()
@@ -1048,11 +1109,12 @@ class Static(Element):
 
 class Line(Element):
 	"""
-	A simple line
-	:color
-	:width
-	:type (str) : can be "horizontal", "vertical", "diagonal1" (top-left to bottom right) or "diagonal2" (top-right to bottom-left)
-	"""
+    Draws a simple line
+    Args:
+        color (str or tuple): "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
+        width (int): The width of the line
+        type (str): can be "horizontal", "vertical", "diagonal1" (top-left to bottom right) or "diagonal2" (top-right to bottom-left)
+    """
 	def __init__(self,color="black",width=1,type="horizontal"):
 		super().__init__()
 		self.color = color
@@ -1087,11 +1149,18 @@ class Line(Element):
 
 ############################# - 	Tools 		- ##############################
 def coordsInArea(click_x,click_y,area):
-	[(x,y),(w,h)] = area
-	if click_x>=x and click_x<x+w and click_y>=y and click_y<y+h:
-		return True
-	else:
-		return False
+    """
+    Returns a boolean indicating if the click was in the given area
+    Args:
+        click_x (str): The x coordinate of the click
+        click_y (str): The y coordinate of the click
+        area (list): The area (of shape : [(x,y),(w,h)])
+    """
+    [(x,y),(w,h)] = area
+    if click_x>=x and click_x<x+w and click_y>=y and click_y<y+h:
+        return True
+    else:
+        return False
 
 def getRectanglesIntersection(area1,area2):
 	(x1,y1),(w1,h1) = area1
@@ -1183,7 +1252,6 @@ def tools_parseKnownImageFile(file):
 		return file
 
 
-
 colorsL = {'black':0,'white':255}
 colorsRGBA = {'black':(0,0,0,0),'white':(255,255,255,1)}
 for i in range(16):
@@ -1219,3 +1287,32 @@ def get_Color(color,deviceColorType):
 			r, g, b = color[0], color[1], color[2]
 			gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
 			return gray
+
+
+################################ - DOCUMENTATION - #############################
+__pdoc__ = {} 			# For the documentation
+ignoreList  =[
+	'returnFalse',
+	'coordsInArea',
+	'getRectanglesIntersection',
+	'roundedCorner',
+	'tools_convertXArgsToPX',
+	'tools_convertYArgsToPX',
+	'tools_parseKnownImageFile',
+	'get_Color',
+	'PSSMScreen.getPartialEltImg',
+	'PSSMScreen.convertDimension',
+	'Layout.generator',
+	'Layout.createImgMatrix',
+	'Layout.createAreaMatrix',
+	'Layout.calculate_remainingHeight',
+	'Layout.calculate_remainingWidth',
+	'Layout.extract_rowsHeight',
+	'Layout.extract_colsWidth',
+	'Layout.dispatchClick',
+	'Layout.dispatchClick_LINEAR',
+	'Layout.dispatchClick_DICHOTOMY_colsOnly',
+	'Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed'
+]
+for f in ignoreList:
+	__pdoc__[f] = False
