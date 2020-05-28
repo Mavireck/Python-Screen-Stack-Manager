@@ -2,8 +2,6 @@
 (This is my own TODO list for the future)
 
 
-- [Element] Add a Text class (a button with no outline basically)
-- [Element] Add an Input class to enter text. + How to detect between which characters the user clicked?
 - [Element] Write a PopupText class to prompt text
 - [Element] Write a PopupChoices class with a button for each choice (which works a bit like ButtonList)
 

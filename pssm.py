@@ -15,6 +15,7 @@ PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Regular.ttf")
 DEFAULT_FONTBOLD = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Bold.ttf")
 STANDARD_FONT_SIZE = "H*0.036"
+CURSOR_CHAR = "|"
 
 
 # Constants for the on-screen-keyboard:
@@ -50,6 +51,16 @@ class PSSMScreen:
 		stack (list): Do not use it unless you know what you are doing. It is the list of all the pssm Elements which are on the screen
 		isInverted (bool)
 
+	Attributes:
+		device: the device.py module.  You can with it access a few useful functions like `self.device.readBatteryPercentage()`
+		colorType: "L" for grayscale devices, "RGBA" for others
+		width: The screen width
+		height : The screen height
+		view_width: The width of the part of the screen not hidden behind bezels
+		view_height: ...
+		name: ...
+		isInverted: ...
+
 	Example of usage:
 		screen = pssm.PSSMScreen("Kobo","Main"))
 
@@ -81,8 +92,8 @@ class PSSMScreen:
 		self.lastX = -1
 		self.lastY = -1
 		self.osk = None
-		self.onKeyPress = None
 		self.numberEltOnTop = 0
+		self.isOSKShown = False
 
 	def findEltWithId(self,myElementId,stack=None):
 		"""
@@ -346,19 +357,22 @@ class PSSMScreen:
 		):
 		if not area:
 			area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
-		self.onKeyPress = onKeyPress
-		self.osk = OSK(onkeyPress = self.onKeyPress, area = area, keymapPath = keymapPath)
+		self.osk = OSK(onkeyPress = onKeyPress, area = area, keymapPath = keymapPath)
 
-	def OSKShow(self):
+	def OSKShow(self,onKeyPress=None):
 		if not self.osk:
 			print("OSK not initialized, it can't be shown")
 			return None
+		if onKeyPress:
+			self.osk.onKeyPress = onKeyPress
 		self.addElt(self.osk) 	# It has already been generated
 		self.numberEltOnTop += 1
+		self.isOSKShown = True
 
 	def OSKHide(self):
 		self.removeElt(elt=self.osk)
 		self.numberEltOnTop -= 1
+		self.isOSKShown = False
 
 	def startListenerThread(self,grabInput=False):
 		"""
@@ -405,7 +419,8 @@ class PSSMScreen:
 		else:
 			if elt.invertOnClick:
 				self.invertArea(elt.area,elt.default_invertDuration)
-			elt.onclickInside(elt,coords)
+			elt.pssmOnClickInside(coords)  # Execute PSSM action on click
+			elt.onclickInside(elt,coords)  # Execute user action attached to it too
 
 	def stopListenerThread(self):
 		self.isInputThreadStarted = False
@@ -465,7 +480,7 @@ class Element:
 			return self.id == other.id
 		return NotImplemented
 
-	def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
+	def update(self,newAttributes={},skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
 		"""
 		Pass a dict as argument, and it will update the Element's attributes accordingly
 		Args :
@@ -546,6 +561,14 @@ class Element:
 		else:
 			print("[PSSM] Could not parse the dimension")
 			return dimension
+
+	def pssmOnClickInside(self,coords):
+		"""
+		Each Element can also have a pssm function implemented on click.
+		By default, it does nothing.
+		"""
+		return None
+
 
 
 ############################# - Layout Elements	- ##############################
@@ -1018,9 +1041,17 @@ class OSK(Layout):
 			    skipGeneration = True
 			)
 			self.parentPSSMScreen.simplePrintElt(self)
-		if self.onkeyPress:
-			self.onkeyPress(keyType,keyChar)
-
+		# TODO : Investigate this issue (surely a threading issue) :
+		# Here, when using a simple demo app containing only an Input element,
+		# when this portion of code is executed, self.onKeyPress == None, but self.parentPSSMScreen.osk.onKeyPress != None.
+		# (Surely because of inheritance.) Anyway, let's work around it
+		if self.parentPSSMScreen.osk.onKeyPress:
+			self.parentPSSMScreen.osk.onKeyPress(keyType,keyChar)
+		#print("handling key press. onKeyPress set to : ", self.onkeyPress)
+		#print("Is self equal to parentPSSMScreen.osk? ",self == self.parentPSSMScreen)
+		#print("Parent pssm osk.onKeyPress set to : ", self.parentPSSMScreen.osk.onKeyPress)
+		#if self.onkeyPress != None:
+			#self.onkeyPress(keyType,keyChar)
 
 	def getKeyLabel(self,key):
 		kt = key["keyType"]
@@ -1141,7 +1172,7 @@ class Button(Element):
 	"""
 	def __init__(
 			self,
-			text,
+			text="",
 			font=DEFAULT_FONT,
 			font_size=STANDARD_FONT_SIZE,
 			background_color="white",
@@ -1166,6 +1197,9 @@ class Button(Element):
 		self.wrap_textOverflow 	= wrap_textOverflow
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
+		self.loaded_font = None
+		self.convertedText = None
+		self.imgDraw = None
 
 	def generator(self,area=None):
 		if area==None:
@@ -1178,6 +1212,7 @@ class Button(Element):
 				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
 				self.font_size = self.convertDimension(STANDARD_FONT_SIZE)
 		loaded_font = ImageFont.truetype(self.font, self.font_size)
+		self.loaded_font = loaded_font
 		if self.radius>0:
 			rect = RectangleRounded(
 				radius=self.radius,
@@ -1193,8 +1228,10 @@ class Button(Element):
 			)
 		rect_img = rect.generator(self.area)
 		imgDraw  = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
+		self.imgDraw = imgDraw
 		myText 	 = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
-		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
+		self.convertedText = myText
+		text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
 		x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
 		y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , myElt = self)
 		imgDraw.text(
@@ -1360,6 +1397,112 @@ class Line(Element):
 		self.imgData = rectangle
 		return self.imgData
 
+class Input(Button):
+	"""
+	Basically a button, except when you click on it, it displays the keyboard.
+	It handles typing things for you. so when you click on this element, the keyboard shows up, and you can start typing.
+	The main thing it does is that it is able to detect between which characters the user typed to be able to insert a character between two others
+	(and that was no easy task)
+	It has a method to retrieve what was typed :
+	Input.getInput()
+	"""
+	def __init__(self,**kwargs):
+		super().__init__()
+		self.hideCursorWhenLast = True
+		for param in kwargs:
+			setattr(self, param, kwargs[param])
+		self.cursorPosition = len(self.text)
+		self.typedText = self.text[:]
+		self.text = self.typedText
+
+	def getInput(self):
+		"""
+		Returns the text currently written on the Input box.
+		"""
+		return self.typedText
+
+	def pssmOnClickInside(self,coords):
+		if not self.parentPSSMScreen.osk:
+			print("[PSSM] Keyboard not initialized, Input element cannot be properly handled")
+			return None
+		self.parentPSSMScreen.osk.onKeyPress = self.onKeyPress		# Set the callback function to our own
+		if not self.parentPSSMScreen.isOSKShown:
+			# Let's print the on screen keyboard as it is not already here
+			self.parentPSSMScreen.OSKShow()
+		else:
+			cx,cy = coords
+			[(sx,sy),(w,h)] = self.area
+			loaded_font = self.loaded_font
+			myText 	 = self.convertedText
+			imgDraw  = self.imgDraw
+			text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
+			x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
+			y = tools_convertYArgsToPX(self.text_yPosition, h,text_h , myElt = self)
+			# Then let's linear search
+			wasFound = False
+			olines = myText[:].split("\n")
+			lines  = [olines[i] if i==0 else "\n" + olines[i] for i in range(len(olines))]
+			linesBefore = ""
+			for i in range(len(lines)):
+				tw1,th1 = imgDraw.textsize(linesBefore, font=loaded_font)
+				linesBefore += lines[i]
+				tw2,th2 = imgDraw.textsize(linesBefore, font=loaded_font)
+				b_correct_y = cy > sy + x + th1 and cy <= sy + y + th2
+				if b_correct_y:
+					for j in range(len(linesBefore)):
+						tw1,th1 = imgDraw.textsize(linesBefore[:j], font=loaded_font)
+						tw2,th2 = imgDraw.textsize(linesBefore[:j+1], font=loaded_font)
+						b_correct_x = cx > sx + x + tw1 and cx <= sx + x + tw2
+						if b_correct_x:
+							pos = j
+							for line in lines[:i]:
+								pos += len(line)
+							self.setCursorPosition(pos+1)
+							wasFound = True
+					if not wasFound:	# Let's put it at the end of the row
+						pos = 0
+						for line in lines[:i+1]:
+							pos += len(line)
+						self.setCursorPosition(pos)
+						wasFound = True
+			if not wasFound:
+				self.setCursorPosition(None)
+			# TODO : find between which characters the user typed
+			# And set self.cursorPosition
+			pass
+
+	def onKeyPress(self,keyType,keyChar):
+		"""
+		Handles each key press.
+		"""
+		c = self.cursorPosition
+		if keyType == KTstandardChar:
+			self.typedText = insertStr(self.typedText,keyChar,c)
+			self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+		elif keyType == KTcarriageReturn:
+			self.typedText = insertStr(self.typedText,"\n",c)
+			self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+		elif keyType == KTbackspace:
+			self.typedText = self.typedText[:c-1] + self.typedText[c:]
+			self.setCursorPosition(self.cursorPosition-1,skipPrint=True)
+		if self.cursorPosition == len(self.typedText) and self.hideCursorWhenLast:
+			# Don't display the cursor when it is at the last position
+			self.text = self.typedText[:]
+		else:
+			self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+		#self.update(skipPrint = True)
+		#self.parentPSSMScreen.simplePrintElt(self,skipGeneration=True)
+		self.update()
+
+	def setCursorPosition(self,pos,skipPrint=False):
+		if pos == None:
+			pos = len(self.typedText)
+		self.cursorPosition = pos
+		self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+		if not skipPrint:
+			self.update()
+
+
 
 ############################# - 	Tools 		- ##############################
 def coordsInArea(click_x,click_y,area):
@@ -1375,6 +1518,10 @@ def coordsInArea(click_x,click_y,area):
         return True
     else:
         return False
+
+def insertStr(string,char,pos):
+	""" Returns a string with the characther insterted at said position	"""
+	return string[:pos] +  char + string[pos:]
 
 def getRectanglesIntersection(area1,area2):
 	(x1,y1),(w1,h1) = area1

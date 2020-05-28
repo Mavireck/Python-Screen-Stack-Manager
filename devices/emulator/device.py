@@ -65,7 +65,8 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 
 def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
 	#TODO: Honor inversion
-	print("Screen refresh and Inversion (partial and full) are not yet supported on the emulator")
+	#print("Screen refresh and Inversion (partial and full) are not yet supported on the emulator")
+	pass
 
 def do_screen_clear():
 	pil_image = Image.new('L', (screen_width,screen_height), color=255).convert("RGB")
