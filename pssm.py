@@ -36,7 +36,7 @@ KTcontrol        = 5
 KTalt            = 6
 
 
-############################# - One lines - ####################################
+############################# - One liners - ###################################
 def returnFalse(*args): return False
 
 ############################# - StackManager 	- ##############################
@@ -82,7 +82,7 @@ class PSSMScreen:
 		self.lastY = -1
 		self.osk = None
 		self.onKeyPress = None
-		self.elementOnTop = False
+		self.numberEltOnTop = 0
 
 	def findEltWithId(self,myElementId,stack=None):
 		"""
@@ -190,13 +190,14 @@ class PSSMScreen:
 			if not skipRegistration:
 				# We append the element to the stack
 				myElement.parentPSSMScreen = self
-				if self.elementOnTop:
+				if self.numberEltOnTop > 0:
 					# There is something on top, addnig it at position -2 (before the last one)
-					self.stack.insert(-2,myElement)
+					pos = - 1 - self.numberEltOnTop
+					self.stack.insert(pos,myElement)
 				else:
 					self.stack.append(myElement)
 				if not skipPrint:
-					if self.elementOnTop:
+					if self.numberEltOnTop > 0 and not self.forcePrintOnTop:
 						#TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything
 						myElement.generator()
 						self.printStack(area=myElement.area)
