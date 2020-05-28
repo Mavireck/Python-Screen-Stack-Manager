@@ -57,7 +57,7 @@ The code is probably not very clear on the first look.
 Basically, it is a row x columns matrix.  
 The first element of each row is the height of the row:  
 - The first row has height 30 pixels
-- The second : "h*0.1" :  0.1 times the screen height
+- The second : "H*0.1" :  0.1 times the screen height
 - The third : "?" : Let PSSM guess the appropriate height in order to occupy most of the screen size.
 - The forth : "p*100" : another way of indicating a 100 pixels
 
