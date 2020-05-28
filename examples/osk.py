@@ -64,7 +64,7 @@ text = pssm.Button(
 )
 mainLayout_array = [
     ["p*20"                                                   ],
-    ["h*0.62", (None,"p*5"),    (text, "?"), (None,"p*5")     ]
+    ["H*0.62", (None,"p*5"),    (text, "?"), (None,"p*5")     ]
 ]
 mainLayout = pssm.Layout(mainLayout_array,screen.area)
 screen.addElt(mainLayout)
@@ -73,7 +73,7 @@ screen.addElt(mainLayout)
 screen.OSKShow()
 ## IMPORTANT NOTE :
 # The keyboard will *always* be on top. if you try to print something over it, pssm will print it underneath
-# To overwrite this behaviour, set screen.elementOnTop = False after the keyboard is shown.
+# To overwrite this behaviour, set myElement.forcePrintOnTop = True
 
 
 # You can also hide it

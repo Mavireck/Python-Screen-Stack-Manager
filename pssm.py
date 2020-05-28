@@ -14,7 +14,7 @@ lastUsedId=0
 PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Regular.ttf")
 DEFAULT_FONTBOLD = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Bold.ttf")
-STANDARD_FONT_SIZE = "h*0.036"
+STANDARD_FONT_SIZE = "H*0.036"
 
 
 # Constants for the on-screen-keyboard:
@@ -337,21 +337,6 @@ class PSSMScreen:
 		self.device.do_screen_clear()
 		return True
 
-	def convertDimension(self,dimension):
-		if isinstance(dimension,int):
-			return dimension
-		else:
-			t  = dimension[0]
-			op = dimension[1:]
-			if t == "p":
-				return int(eval("1" + op))
-			elif t== "w":
-				return int(eval(str(self.width) + op))
-			elif t== "h":
-				return int(eval(str(self.height) + op))
-			else:
-				return dimension
-
 	def OSKInit(
 			self,
 			onKeyPress = None,
@@ -368,11 +353,11 @@ class PSSMScreen:
 			print("OSK not initialized, it can't be shown")
 			return None
 		self.addElt(self.osk) 	# It has already been generated
-		self.elementOnTop = True
+		self.numberEltOnTop += 1
 
 	def OSKHide(self):
 		self.removeElt(elt=self.osk)
-		self.elementOnTop = False
+		self.numberEltOnTop -= 1
 
 	def startListenerThread(self,grabInput=False):
 		"""
@@ -441,6 +426,7 @@ class Element:
 		tags (set): A set of tags the element has. (deprecated)
 		invertOnClick (bool): Invert the element when a click is registered ?
 		invertDuration (int): Duration in seconds of the element invertion after a click is registered (use 0 for infinite)
+		forcePrintOnTop (bool): Force the element to be printed on top of the stack, even if there is an on-screen keyboard or a popup
 	"""
 	def __init__(
 			self,
@@ -451,7 +437,8 @@ class Element:
 			data 			= {},
 			tags 			= set(),
 			invertOnClick 	= False,
-			invertDuration 	= 0.2
+			invertDuration 	= 0.2,
+			forcePrintOnTop = False
 		):
 		global lastUsedId
 		self.id = lastUsedId
@@ -465,6 +452,7 @@ class Element:
 		self.invertOnClick = invertOnClick
 		self.tags=tags
 		self.default_invertDuration = invertDuration
+		self.forcePrintOnTop = forcePrintOnTop
 		self.parentLayouts = []
 		self.parentPSSMScreen = None
 
@@ -512,6 +500,51 @@ class Element:
 	def setInverted(self,mode):
 		# TODO : actually invert it ? or delete this function
 		self.isInverted = mode
+
+	def convertDimension(self,dimension):
+		"""
+		Converts the user dimension input (like "h*0.1") to to proper integer amout of pixels.
+		Basically, you give it a string. And it will change a few characters to their corresponding value, then return the evaluated string.
+
+		Examples:
+			I HIGHLY recommend doing only simple operation, like "H*0.1", "W/10", always starting with the corresponding variable.
+			But you can if you want do more complicated things:
+			elt.convertDimension("H+W")   ->  screen_height + screen_width
+			elt.convertDimension("p*300+max(w,H)")   ->   300 + max(element_width, screen_height)
+
+		Note:
+			When using question mark dimension (like "?*2"), the question mark MUST be at the beginning of the string
+		"""
+		if isinstance(dimension,int):
+			return dimension
+		elif isinstance(dimension,str):
+			nd = ""
+			W = self.parentPSSMScreen.width
+			H = self.parentPSSMScreen.height
+			if self.area:
+				(x,y),(w,h) = self.area
+			else:		# area not defined. Instead of being stuck, let's assume the screen height and width are a decent alternative
+				w,h = W,H
+			for c in dimension:
+				if c == 'p' or c== 'P':
+					nd += '1'
+				elif c == 'W':		# screen width
+					nd += str(W)
+				elif c == 'H':		# screen height
+					nd += str(H)
+				elif c == 'w':		# element width
+					nd += str(w)
+				elif c == 'h':		# element height
+					nd += str(h)
+				else: 			# A standard character
+					nd += c
+			if dimension[0] == '?':
+				return nd			# We return a string, another function will take care of evaluating it
+			else:
+				return int(eval(nd))		# Then we can evaluate the input
+		else:
+			print("[PSSM] Could not parse the dimension")
+			return dimension
 
 
 ############################# - Layout Elements	- ##############################
@@ -632,7 +665,7 @@ class Layout(Element):
 			row = self.layout[i]
 			row_cols = []           # All the columns of this particular row
 			row_height = row[0]
-			converted_height = self.parentPSSMScreen.convertDimension(row_height)
+			converted_height = self.convertDimension(row_height)
 			if isinstance(converted_height,int):
 				true_row_height = converted_height
 			else:
@@ -640,7 +673,7 @@ class Layout(Element):
 				true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
 			for j in range(1,len(row)):
 				(element,element_width) = row[j]
-				converted_width = self.parentPSSMScreen.convertDimension(element_width)
+				converted_width = self.convertDimension(element_width)
 				if element != None:
 					for parent in self.parentLayouts:
 						self.layout[i][j][0].parentLayouts.append(parent)
@@ -677,7 +710,7 @@ class Layout(Element):
 		total_questionMarks_weight = 0
 		total_height = 0
 		for dimension in rows:
-			converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
+			converted_dimension = self.convertDimension(dimension)
 			if isinstance(converted_dimension,int):
 				total_height += converted_dimension
 			else:
@@ -691,7 +724,7 @@ class Layout(Element):
 		total_width = 0
 		total_questionMarks_weight = 0
 		for dimension in cols:
-			converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
+			converted_dimension = self.convertDimension(dimension)
 			if isinstance(converted_dimension,int):
 				total_width += converted_dimension
 			else:
@@ -944,7 +977,7 @@ class OSK(Layout):
 				outline_color 		= "white" if key["isPadding"] else "black"
 				buttonElt = Button(
 					text				= label,
-					font_size 			= "h*0.02",
+					font_size 			= "H*0.02",
 					background_color	= background_color,
 					outline_color		= outline_color,
 					onclickInside		= self.handleKeyPress,
@@ -1139,10 +1172,10 @@ class Button(Element):
 		[(x,y),(w,h)] = area
 		self.area = area
 		if not isinstance(self.font_size,int):
-			self.font_size = self.parentPSSMScreen.convertDimension(self.font_size)
+			self.font_size = self.convertDimension(self.font_size)
 			if not isinstance(self.font_size,int):
 				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
-				self.font_size = self.parentPSSMScreen.convertDimension(STANDARD_FONT_SIZE)
+				self.font_size = self.convertDimension(STANDARD_FONT_SIZE)
 		loaded_font = ImageFont.truetype(self.font, self.font_size)
 		if self.radius>0:
 			rect = RectangleRounded(
@@ -1161,8 +1194,8 @@ class Button(Element):
 		imgDraw  = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
 		myText 	 = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
 		text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
-		x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , parentPSSMScreen = self.parentPSSMScreen)
-		y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , parentPSSMScreen = self.parentPSSMScreen)
+		x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
+		y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , myElt = self)
 		imgDraw.text(
 			(x,y),
 			myText,
@@ -1371,7 +1404,7 @@ def roundedCorner(radius, fill="white",outline_color="gray3",colorType='L'):
 	)
 	return corner
 
-def tools_convertXArgsToPX(xPosition,objw,textw,parentPSSMScreen=None):
+def tools_convertXArgsToPX(xPosition,objw,textw,myElt=None):
 	"""
 	Converts xPosition string arguments to numerical values
 	"""
@@ -1384,14 +1417,14 @@ def tools_convertXArgsToPX(xPosition,objw,textw,parentPSSMScreen=None):
 		x = int(objw-textw)
 	else:
 		try:
-			converted = parentPSSMScreen.convertDimension(xPosition)
+			converted = myElt.convertDimension(xPosition)
 			x = int(converted)
 		except:
 			print("[PSSM] Invalid input for xPosition")
 			return False
 	return x
 
-def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
+def tools_convertYArgsToPX(yPosition,objh,texth,myElt=None):
 	"""
 	Converts yPosition string arguments to numerical values
 	"""
@@ -1404,7 +1437,7 @@ def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
 		y = int(objh-texth)
 	else:
 		try:
-			converted = parentPSSMScreen.convertDimension(xPosition)
+			converted = myElt.convertDimension(xPosition)
 			y = int(converted)
 		except:
 			print("[PSSM] Invalid input for yPosition")

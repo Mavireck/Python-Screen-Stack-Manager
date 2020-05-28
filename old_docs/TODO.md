@@ -3,8 +3,9 @@
 
 
 - [Element] Add a Text class (a button with no outline basically)
-- Make size parameters easier to use : "H+W" = screen.height+screen.width, "h+H" = area.height+screen.height, "1+w*0.1",...
-- [Element] Add an Input class to enter text
+- [Element] Add an Input class to enter text. + How to detect between which characters the user clicked?
+- [Element] Write a PopupText class to prompt text
+- [Element] Write a PopupChoices class with a button for each choice (which works a bit like ButtonList)
 
 - [Emulator] Rewrite it using a proper librairy and not openCV (will be more flexible to handle touch events and keypress)
 - [Emulator] Handle partial screen inversion
