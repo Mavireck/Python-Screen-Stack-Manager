@@ -357,7 +357,7 @@ class PSSMScreen:
 		):
 		if not area:
 			area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
-		self.osk = OSK(onkeyPress = onKeyPress, area = area, keymapPath = keymapPath)
+		self.osk = OSK(onKeyPress = onKeyPress, area = area, keymapPath = keymapPath)
 
 	def OSKShow(self,onKeyPress=None):
 		if not self.osk:
@@ -942,9 +942,9 @@ class OSK(Layout):
 	A PSSM Layout element which builds an on-screen keyboard
 	Args:
 		keymapPath (str): a path to a PSSMOSK keymap (like the one included)
-		onkeyPress (function): A callback function. Will be given keyType and keyChar as argument
+		onKeyPress (function): A callback function. Will be given keyType and keyChar as argument
 	"""
-	def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onkeyPress = None, area=None,**kwargs):
+	def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onKeyPress = None, area=None,**kwargs):
 		if not keymapPath:
 			keymapPath = DEFAULT_KEYMAP_PATH
 		self.keymapPaths = keymapPath
@@ -958,7 +958,7 @@ class OSK(Layout):
 		with open(self.keymapPaths['alt']) as json_file:
 			self.keymap['alt'] = json.load(json_file)
 		self.lang     	= self.keymap['standard']["lang"]
-		self.onkeyPress	= onkeyPress
+		self.onKeyPress	= onKeyPress
 		for param in kwargs:
 			setattr(self, param, kwargs[param])
 		self.view = 'standard'
@@ -1041,17 +1041,8 @@ class OSK(Layout):
 			    skipGeneration = True
 			)
 			self.parentPSSMScreen.simplePrintElt(self)
-		# TODO : Investigate this issue (surely a threading issue) :
-		# Here, when using a simple demo app containing only an Input element,
-		# when this portion of code is executed, self.onKeyPress == None, but self.parentPSSMScreen.osk.onKeyPress != None.
-		# (Surely because of inheritance.) Anyway, let's work around it
-		if self.parentPSSMScreen.osk.onKeyPress:
-			self.parentPSSMScreen.osk.onKeyPress(keyType,keyChar)
-		#print("handling key press. onKeyPress set to : ", self.onkeyPress)
-		#print("Is self equal to parentPSSMScreen.osk? ",self == self.parentPSSMScreen)
-		#print("Parent pssm osk.onKeyPress set to : ", self.parentPSSMScreen.osk.onKeyPress)
-		#if self.onkeyPress != None:
-			#self.onkeyPress(keyType,keyChar)
+		if self.onKeyPress:
+			self.onKeyPress(keyType,keyChar)
 
 	def getKeyLabel(self,key):
 		kt = key["keyType"]
