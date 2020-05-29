@@ -114,3 +114,4 @@ def demo4():
     screen.addElt(myLayout)
 
 demo3()
+screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code

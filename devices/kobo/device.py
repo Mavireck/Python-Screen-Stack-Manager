@@ -95,6 +95,9 @@ def wifiUp():
 def wait(time_seconds):
 	sleep(time_seconds)
 
+def startMainLoop():
+	return True
+
 def closePrintHandler():
 	FBInk.fbink_close(fbfd)
 

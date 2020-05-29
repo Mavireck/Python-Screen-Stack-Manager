@@ -15,6 +15,7 @@ view_width=screen_width
 view_height=screen_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
+emulator_windows_scale = 0.8		# Scale the emulator window
 isEmulator= True
 isRGB 	  = True
 colorType = "L"
@@ -44,6 +45,10 @@ def wait(time_seconds):
 	#Reminder : When using 'wait' in the emulator, you can skip the wait by pressing any keyboard key
 	cv2.waitKey(int(time_seconds*1000))
 
+def startMainLoop():
+    # Somehow necessary for it not to be killed in the emulator
+    while True:
+        wait(0)	# We tell openCV to keep the window open until a key is pressed
 
 def closePrintHandler():
 	#TODO : is there anything to do?
@@ -60,7 +65,9 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 	opencvImage = np.array(last_printed_PIL)
 	# Convert RGB to BGR
 	opencvImage = opencvImage[:, :, ::-1].copy()
-	cv2.imshow('PSSM_Emulator',opencvImage)
+	rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+	opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
+	cv2.imshow('PSSM_Emulator',opencvImage_Re)
 	cv2.waitKey(1)
 
 def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
@@ -74,7 +81,9 @@ def do_screen_clear():
 	opencvImage = np.array(pil_image)
 	# Convert RGB to BGR
 	opencvImage = opencvImage[:, :, ::-1].copy()
-	cv2.imshow('PSSM_Emulator',opencvImage)
+	rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+	opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
+	cv2.imshow('PSSM_Emulator',opencvImage_Re)
 	cv2.waitKey(1)
 
 
@@ -100,4 +109,6 @@ def closeInteractionHandler():
 def cv2Link(event, x, y, flags, param):
 	global eventCallbackFct
 	if event == cv2.EVENT_LBUTTONUP:
-		eventCallbackFct(x,y)
+		scaled_x = int(x/emulator_windows_scale)
+		scaled_y = int(y/emulator_windows_scale)
+		eventCallbackFct(scaled_x,scaled_y)
