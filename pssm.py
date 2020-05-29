@@ -12,8 +12,8 @@ from copy import deepcopy
 lastUsedId=0
 
 PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_FONT = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Regular.ttf")
-DEFAULT_FONTBOLD = os.path.join(PATH_TO_PSSM,"fonts", "Merriweather-Bold.ttf")
+DEFAULT_FONT = "default"
+DEFAULT_FONTBOLD = "default-Bold"
 STANDARD_FONT_SIZE = "H*0.036"
 CURSOR_CHAR = "|"
 
@@ -1160,7 +1160,7 @@ class Button(Element):
 	"""
 	Basically a rectangle (or rounded rectangle) with text printed on it
 	Args:
-		font (str): Path to a font file
+		font (str): Path to a font file (ttf file), or one of PSSM built-in fonts (e.g. "Merriweather-Bold", "default", "Merriweather-Regular",...) (see the font folder for the complete list)
 		font_size (int): The font size
 		font_color (str): The color of the font : "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
 		wrap_textOverflow (bool): (True by default) Wrap text in order to avoid it overflowing. The cuts are made between words.
@@ -1188,7 +1188,7 @@ class Button(Element):
 		self.background_color   = background_color
 		self.outline_color    	= outline_color
 		self.text       		= text
-		self.font       		= font
+		self.font       		= tools_parseKnownFonts(font)
 		self.font_size  		= font_size
 		self.radius     		= radius
 		self.font_color 		= font_color
@@ -1593,6 +1593,9 @@ def tools_convertYArgsToPX(yPosition,objh,texth,myElt=None):
 	return y
 
 def tools_parseKnownImageFile(file):
+	"""
+	Finds the path to a image file if its argument is one of pssm images.
+	"""
 	files={
 		'back' 		: PATH_TO_PSSM + "/icons/back.png",
 		'delete' 	: PATH_TO_PSSM + "/icons/delete.jpg",
@@ -1612,6 +1615,21 @@ def tools_parseKnownImageFile(file):
 	else:
 		return file
 
+def tools_parseKnownFonts(font):
+	"""
+	Finds the path to a image file if its argument is one of pssm images.
+	"""
+	fonts={
+		'default'					: PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
+		'default-Regular'			: PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
+		'default-Bold'				: PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf",
+		'Merriweather-Regular' 		: PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
+		'Merriweather-Bold'			: PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf"
+	}
+	if font in fonts:
+		return fonts[font]
+	else:
+		return font
 
 colorsL = {'black':0,'white':255}
 colorsRGBA = {'black':(0,0,0,0),'white':(255,255,255,1)}
