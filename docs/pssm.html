@@ -38,9 +38,10 @@ from copy import deepcopy
 lastUsedId=0
 
 PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_FONT = os.path.join(PATH_TO_PSSM,&#34;fonts&#34;, &#34;Merriweather-Regular.ttf&#34;)
-DEFAULT_FONTBOLD = os.path.join(PATH_TO_PSSM,&#34;fonts&#34;, &#34;Merriweather-Bold.ttf&#34;)
-STANDARD_FONT_SIZE = &#34;h*0.036&#34;
+DEFAULT_FONT = &#34;default&#34;
+DEFAULT_FONTBOLD = &#34;default-Bold&#34;
+STANDARD_FONT_SIZE = &#34;H*0.036&#34;
+CURSOR_CHAR = &#34;|&#34;
 
 
 # Constants for the on-screen-keyboard:
@@ -62,7 +63,7 @@ KTcontrol        = 5
 KTalt            = 6
 
 
-############################# - One lines - ####################################
+############################# - One liners - ###################################
 def returnFalse(*args): return False
 
 ############################# - StackManager    - ##############################
@@ -75,6 +76,16 @@ class PSSMScreen:
                 name (str): The name of the class instance (deprecated, I will eventually remove it)
                 stack (list): Do not use it unless you know what you are doing. It is the list of all the pssm Elements which are on the screen
                 isInverted (bool)
+
+        Attributes:
+                device: the device.py module.  You can with it access a few useful functions like `self.device.readBatteryPercentage()`
+                colorType: &#34;L&#34; for grayscale devices, &#34;RGBA&#34; for others
+                width: The screen width
+                height : The screen height
+                view_width: The width of the part of the screen not hidden behind bezels
+                view_height: ...
+                name: ...
+                isInverted: ...
 
         Example of usage:
                 screen = pssm.PSSMScreen(&#34;Kobo&#34;,&#34;Main&#34;))
@@ -107,8 +118,8 @@ class PSSMScreen:
                 self.lastX = -1
                 self.lastY = -1
                 self.osk = None
-                self.onKeyPress = None
-                self.isKeyboardShown = False
+                self.numberEltOnTop = 0
+                self.isOSKShown = False
 
         def findEltWithId(self,myElementId,stack=None):
                 &#34;&#34;&#34;
@@ -216,9 +227,14 @@ class PSSMScreen:
                         if not skipRegistration:
                                 # We append the element to the stack
                                 myElement.parentPSSMScreen = self
-                                self.stack.append(myElement)
+                                if self.numberEltOnTop &gt; 0:
+                                        # There is something on top, addnig it at position -2 (before the last one)
+                                        pos = - 1 - self.numberEltOnTop
+                                        self.stack.insert(pos,myElement)
+                                else:
+                                        self.stack.append(myElement)
                                 if not skipPrint:
-                                        if self.isKeyboardShown:
+                                        if self.numberEltOnTop &gt; 0 and not self.forcePrintOnTop:
                                                 #TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything
                                                 myElement.generator()
                                                 self.printStack(area=myElement.area)
@@ -359,21 +375,6 @@ class PSSMScreen:
                 self.device.do_screen_clear()
                 return True
 
-        def convertDimension(self,dimension):
-                if isinstance(dimension,int):
-                        return dimension
-                else:
-                        t  = dimension[0]
-                        op = dimension[1:]
-                        if t == &#34;p&#34;:
-                                return int(eval(&#34;1&#34; + op))
-                        elif t== &#34;w&#34;:
-                                return int(eval(str(self.width) + op))
-                        elif t== &#34;h&#34;:
-                                return int(eval(str(self.height) + op))
-                        else:
-                                return dimension
-
         def OSKInit(
                         self,
                         onKeyPress = None,
@@ -382,19 +383,22 @@ class PSSMScreen:
                 ):
                 if not area:
                         area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
-                self.onKeyPress = onKeyPress
-                self.osk = OSK(onkeyPress = self.onKeyPress, area = area, keymapPath = keymapPath)
+                self.osk = OSK(onKeyPress = onKeyPress, area = area, keymapPath = keymapPath)
 
-        def OSKShow(self):
+        def OSKShow(self,onKeyPress=None):
                 if not self.osk:
                         print(&#34;OSK not initialized, it can&#39;t be shown&#34;)
                         return None
+                if onKeyPress:
+                        self.osk.onKeyPress = onKeyPress
                 self.addElt(self.osk)   # It has already been generated
-                self.isKeyboardShown = True
+                self.numberEltOnTop += 1
+                self.isOSKShown = True
 
         def OSKHide(self):
                 self.removeElt(elt=self.osk)
-                self.isKeyboardShown = False
+                self.numberEltOnTop -= 1
+                self.isOSKShown = False
 
         def startListenerThread(self,grabInput=False):
                 &#34;&#34;&#34;
@@ -441,7 +445,8 @@ class PSSMScreen:
                 else:
                         if elt.invertOnClick:
                                 self.invertArea(elt.area,elt.default_invertDuration)
-                        elt.onclickInside(elt,coords)
+                        elt.pssmOnClickInside(coords)  # Execute PSSM action on click
+                        elt.onclickInside(elt,coords)  # Execute user action attached to it too
 
         def stopListenerThread(self):
                 self.isInputThreadStarted = False
@@ -463,6 +468,7 @@ class Element:
                 tags (set): A set of tags the element has. (deprecated)
                 invertOnClick (bool): Invert the element when a click is registered ?
                 invertDuration (int): Duration in seconds of the element invertion after a click is registered (use 0 for infinite)
+                forcePrintOnTop (bool): Force the element to be printed on top of the stack, even if there is an on-screen keyboard or a popup
         &#34;&#34;&#34;
         def __init__(
                         self,
@@ -473,7 +479,8 @@ class Element:
                         data                    = {},
                         tags                    = set(),
                         invertOnClick   = False,
-                        invertDuration  = 0.2
+                        invertDuration  = 0.2,
+                        forcePrintOnTop = False
                 ):
                 global lastUsedId
                 self.id = lastUsedId
@@ -487,6 +494,7 @@ class Element:
                 self.invertOnClick = invertOnClick
                 self.tags=tags
                 self.default_invertDuration = invertDuration
+                self.forcePrintOnTop = forcePrintOnTop
                 self.parentLayouts = []
                 self.parentPSSMScreen = None
 
@@ -498,7 +506,7 @@ class Element:
                         return self.id == other.id
                 return NotImplemented
 
-        def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
+        def update(self,newAttributes={},skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
                 &#34;&#34;&#34;
                 Pass a dict as argument, and it will update the Element&#39;s attributes accordingly
                 Args :
@@ -534,6 +542,59 @@ class Element:
         def setInverted(self,mode):
                 # TODO : actually invert it ? or delete this function
                 self.isInverted = mode
+
+        def convertDimension(self,dimension):
+                &#34;&#34;&#34;
+                Converts the user dimension input (like &#34;h*0.1&#34;) to to proper integer amout of pixels.
+                Basically, you give it a string. And it will change a few characters to their corresponding value, then return the evaluated string.
+
+                Examples:
+                        I HIGHLY recommend doing only simple operation, like &#34;H*0.1&#34;, &#34;W/10&#34;, always starting with the corresponding variable.
+                        But you can if you want do more complicated things:
+                        elt.convertDimension(&#34;H+W&#34;)   -&gt;  screen_height + screen_width
+                        elt.convertDimension(&#34;p*300+max(w,H)&#34;)   -&gt;   300 + max(element_width, screen_height)
+
+                Note:
+                        When using question mark dimension (like &#34;?*2&#34;), the question mark MUST be at the beginning of the string
+                &#34;&#34;&#34;
+                if isinstance(dimension,int):
+                        return dimension
+                elif isinstance(dimension,str):
+                        nd = &#34;&#34;
+                        W = self.parentPSSMScreen.width
+                        H = self.parentPSSMScreen.height
+                        if self.area:
+                                (x,y),(w,h) = self.area
+                        else:           # area not defined. Instead of being stuck, let&#39;s assume the screen height and width are a decent alternative
+                                w,h = W,H
+                        for c in dimension:
+                                if c == &#39;p&#39; or c== &#39;P&#39;:
+                                        nd += &#39;1&#39;
+                                elif c == &#39;W&#39;:          # screen width
+                                        nd += str(W)
+                                elif c == &#39;H&#39;:          # screen height
+                                        nd += str(H)
+                                elif c == &#39;w&#39;:          # element width
+                                        nd += str(w)
+                                elif c == &#39;h&#39;:          # element height
+                                        nd += str(h)
+                                else:                   # A standard character
+                                        nd += c
+                        if dimension[0] == &#39;?&#39;:
+                                return nd                       # We return a string, another function will take care of evaluating it
+                        else:
+                                return int(eval(nd))            # Then we can evaluate the input
+                else:
+                        print(&#34;[PSSM] Could not parse the dimension&#34;)
+                        return dimension
+
+        def pssmOnClickInside(self,coords):
+                &#34;&#34;&#34;
+                Each Element can also have a pssm function implemented on click.
+                By default, it does nothing.
+                &#34;&#34;&#34;
+                return None
+
 
 
 ############################# - Layout Elements - ##############################
@@ -654,7 +715,7 @@ class Layout(Element):
                         row = self.layout[i]
                         row_cols = []           # All the columns of this particular row
                         row_height = row[0]
-                        converted_height = self.parentPSSMScreen.convertDimension(row_height)
+                        converted_height = self.convertDimension(row_height)
                         if isinstance(converted_height,int):
                                 true_row_height = converted_height
                         else:
@@ -662,7 +723,7 @@ class Layout(Element):
                                 true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
                         for j in range(1,len(row)):
                                 (element,element_width) = row[j]
-                                converted_width = self.parentPSSMScreen.convertDimension(element_width)
+                                converted_width = self.convertDimension(element_width)
                                 if element != None:
                                         for parent in self.parentLayouts:
                                                 self.layout[i][j][0].parentLayouts.append(parent)
@@ -699,7 +760,7 @@ class Layout(Element):
                 total_questionMarks_weight = 0
                 total_height = 0
                 for dimension in rows:
-                        converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
+                        converted_dimension = self.convertDimension(dimension)
                         if isinstance(converted_dimension,int):
                                 total_height += converted_dimension
                         else:
@@ -713,7 +774,7 @@ class Layout(Element):
                 total_width = 0
                 total_questionMarks_weight = 0
                 for dimension in cols:
-                        converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
+                        converted_dimension = self.convertDimension(dimension)
                         if isinstance(converted_dimension,int):
                                 total_width += converted_dimension
                         else:
@@ -907,9 +968,9 @@ class OSK(Layout):
         A PSSM Layout element which builds an on-screen keyboard
         Args:
                 keymapPath (str): a path to a PSSMOSK keymap (like the one included)
-                onkeyPress (function): A callback function. Will be given keyType and keyChar as argument
+                onKeyPress (function): A callback function. Will be given keyType and keyChar as argument
         &#34;&#34;&#34;
-        def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onkeyPress = None, area=None,**kwargs):
+        def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onKeyPress = None, area=None,**kwargs):
                 if not keymapPath:
                         keymapPath = DEFAULT_KEYMAP_PATH
                 self.keymapPaths = keymapPath
@@ -923,7 +984,7 @@ class OSK(Layout):
                 with open(self.keymapPaths[&#39;alt&#39;]) as json_file:
                         self.keymap[&#39;alt&#39;] = json.load(json_file)
                 self.lang       = self.keymap[&#39;standard&#39;][&#34;lang&#34;]
-                self.onkeyPress = onkeyPress
+                self.onKeyPress = onKeyPress
                 for param in kwargs:
                         setattr(self, param, kwargs[param])
                 self.view = &#39;standard&#39;
@@ -966,7 +1027,7 @@ class OSK(Layout):
                                 outline_color           = &#34;white&#34; if key[&#34;isPadding&#34;] else &#34;black&#34;
                                 buttonElt = Button(
                                         text                            = label,
-                                        font_size                       = &#34;h*0.02&#34;,
+                                        font_size                       = &#34;H*0.02&#34;,
                                         background_color        = background_color,
                                         outline_color           = outline_color,
                                         onclickInside           = self.handleKeyPress,
@@ -1006,9 +1067,8 @@ class OSK(Layout):
                             skipGeneration = True
                         )
                         self.parentPSSMScreen.simplePrintElt(self)
-                if self.onkeyPress:
-                        self.onkeyPress(keyType,keyChar)
-
+                if self.onKeyPress:
+                        self.onKeyPress(keyType,keyChar)
 
         def getKeyLabel(self,key):
                 kt = key[&#34;keyType&#34;]
@@ -1117,7 +1177,7 @@ class Button(Element):
         &#34;&#34;&#34;
         Basically a rectangle (or rounded rectangle) with text printed on it
         Args:
-                font (str): Path to a font file
+                font (str): Path to a font file (ttf file), or one of PSSM built-in fonts (e.g. &#34;Merriweather-Bold&#34;, &#34;default&#34;, &#34;Merriweather-Regular&#34;,...) (see the font folder for the complete list)
                 font_size (int): The font size
                 font_color (str): The color of the font : &#34;white&#34;, &#34;black&#34;, &#34;gray0&#34; to &#34;gray15&#34; or a (red, green, blue, transparency) tuple
                 wrap_textOverflow (bool): (True by default) Wrap text in order to avoid it overflowing. The cuts are made between words.
@@ -1129,7 +1189,7 @@ class Button(Element):
         &#34;&#34;&#34;
         def __init__(
                         self,
-                        text,
+                        text=&#34;&#34;,
                         font=DEFAULT_FONT,
                         font_size=STANDARD_FONT_SIZE,
                         background_color=&#34;white&#34;,
@@ -1145,7 +1205,7 @@ class Button(Element):
                 self.background_color   = background_color
                 self.outline_color      = outline_color
                 self.text                       = text
-                self.font                       = font
+                self.font                       = tools_parseKnownFonts(font)
                 self.font_size                  = font_size
                 self.radius                     = radius
                 self.font_color                 = font_color
@@ -1154,6 +1214,9 @@ class Button(Element):
                 self.wrap_textOverflow  = wrap_textOverflow
                 for param in kwargs:
                         setattr(self, param, kwargs[param])
+                self.loaded_font = None
+                self.convertedText = None
+                self.imgDraw = None
 
         def generator(self,area=None):
                 if area==None:
@@ -1161,11 +1224,12 @@ class Button(Element):
                 [(x,y),(w,h)] = area
                 self.area = area
                 if not isinstance(self.font_size,int):
-                        self.font_size = self.parentPSSMScreen.convertDimension(self.font_size)
+                        self.font_size = self.convertDimension(self.font_size)
                         if not isinstance(self.font_size,int):
                                 # That&#39;s a question mark dimension, or an invalid dimension. Rollback to default font size
-                                self.font_size = self.parentPSSMScreen.convertDimension(STANDARD_FONT_SIZE)
+                                self.font_size = self.convertDimension(STANDARD_FONT_SIZE)
                 loaded_font = ImageFont.truetype(self.font, self.font_size)
+                self.loaded_font = loaded_font
                 if self.radius&gt;0:
                         rect = RectangleRounded(
                                 radius=self.radius,
@@ -1181,10 +1245,12 @@ class Button(Element):
                         )
                 rect_img = rect.generator(self.area)
                 imgDraw  = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
+                self.imgDraw = imgDraw
                 myText   = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
-                text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
-                x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , parentPSSMScreen = self.parentPSSMScreen)
-                y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , parentPSSMScreen = self.parentPSSMScreen)
+                self.convertedText = myText
+                text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
+                x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
+                y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , myElt = self)
                 imgDraw.text(
                         (x,y),
                         myText,
@@ -1348,6 +1414,112 @@ class Line(Element):
                 self.imgData = rectangle
                 return self.imgData
 
+class Input(Button):
+        &#34;&#34;&#34;
+        Basically a button, except when you click on it, it displays the keyboard.
+        It handles typing things for you. so when you click on this element, the keyboard shows up, and you can start typing.
+        The main thing it does is that it is able to detect between which characters the user typed to be able to insert a character between two others
+        (and that was no easy task)
+        It has a method to retrieve what was typed :
+        Input.getInput()
+        &#34;&#34;&#34;
+        def __init__(self,**kwargs):
+                super().__init__()
+                self.hideCursorWhenLast = True
+                for param in kwargs:
+                        setattr(self, param, kwargs[param])
+                self.cursorPosition = len(self.text)
+                self.typedText = self.text[:]
+                self.text = self.typedText
+
+        def getInput(self):
+                &#34;&#34;&#34;
+                Returns the text currently written on the Input box.
+                &#34;&#34;&#34;
+                return self.typedText
+
+        def pssmOnClickInside(self,coords):
+                if not self.parentPSSMScreen.osk:
+                        print(&#34;[PSSM] Keyboard not initialized, Input element cannot be properly handled&#34;)
+                        return None
+                self.parentPSSMScreen.osk.onKeyPress = self.onKeyPress          # Set the callback function to our own
+                if not self.parentPSSMScreen.isOSKShown:
+                        # Let&#39;s print the on screen keyboard as it is not already here
+                        self.parentPSSMScreen.OSKShow()
+                else:
+                        cx,cy = coords
+                        [(sx,sy),(w,h)] = self.area
+                        loaded_font = self.loaded_font
+                        myText   = self.convertedText
+                        imgDraw  = self.imgDraw
+                        text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
+                        x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
+                        y = tools_convertYArgsToPX(self.text_yPosition, h,text_h , myElt = self)
+                        # Then let&#39;s linear search
+                        wasFound = False
+                        olines = myText[:].split(&#34;\n&#34;)
+                        lines  = [olines[i] if i==0 else &#34;\n&#34; + olines[i] for i in range(len(olines))]
+                        linesBefore = &#34;&#34;
+                        for i in range(len(lines)):
+                                tw1,th1 = imgDraw.textsize(linesBefore, font=loaded_font)
+                                linesBefore += lines[i]
+                                tw2,th2 = imgDraw.textsize(linesBefore, font=loaded_font)
+                                b_correct_y = cy &gt; sy + x + th1 and cy &lt;= sy + y + th2
+                                if b_correct_y:
+                                        for j in range(len(linesBefore)):
+                                                tw1,th1 = imgDraw.textsize(linesBefore[:j], font=loaded_font)
+                                                tw2,th2 = imgDraw.textsize(linesBefore[:j+1], font=loaded_font)
+                                                b_correct_x = cx &gt; sx + x + tw1 and cx &lt;= sx + x + tw2
+                                                if b_correct_x:
+                                                        pos = j
+                                                        for line in lines[:i]:
+                                                                pos += len(line)
+                                                        self.setCursorPosition(pos+1)
+                                                        wasFound = True
+                                        if not wasFound:        # Let&#39;s put it at the end of the row
+                                                pos = 0
+                                                for line in lines[:i+1]:
+                                                        pos += len(line)
+                                                self.setCursorPosition(pos)
+                                                wasFound = True
+                        if not wasFound:
+                                self.setCursorPosition(None)
+                        # TODO : find between which characters the user typed
+                        # And set self.cursorPosition
+                        pass
+
+        def onKeyPress(self,keyType,keyChar):
+                &#34;&#34;&#34;
+                Handles each key press.
+                &#34;&#34;&#34;
+                c = self.cursorPosition
+                if keyType == KTstandardChar:
+                        self.typedText = insertStr(self.typedText,keyChar,c)
+                        self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+                elif keyType == KTcarriageReturn:
+                        self.typedText = insertStr(self.typedText,&#34;\n&#34;,c)
+                        self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+                elif keyType == KTbackspace:
+                        self.typedText = self.typedText[:c-1] + self.typedText[c:]
+                        self.setCursorPosition(self.cursorPosition-1,skipPrint=True)
+                if self.cursorPosition == len(self.typedText) and self.hideCursorWhenLast:
+                        # Don&#39;t display the cursor when it is at the last position
+                        self.text = self.typedText[:]
+                else:
+                        self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+                #self.update(skipPrint = True)
+                #self.parentPSSMScreen.simplePrintElt(self,skipGeneration=True)
+                self.update()
+
+        def setCursorPosition(self,pos,skipPrint=False):
+                if pos == None:
+                        pos = len(self.typedText)
+                self.cursorPosition = pos
+                self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+                if not skipPrint:
+                        self.update()
+
+
 
 ############################# -         Tools           - ##############################
 def coordsInArea(click_x,click_y,area):
@@ -1363,6 +1535,10 @@ def coordsInArea(click_x,click_y,area):
         return True
     else:
         return False
+
+def insertStr(string,char,pos):
+        &#34;&#34;&#34; Returns a string with the characther insterted at said position     &#34;&#34;&#34;
+        return string[:pos] +  char + string[pos:]
 
 def getRectanglesIntersection(area1,area2):
         (x1,y1),(w1,h1) = area1
@@ -1393,7 +1569,7 @@ def roundedCorner(radius, fill=&#34;white&#34;,outline_color=&#34;gray3&#34;,col
         )
         return corner
 
-def tools_convertXArgsToPX(xPosition,objw,textw,parentPSSMScreen=None):
+def tools_convertXArgsToPX(xPosition,objw,textw,myElt=None):
         &#34;&#34;&#34;
         Converts xPosition string arguments to numerical values
         &#34;&#34;&#34;
@@ -1406,14 +1582,14 @@ def tools_convertXArgsToPX(xPosition,objw,textw,parentPSSMScreen=None):
                 x = int(objw-textw)
         else:
                 try:
-                        converted = parentPSSMScreen.convertDimension(xPosition)
+                        converted = myElt.convertDimension(xPosition)
                         x = int(converted)
                 except:
                         print(&#34;[PSSM] Invalid input for xPosition&#34;)
                         return False
         return x
 
-def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
+def tools_convertYArgsToPX(yPosition,objh,texth,myElt=None):
         &#34;&#34;&#34;
         Converts yPosition string arguments to numerical values
         &#34;&#34;&#34;
@@ -1426,7 +1602,7 @@ def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
                 y = int(objh-texth)
         else:
                 try:
-                        converted = parentPSSMScreen.convertDimension(xPosition)
+                        converted = myElt.convertDimension(xPosition)
                         y = int(converted)
                 except:
                         print(&#34;[PSSM] Invalid input for yPosition&#34;)
@@ -1434,6 +1610,9 @@ def tools_convertYArgsToPX(yPosition,objh,texth,parentPSSMScreen=None):
         return y
 
 def tools_parseKnownImageFile(file):
+        &#34;&#34;&#34;
+        Finds the path to a image file if its argument is one of pssm images.
+        &#34;&#34;&#34;
         files={
                 &#39;back&#39;          : PATH_TO_PSSM + &#34;/icons/back.png&#34;,
                 &#39;delete&#39;        : PATH_TO_PSSM + &#34;/icons/delete.jpg&#34;,
@@ -1453,6 +1632,21 @@ def tools_parseKnownImageFile(file):
         else:
                 return file
 
+def tools_parseKnownFonts(font):
+        &#34;&#34;&#34;
+        Finds the path to a image file if its argument is one of pssm images.
+        &#34;&#34;&#34;
+        fonts={
+                &#39;default&#39;                                       : PATH_TO_PSSM + &#34;/fonts/Merriweather-Regular.ttf&#34;,
+                &#39;default-Regular&#39;                       : PATH_TO_PSSM + &#34;/fonts/Merriweather-Regular.ttf&#34;,
+                &#39;default-Bold&#39;                          : PATH_TO_PSSM + &#34;/fonts/Merriweather-Bold.ttf&#34;,
+                &#39;Merriweather-Regular&#39;          : PATH_TO_PSSM + &#34;/fonts/Merriweather-Regular.ttf&#34;,
+                &#39;Merriweather-Bold&#39;                     : PATH_TO_PSSM + &#34;/fonts/Merriweather-Bold.ttf&#34;
+        }
+        if font in fonts:
+                return fonts[font]
+        else:
+                return font
 
 colorsL = {&#39;black&#39;:0,&#39;white&#39;:255}
 colorsRGBA = {&#39;black&#39;:(0,0,0,0),&#39;white&#39;:(255,255,255,1)}
@@ -1525,20 +1719,63 @@ for f in ignoreList:
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="Python-Screen-Stack-Manager.pssm.insertStr"><code class="name flex">
+<span>def <span class="ident">insertStr</span></span>(<span>string, char, pos)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns a string with the characther insterted at said position</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def insertStr(string,char,pos):
+        &#34;&#34;&#34; Returns a string with the characther insterted at said position     &#34;&#34;&#34;
+        return string[:pos] +  char + string[pos:]</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.pssm.tools_parseKnownFonts"><code class="name flex">
+<span>def <span class="ident">tools_parseKnownFonts</span></span>(<span>font)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Finds the path to a image file if its argument is one of pssm images.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tools_parseKnownFonts(font):
+        &#34;&#34;&#34;
+        Finds the path to a image file if its argument is one of pssm images.
+        &#34;&#34;&#34;
+        fonts={
+                &#39;default&#39;                                       : PATH_TO_PSSM + &#34;/fonts/Merriweather-Regular.ttf&#34;,
+                &#39;default-Regular&#39;                       : PATH_TO_PSSM + &#34;/fonts/Merriweather-Regular.ttf&#34;,
+                &#39;default-Bold&#39;                          : PATH_TO_PSSM + &#34;/fonts/Merriweather-Bold.ttf&#34;,
+                &#39;Merriweather-Regular&#39;          : PATH_TO_PSSM + &#34;/fonts/Merriweather-Regular.ttf&#34;,
+                &#39;Merriweather-Bold&#39;                     : PATH_TO_PSSM + &#34;/fonts/Merriweather-Bold.ttf&#34;
+        }
+        if font in fonts:
+                return fonts[font]
+        else:
+                return font</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
 <dt id="Python-Screen-Stack-Manager.pssm.Button"><code class="flex name class">
 <span>class <span class="ident">Button</span></span>
-<span>(</span><span>text, font=DEFAULT_FONT, font_size='h*0.036', background_color='white', outline_color='black', radius=0, font_color='black', text_xPosition='center', text_yPosition='center', wrap_textOverflow=True, **kwargs)</span>
+<span>(</span><span>text='', font='default', font_size='H*0.036', background_color='white', outline_color='black', radius=0, font_color='black', text_xPosition='center', text_yPosition='center', wrap_textOverflow=True, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Basically a rectangle (or rounded rectangle) with text printed on it</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>font</code></strong> :&ensp;<code>str</code></dt>
-<dd>Path to a font file</dd>
+<dd>Path to a font file (ttf file), or one of PSSM built-in fonts (e.g. "Merriweather-Bold", "default", "Merriweather-Regular",&hellip;) (see the font folder for the complete list)</dd>
 <dt><strong><code>font_size</code></strong> :&ensp;<code>int</code></dt>
 <dd>The font size</dd>
 <dt><strong><code>font_color</code></strong> :&ensp;<code>str</code></dt>
@@ -1564,7 +1801,7 @@ for f in ignoreList:
         &#34;&#34;&#34;
         Basically a rectangle (or rounded rectangle) with text printed on it
         Args:
-                font (str): Path to a font file
+                font (str): Path to a font file (ttf file), or one of PSSM built-in fonts (e.g. &#34;Merriweather-Bold&#34;, &#34;default&#34;, &#34;Merriweather-Regular&#34;,...) (see the font folder for the complete list)
                 font_size (int): The font size
                 font_color (str): The color of the font : &#34;white&#34;, &#34;black&#34;, &#34;gray0&#34; to &#34;gray15&#34; or a (red, green, blue, transparency) tuple
                 wrap_textOverflow (bool): (True by default) Wrap text in order to avoid it overflowing. The cuts are made between words.
@@ -1576,7 +1813,7 @@ for f in ignoreList:
         &#34;&#34;&#34;
         def __init__(
                         self,
-                        text,
+                        text=&#34;&#34;,
                         font=DEFAULT_FONT,
                         font_size=STANDARD_FONT_SIZE,
                         background_color=&#34;white&#34;,
@@ -1592,7 +1829,7 @@ for f in ignoreList:
                 self.background_color   = background_color
                 self.outline_color      = outline_color
                 self.text                       = text
-                self.font                       = font
+                self.font                       = tools_parseKnownFonts(font)
                 self.font_size                  = font_size
                 self.radius                     = radius
                 self.font_color                 = font_color
@@ -1601,6 +1838,9 @@ for f in ignoreList:
                 self.wrap_textOverflow  = wrap_textOverflow
                 for param in kwargs:
                         setattr(self, param, kwargs[param])
+                self.loaded_font = None
+                self.convertedText = None
+                self.imgDraw = None
 
         def generator(self,area=None):
                 if area==None:
@@ -1608,11 +1848,12 @@ for f in ignoreList:
                 [(x,y),(w,h)] = area
                 self.area = area
                 if not isinstance(self.font_size,int):
-                        self.font_size = self.parentPSSMScreen.convertDimension(self.font_size)
+                        self.font_size = self.convertDimension(self.font_size)
                         if not isinstance(self.font_size,int):
                                 # That&#39;s a question mark dimension, or an invalid dimension. Rollback to default font size
-                                self.font_size = self.parentPSSMScreen.convertDimension(STANDARD_FONT_SIZE)
+                                self.font_size = self.convertDimension(STANDARD_FONT_SIZE)
                 loaded_font = ImageFont.truetype(self.font, self.font_size)
+                self.loaded_font = loaded_font
                 if self.radius&gt;0:
                         rect = RectangleRounded(
                                 radius=self.radius,
@@ -1628,10 +1869,12 @@ for f in ignoreList:
                         )
                 rect_img = rect.generator(self.area)
                 imgDraw  = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
+                self.imgDraw = imgDraw
                 myText   = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
-                text_w,text_h = imgDraw.textsize(self.text, font=loaded_font)
-                x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , parentPSSMScreen = self.parentPSSMScreen)
-                y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , parentPSSMScreen = self.parentPSSMScreen)
+                self.convertedText = myText
+                text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
+                x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
+                y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , myElt = self)
                 imgDraw.text(
                         (x,y),
                         myText,
@@ -1681,6 +1924,10 @@ for f in ignoreList:
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="Python-Screen-Stack-Manager.pssm.Input" href="#Python-Screen-Stack-Manager.pssm.Input">Input</a></li>
 </ul>
 <h3>Methods</h3>
 <dl>
@@ -1736,7 +1983,9 @@ for f in ignoreList:
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -1827,12 +2076,14 @@ for f in ignoreList:
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Layout" href="#Python-Screen-Stack-Manager.pssm.Layout">Layout</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.createEltList" href="#Python-Screen-Stack-Manager.pssm.Layout.createEltList">createEltList</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick">dispatchClick</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed">dispatchClick_DICHOTOMY_Full_ToBeFixed</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_colsOnly" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_colsOnly">dispatchClick_DICHOTOMY_colsOnly</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_LINEAR" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_LINEAR">dispatchClick_LINEAR</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.generator" href="#Python-Screen-Stack-Manager.pssm.Layout.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -1840,7 +2091,7 @@ for f in ignoreList:
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.Element"><code class="flex name class">
 <span>class <span class="ident">Element</span></span>
-<span>(</span><span>area=None, imgData=None, onclickInside=&lt;function returnFalse&gt;, isInverted=False, data={}, tags=set(), invertOnClick=False, invertDuration=0.2)</span>
+<span>(</span><span>area=None, imgData=None, onclickInside=&lt;function returnFalse&gt;, isInverted=False, data={}, tags=set(), invertOnClick=False, invertDuration=0.2, forcePrintOnTop=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Everything which is going to be displayed on the screen is an Element.</p>
@@ -1862,6 +2113,8 @@ for f in ignoreList:
 <dd>Invert the element when a click is registered ?</dd>
 <dt><strong><code>invertDuration</code></strong> :&ensp;<code>int</code></dt>
 <dd>Duration in seconds of the element invertion after a click is registered (use 0 for infinite)</dd>
+<dt><strong><code>forcePrintOnTop</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Force the element to be printed on top of the stack, even if there is an on-screen keyboard or a popup</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -1880,6 +2133,7 @@ for f in ignoreList:
                 tags (set): A set of tags the element has. (deprecated)
                 invertOnClick (bool): Invert the element when a click is registered ?
                 invertDuration (int): Duration in seconds of the element invertion after a click is registered (use 0 for infinite)
+                forcePrintOnTop (bool): Force the element to be printed on top of the stack, even if there is an on-screen keyboard or a popup
         &#34;&#34;&#34;
         def __init__(
                         self,
@@ -1890,7 +2144,8 @@ for f in ignoreList:
                         data                    = {},
                         tags                    = set(),
                         invertOnClick   = False,
-                        invertDuration  = 0.2
+                        invertDuration  = 0.2,
+                        forcePrintOnTop = False
                 ):
                 global lastUsedId
                 self.id = lastUsedId
@@ -1904,6 +2159,7 @@ for f in ignoreList:
                 self.invertOnClick = invertOnClick
                 self.tags=tags
                 self.default_invertDuration = invertDuration
+                self.forcePrintOnTop = forcePrintOnTop
                 self.parentLayouts = []
                 self.parentPSSMScreen = None
 
@@ -1915,7 +2171,7 @@ for f in ignoreList:
                         return self.id == other.id
                 return NotImplemented
 
-        def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
+        def update(self,newAttributes={},skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
                 &#34;&#34;&#34;
                 Pass a dict as argument, and it will update the Element&#39;s attributes accordingly
                 Args :
@@ -1950,7 +2206,59 @@ for f in ignoreList:
 
         def setInverted(self,mode):
                 # TODO : actually invert it ? or delete this function
-                self.isInverted = mode</code></pre>
+                self.isInverted = mode
+
+        def convertDimension(self,dimension):
+                &#34;&#34;&#34;
+                Converts the user dimension input (like &#34;h*0.1&#34;) to to proper integer amout of pixels.
+                Basically, you give it a string. And it will change a few characters to their corresponding value, then return the evaluated string.
+
+                Examples:
+                        I HIGHLY recommend doing only simple operation, like &#34;H*0.1&#34;, &#34;W/10&#34;, always starting with the corresponding variable.
+                        But you can if you want do more complicated things:
+                        elt.convertDimension(&#34;H+W&#34;)   -&gt;  screen_height + screen_width
+                        elt.convertDimension(&#34;p*300+max(w,H)&#34;)   -&gt;   300 + max(element_width, screen_height)
+
+                Note:
+                        When using question mark dimension (like &#34;?*2&#34;), the question mark MUST be at the beginning of the string
+                &#34;&#34;&#34;
+                if isinstance(dimension,int):
+                        return dimension
+                elif isinstance(dimension,str):
+                        nd = &#34;&#34;
+                        W = self.parentPSSMScreen.width
+                        H = self.parentPSSMScreen.height
+                        if self.area:
+                                (x,y),(w,h) = self.area
+                        else:           # area not defined. Instead of being stuck, let&#39;s assume the screen height and width are a decent alternative
+                                w,h = W,H
+                        for c in dimension:
+                                if c == &#39;p&#39; or c== &#39;P&#39;:
+                                        nd += &#39;1&#39;
+                                elif c == &#39;W&#39;:          # screen width
+                                        nd += str(W)
+                                elif c == &#39;H&#39;:          # screen height
+                                        nd += str(H)
+                                elif c == &#39;w&#39;:          # element width
+                                        nd += str(w)
+                                elif c == &#39;h&#39;:          # element height
+                                        nd += str(h)
+                                else:                   # A standard character
+                                        nd += c
+                        if dimension[0] == &#39;?&#39;:
+                                return nd                       # We return a string, another function will take care of evaluating it
+                        else:
+                                return int(eval(nd))            # Then we can evaluate the input
+                else:
+                        print(&#34;[PSSM] Could not parse the dimension&#34;)
+                        return dimension
+
+        def pssmOnClickInside(self,coords):
+                &#34;&#34;&#34;
+                Each Element can also have a pssm function implemented on click.
+                By default, it does nothing.
+                &#34;&#34;&#34;
+                return None</code></pre>
 </details>
 <h3>Subclasses</h3>
 <ul class="hlist">
@@ -1964,6 +2272,73 @@ for f in ignoreList:
 </ul>
 <h3>Methods</h3>
 <dl>
+<dt id="Python-Screen-Stack-Manager.pssm.Element.convertDimension"><code class="name flex">
+<span>def <span class="ident">convertDimension</span></span>(<span>self, dimension)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Converts the user dimension input (like "h*0.1") to to proper integer amout of pixels.
+Basically, you give it a string. And it will change a few characters to their corresponding value, then return the evaluated string.</p>
+<h2 id="examples">Examples</h2>
+<p>I HIGHLY recommend doing only simple operation, like "H<em>0.1", "W/10", always starting with the corresponding variable.
+But you can if you want do more complicated things:
+elt.convertDimension("H+W")
+-&gt;
+screen_height + screen_width
+elt.convertDimension("p</em>300+max(w,H)")
+-&gt;
+300 + max(element_width, screen_height)</p>
+<h2 id="note">Note</h2>
+<p>When using question mark dimension (like "?*2"), the question mark MUST be at the beginning of the string</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def convertDimension(self,dimension):
+        &#34;&#34;&#34;
+        Converts the user dimension input (like &#34;h*0.1&#34;) to to proper integer amout of pixels.
+        Basically, you give it a string. And it will change a few characters to their corresponding value, then return the evaluated string.
+
+        Examples:
+                I HIGHLY recommend doing only simple operation, like &#34;H*0.1&#34;, &#34;W/10&#34;, always starting with the corresponding variable.
+                But you can if you want do more complicated things:
+                elt.convertDimension(&#34;H+W&#34;)   -&gt;  screen_height + screen_width
+                elt.convertDimension(&#34;p*300+max(w,H)&#34;)   -&gt;   300 + max(element_width, screen_height)
+
+        Note:
+                When using question mark dimension (like &#34;?*2&#34;), the question mark MUST be at the beginning of the string
+        &#34;&#34;&#34;
+        if isinstance(dimension,int):
+                return dimension
+        elif isinstance(dimension,str):
+                nd = &#34;&#34;
+                W = self.parentPSSMScreen.width
+                H = self.parentPSSMScreen.height
+                if self.area:
+                        (x,y),(w,h) = self.area
+                else:           # area not defined. Instead of being stuck, let&#39;s assume the screen height and width are a decent alternative
+                        w,h = W,H
+                for c in dimension:
+                        if c == &#39;p&#39; or c== &#39;P&#39;:
+                                nd += &#39;1&#39;
+                        elif c == &#39;W&#39;:          # screen width
+                                nd += str(W)
+                        elif c == &#39;H&#39;:          # screen height
+                                nd += str(H)
+                        elif c == &#39;w&#39;:          # element width
+                                nd += str(w)
+                        elif c == &#39;h&#39;:          # element height
+                                nd += str(h)
+                        else:                   # A standard character
+                                nd += c
+                if dimension[0] == &#39;?&#39;:
+                        return nd                       # We return a string, another function will take care of evaluating it
+                else:
+                        return int(eval(nd))            # Then we can evaluate the input
+        else:
+                print(&#34;[PSSM] Could not parse the dimension&#34;)
+                return dimension</code></pre>
+</details>
+</dd>
 <dt id="Python-Screen-Stack-Manager.pssm.Element.generator"><code class="name flex">
 <span>def <span class="ident">generator</span></span>(<span>self)</span>
 </code></dt>
@@ -1982,6 +2357,24 @@ build an image. It therefore returns a pillow image.</p></div>
         return NotImplemented</code></pre>
 </details>
 </dd>
+<dt id="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside"><code class="name flex">
+<span>def <span class="ident">pssmOnClickInside</span></span>(<span>self, coords)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Each Element can also have a pssm function implemented on click.
+By default, it does nothing.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pssmOnClickInside(self,coords):
+        &#34;&#34;&#34;
+        Each Element can also have a pssm function implemented on click.
+        By default, it does nothing.
+        &#34;&#34;&#34;
+        return None</code></pre>
+</details>
+</dd>
 <dt id="Python-Screen-Stack-Manager.pssm.Element.setInverted"><code class="name flex">
 <span>def <span class="ident">setInverted</span></span>(<span>self, mode)</span>
 </code></dt>
@@ -1997,7 +2390,7 @@ build an image. It therefore returns a pillow image.</p></div>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.Element.update"><code class="name flex">
-<span>def <span class="ident">update</span></span>(<span>self, newAttributes, skipGeneration=False, skipThisEltGeneration=False, skipPrint=False)</span>
+<span>def <span class="ident">update</span></span>(<span>self, newAttributes={}, skipGeneration=False, skipThisEltGeneration=False, skipPrint=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Pass a dict as argument, and it will update the Element's attributes accordingly
@@ -2010,7 +2403,7 @@ skipPrint (bool): Do not update the screen, but do regenerate.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def update(self,newAttributes,skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
+<pre><code class="python">def update(self,newAttributes={},skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
         &#34;&#34;&#34;
         Pass a dict as argument, and it will update the Element&#39;s attributes accordingly
         Args :
@@ -2097,8 +2490,217 @@ skipPrint (bool): Do not update the screen, but do regenerate.</p></div>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="Python-Screen-Stack-Manager.pssm.Input"><code class="flex name class">
+<span>class <span class="ident">Input</span></span>
+<span>(</span><span>**kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Basically a button, except when you click on it, it displays the keyboard.
+It handles typing things for you. so when you click on this element, the keyboard shows up, and you can start typing.
+The main thing it does is that it is able to detect between which characters the user typed to be able to insert a character between two others
+(and that was no easy task)
+It has a method to retrieve what was typed :
+Input.getInput()</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Input(Button):
+        &#34;&#34;&#34;
+        Basically a button, except when you click on it, it displays the keyboard.
+        It handles typing things for you. so when you click on this element, the keyboard shows up, and you can start typing.
+        The main thing it does is that it is able to detect between which characters the user typed to be able to insert a character between two others
+        (and that was no easy task)
+        It has a method to retrieve what was typed :
+        Input.getInput()
+        &#34;&#34;&#34;
+        def __init__(self,**kwargs):
+                super().__init__()
+                self.hideCursorWhenLast = True
+                for param in kwargs:
+                        setattr(self, param, kwargs[param])
+                self.cursorPosition = len(self.text)
+                self.typedText = self.text[:]
+                self.text = self.typedText
+
+        def getInput(self):
+                &#34;&#34;&#34;
+                Returns the text currently written on the Input box.
+                &#34;&#34;&#34;
+                return self.typedText
+
+        def pssmOnClickInside(self,coords):
+                if not self.parentPSSMScreen.osk:
+                        print(&#34;[PSSM] Keyboard not initialized, Input element cannot be properly handled&#34;)
+                        return None
+                self.parentPSSMScreen.osk.onKeyPress = self.onKeyPress          # Set the callback function to our own
+                if not self.parentPSSMScreen.isOSKShown:
+                        # Let&#39;s print the on screen keyboard as it is not already here
+                        self.parentPSSMScreen.OSKShow()
+                else:
+                        cx,cy = coords
+                        [(sx,sy),(w,h)] = self.area
+                        loaded_font = self.loaded_font
+                        myText   = self.convertedText
+                        imgDraw  = self.imgDraw
+                        text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
+                        x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
+                        y = tools_convertYArgsToPX(self.text_yPosition, h,text_h , myElt = self)
+                        # Then let&#39;s linear search
+                        wasFound = False
+                        olines = myText[:].split(&#34;\n&#34;)
+                        lines  = [olines[i] if i==0 else &#34;\n&#34; + olines[i] for i in range(len(olines))]
+                        linesBefore = &#34;&#34;
+                        for i in range(len(lines)):
+                                tw1,th1 = imgDraw.textsize(linesBefore, font=loaded_font)
+                                linesBefore += lines[i]
+                                tw2,th2 = imgDraw.textsize(linesBefore, font=loaded_font)
+                                b_correct_y = cy &gt; sy + x + th1 and cy &lt;= sy + y + th2
+                                if b_correct_y:
+                                        for j in range(len(linesBefore)):
+                                                tw1,th1 = imgDraw.textsize(linesBefore[:j], font=loaded_font)
+                                                tw2,th2 = imgDraw.textsize(linesBefore[:j+1], font=loaded_font)
+                                                b_correct_x = cx &gt; sx + x + tw1 and cx &lt;= sx + x + tw2
+                                                if b_correct_x:
+                                                        pos = j
+                                                        for line in lines[:i]:
+                                                                pos += len(line)
+                                                        self.setCursorPosition(pos+1)
+                                                        wasFound = True
+                                        if not wasFound:        # Let&#39;s put it at the end of the row
+                                                pos = 0
+                                                for line in lines[:i+1]:
+                                                        pos += len(line)
+                                                self.setCursorPosition(pos)
+                                                wasFound = True
+                        if not wasFound:
+                                self.setCursorPosition(None)
+                        # TODO : find between which characters the user typed
+                        # And set self.cursorPosition
+                        pass
+
+        def onKeyPress(self,keyType,keyChar):
+                &#34;&#34;&#34;
+                Handles each key press.
+                &#34;&#34;&#34;
+                c = self.cursorPosition
+                if keyType == KTstandardChar:
+                        self.typedText = insertStr(self.typedText,keyChar,c)
+                        self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+                elif keyType == KTcarriageReturn:
+                        self.typedText = insertStr(self.typedText,&#34;\n&#34;,c)
+                        self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+                elif keyType == KTbackspace:
+                        self.typedText = self.typedText[:c-1] + self.typedText[c:]
+                        self.setCursorPosition(self.cursorPosition-1,skipPrint=True)
+                if self.cursorPosition == len(self.typedText) and self.hideCursorWhenLast:
+                        # Don&#39;t display the cursor when it is at the last position
+                        self.text = self.typedText[:]
+                else:
+                        self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+                #self.update(skipPrint = True)
+                #self.parentPSSMScreen.simplePrintElt(self,skipGeneration=True)
+                self.update()
+
+        def setCursorPosition(self,pos,skipPrint=False):
+                if pos == None:
+                        pos = len(self.typedText)
+                self.cursorPosition = pos
+                self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+                if not skipPrint:
+                        self.update()</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="Python-Screen-Stack-Manager.pssm.Button" href="#Python-Screen-Stack-Manager.pssm.Button">Button</a></li>
+<li><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="Python-Screen-Stack-Manager.pssm.Input.getInput"><code class="name flex">
+<span>def <span class="ident">getInput</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the text currently written on the Input box.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def getInput(self):
+        &#34;&#34;&#34;
+        Returns the text currently written on the Input box.
+        &#34;&#34;&#34;
+        return self.typedText</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.pssm.Input.onKeyPress"><code class="name flex">
+<span>def <span class="ident">onKeyPress</span></span>(<span>self, keyType, keyChar)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Handles each key press.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def onKeyPress(self,keyType,keyChar):
+        &#34;&#34;&#34;
+        Handles each key press.
+        &#34;&#34;&#34;
+        c = self.cursorPosition
+        if keyType == KTstandardChar:
+                self.typedText = insertStr(self.typedText,keyChar,c)
+                self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+        elif keyType == KTcarriageReturn:
+                self.typedText = insertStr(self.typedText,&#34;\n&#34;,c)
+                self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
+        elif keyType == KTbackspace:
+                self.typedText = self.typedText[:c-1] + self.typedText[c:]
+                self.setCursorPosition(self.cursorPosition-1,skipPrint=True)
+        if self.cursorPosition == len(self.typedText) and self.hideCursorWhenLast:
+                # Don&#39;t display the cursor when it is at the last position
+                self.text = self.typedText[:]
+        else:
+                self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+        #self.update(skipPrint = True)
+        #self.parentPSSMScreen.simplePrintElt(self,skipGeneration=True)
+        self.update()</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.pssm.Input.setCursorPosition"><code class="name flex">
+<span>def <span class="ident">setCursorPosition</span></span>(<span>self, pos, skipPrint=False)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def setCursorPosition(self,pos,skipPrint=False):
+        if pos == None:
+                pos = len(self.typedText)
+        self.cursorPosition = pos
+        self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
+        if not skipPrint:
+                self.update()</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="Python-Screen-Stack-Manager.pssm.Button" href="#Python-Screen-Stack-Manager.pssm.Button">Button</a></b></code>:
+<ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Button.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Button.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Button.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Button.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
 </ul>
@@ -2263,7 +2865,7 @@ screen.addElt(myLayout)</p></div>
                         row = self.layout[i]
                         row_cols = []           # All the columns of this particular row
                         row_height = row[0]
-                        converted_height = self.parentPSSMScreen.convertDimension(row_height)
+                        converted_height = self.convertDimension(row_height)
                         if isinstance(converted_height,int):
                                 true_row_height = converted_height
                         else:
@@ -2271,7 +2873,7 @@ screen.addElt(myLayout)</p></div>
                                 true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
                         for j in range(1,len(row)):
                                 (element,element_width) = row[j]
-                                converted_width = self.parentPSSMScreen.convertDimension(element_width)
+                                converted_width = self.convertDimension(element_width)
                                 if element != None:
                                         for parent in self.parentLayouts:
                                                 self.layout[i][j][0].parentLayouts.append(parent)
@@ -2308,7 +2910,7 @@ screen.addElt(myLayout)</p></div>
                 total_questionMarks_weight = 0
                 total_height = 0
                 for dimension in rows:
-                        converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
+                        converted_dimension = self.convertDimension(dimension)
                         if isinstance(converted_dimension,int):
                                 total_height += converted_dimension
                         else:
@@ -2322,7 +2924,7 @@ screen.addElt(myLayout)</p></div>
                 total_width = 0
                 total_questionMarks_weight = 0
                 for dimension in cols:
-                        converted_dimension = self.parentPSSMScreen.convertDimension(dimension)
+                        converted_dimension = self.convertDimension(dimension)
                         if isinstance(converted_dimension,int):
                                 total_width += converted_dimension
                         else:
@@ -2550,6 +3152,8 @@ screen.addElt(myLayout)</p></div>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -2621,7 +3225,9 @@ screen.addElt(myLayout)</p></div>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -2629,7 +3235,7 @@ screen.addElt(myLayout)</p></div>
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.OSK"><code class="flex name class">
 <span>class <span class="ident">OSK</span></span>
-<span>(</span><span>keymapPath={'standard': DEFAULT_KEYMAP_PATH, 'caps': DEFAULT_KEYMAP_PATH_CAPS, 'alt': DEFAULT_KEYMAP_PATH_ALT}, onkeyPress=None, area=None, **kwargs)</span>
+<span>(</span><span>keymapPath={'standard': '...', 'caps': '...', 'alt': '...'}, onKeyPress=None, area=None, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>A PSSM Layout element which builds an on-screen keyboard</p>
@@ -2637,7 +3243,7 @@ screen.addElt(myLayout)</p></div>
 <dl>
 <dt><strong><code>keymapPath</code></strong> :&ensp;<code>str</code></dt>
 <dd>a path to a PSSMOSK keymap (like the one included)</dd>
-<dt><strong><code>onkeyPress</code></strong> :&ensp;<code>function</code></dt>
+<dt><strong><code>onKeyPress</code></strong> :&ensp;<code>function</code></dt>
 <dd>A callback function. Will be given keyType and keyChar as argument</dd>
 </dl></div>
 <details class="source">
@@ -2649,9 +3255,9 @@ screen.addElt(myLayout)</p></div>
         A PSSM Layout element which builds an on-screen keyboard
         Args:
                 keymapPath (str): a path to a PSSMOSK keymap (like the one included)
-                onkeyPress (function): A callback function. Will be given keyType and keyChar as argument
+                onKeyPress (function): A callback function. Will be given keyType and keyChar as argument
         &#34;&#34;&#34;
-        def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onkeyPress = None, area=None,**kwargs):
+        def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onKeyPress = None, area=None,**kwargs):
                 if not keymapPath:
                         keymapPath = DEFAULT_KEYMAP_PATH
                 self.keymapPaths = keymapPath
@@ -2665,7 +3271,7 @@ screen.addElt(myLayout)</p></div>
                 with open(self.keymapPaths[&#39;alt&#39;]) as json_file:
                         self.keymap[&#39;alt&#39;] = json.load(json_file)
                 self.lang       = self.keymap[&#39;standard&#39;][&#34;lang&#34;]
-                self.onkeyPress = onkeyPress
+                self.onKeyPress = onKeyPress
                 for param in kwargs:
                         setattr(self, param, kwargs[param])
                 self.view = &#39;standard&#39;
@@ -2708,7 +3314,7 @@ screen.addElt(myLayout)</p></div>
                                 outline_color           = &#34;white&#34; if key[&#34;isPadding&#34;] else &#34;black&#34;
                                 buttonElt = Button(
                                         text                            = label,
-                                        font_size                       = &#34;h*0.02&#34;,
+                                        font_size                       = &#34;H*0.02&#34;,
                                         background_color        = background_color,
                                         outline_color           = outline_color,
                                         onclickInside           = self.handleKeyPress,
@@ -2748,9 +3354,8 @@ screen.addElt(myLayout)</p></div>
                             skipGeneration = True
                         )
                         self.parentPSSMScreen.simplePrintElt(self)
-                if self.onkeyPress:
-                        self.onkeyPress(keyType,keyChar)
-
+                if self.onKeyPress:
+                        self.onKeyPress(keyType,keyChar)
 
         def getKeyLabel(self,key):
                 kt = key[&#34;keyType&#34;]
@@ -2798,7 +3403,7 @@ screen.addElt(myLayout)</p></div>
                         outline_color           = &#34;white&#34; if key[&#34;isPadding&#34;] else &#34;black&#34;
                         buttonElt = Button(
                                 text                            = label,
-                                font_size                       = &#34;h*0.02&#34;,
+                                font_size                       = &#34;H*0.02&#34;,
                                 background_color        = background_color,
                                 outline_color           = outline_color,
                                 onclickInside           = self.handleKeyPress,
@@ -2907,8 +3512,8 @@ Then, unless asked to, we will only return the appropriate image</p></div>
                     skipGeneration = True
                 )
                 self.parentPSSMScreen.simplePrintElt(self)
-        if self.onkeyPress:
-                self.onkeyPress(keyType,keyChar)</code></pre>
+        if self.onKeyPress:
+                self.onKeyPress(keyType,keyChar)</code></pre>
 </details>
 </dd>
 </dl>
@@ -2916,11 +3521,13 @@ Then, unless asked to, we will only return the appropriate image</p></div>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Layout" href="#Python-Screen-Stack-Manager.pssm.Layout">Layout</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.createEltList" href="#Python-Screen-Stack-Manager.pssm.Layout.createEltList">createEltList</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick">dispatchClick</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed">dispatchClick_DICHOTOMY_Full_ToBeFixed</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_colsOnly" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_DICHOTOMY_colsOnly">dispatchClick_DICHOTOMY_colsOnly</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_LINEAR" href="#Python-Screen-Stack-Manager.pssm.Layout.dispatchClick_LINEAR">dispatchClick_LINEAR</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Layout.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -2941,8 +3548,28 @@ Then, unless asked to, we will only return the appropriate image</p></div>
 <dt><strong><code>stack</code></strong> :&ensp;<code>list</code></dt>
 <dd>Do not use it unless you know what you are doing. It is the list of all the pssm Elements which are on the screen</dd>
 </dl>
-<p>isInverted (bool)
-Example of usage:
+<p>isInverted (bool)</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>device</code></strong></dt>
+<dd>the device.py module.
+You can with it access a few useful functions like <code>self.device.readBatteryPercentage()</code></dd>
+<dt><strong><code>colorType</code></strong></dt>
+<dd>"L" for grayscale devices, "RGBA" for others</dd>
+<dt><strong><code>width</code></strong></dt>
+<dd>The screen width</dd>
+<dt><strong><code>height</code></strong> :&ensp;<code>The screen height</code></dt>
+<dd>&nbsp;</dd>
+<dt><strong><code>view_width</code></strong></dt>
+<dd>The width of the part of the screen not hidden behind bezels</dd>
+<dt><strong><code>view_height</code></strong></dt>
+<dd>&hellip;</dd>
+<dt><strong><code>name</code></strong></dt>
+<dd>&hellip;</dd>
+<dt><strong><code>isInverted</code></strong></dt>
+<dd>&hellip;</dd>
+</dl>
+<p>Example of usage:
 screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
 <details class="source">
 <summary>
@@ -2957,6 +3584,16 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
                 name (str): The name of the class instance (deprecated, I will eventually remove it)
                 stack (list): Do not use it unless you know what you are doing. It is the list of all the pssm Elements which are on the screen
                 isInverted (bool)
+
+        Attributes:
+                device: the device.py module.  You can with it access a few useful functions like `self.device.readBatteryPercentage()`
+                colorType: &#34;L&#34; for grayscale devices, &#34;RGBA&#34; for others
+                width: The screen width
+                height : The screen height
+                view_width: The width of the part of the screen not hidden behind bezels
+                view_height: ...
+                name: ...
+                isInverted: ...
 
         Example of usage:
                 screen = pssm.PSSMScreen(&#34;Kobo&#34;,&#34;Main&#34;))
@@ -2989,8 +3626,8 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
                 self.lastX = -1
                 self.lastY = -1
                 self.osk = None
-                self.onKeyPress = None
-                self.isKeyboardShown = False
+                self.numberEltOnTop = 0
+                self.isOSKShown = False
 
         def findEltWithId(self,myElementId,stack=None):
                 &#34;&#34;&#34;
@@ -3098,9 +3735,14 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
                         if not skipRegistration:
                                 # We append the element to the stack
                                 myElement.parentPSSMScreen = self
-                                self.stack.append(myElement)
+                                if self.numberEltOnTop &gt; 0:
+                                        # There is something on top, addnig it at position -2 (before the last one)
+                                        pos = - 1 - self.numberEltOnTop
+                                        self.stack.insert(pos,myElement)
+                                else:
+                                        self.stack.append(myElement)
                                 if not skipPrint:
-                                        if self.isKeyboardShown:
+                                        if self.numberEltOnTop &gt; 0 and not self.forcePrintOnTop:
                                                 #TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything
                                                 myElement.generator()
                                                 self.printStack(area=myElement.area)
@@ -3241,21 +3883,6 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
                 self.device.do_screen_clear()
                 return True
 
-        def convertDimension(self,dimension):
-                if isinstance(dimension,int):
-                        return dimension
-                else:
-                        t  = dimension[0]
-                        op = dimension[1:]
-                        if t == &#34;p&#34;:
-                                return int(eval(&#34;1&#34; + op))
-                        elif t== &#34;w&#34;:
-                                return int(eval(str(self.width) + op))
-                        elif t== &#34;h&#34;:
-                                return int(eval(str(self.height) + op))
-                        else:
-                                return dimension
-
         def OSKInit(
                         self,
                         onKeyPress = None,
@@ -3264,19 +3891,22 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
                 ):
                 if not area:
                         area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
-                self.onKeyPress = onKeyPress
-                self.osk = OSK(onkeyPress = self.onKeyPress, area = area, keymapPath = keymapPath)
+                self.osk = OSK(onKeyPress = onKeyPress, area = area, keymapPath = keymapPath)
 
-        def OSKShow(self):
+        def OSKShow(self,onKeyPress=None):
                 if not self.osk:
                         print(&#34;OSK not initialized, it can&#39;t be shown&#34;)
                         return None
+                if onKeyPress:
+                        self.osk.onKeyPress = onKeyPress
                 self.addElt(self.osk)   # It has already been generated
-                self.isKeyboardShown = True
+                self.numberEltOnTop += 1
+                self.isOSKShown = True
 
         def OSKHide(self):
                 self.removeElt(elt=self.osk)
-                self.isKeyboardShown = False
+                self.numberEltOnTop -= 1
+                self.isOSKShown = False
 
         def startListenerThread(self,grabInput=False):
                 &#34;&#34;&#34;
@@ -3323,7 +3953,8 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
                 else:
                         if elt.invertOnClick:
                                 self.invertArea(elt.area,elt.default_invertDuration)
-                        elt.onclickInside(elt,coords)
+                        elt.pssmOnClickInside(coords)  # Execute PSSM action on click
+                        elt.onclickInside(elt,coords)  # Execute user action attached to it too
 
         def stopListenerThread(self):
                 self.isInputThreadStarted = False
@@ -3343,7 +3974,8 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
 </summary>
 <pre><code class="python">def OSKHide(self):
         self.removeElt(elt=self.osk)
-        self.isKeyboardShown = False</code></pre>
+        self.numberEltOnTop -= 1
+        self.isOSKShown = False</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.PSSMScreen.OSKInit"><code class="name flex">
@@ -3363,12 +3995,11 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
         ):
         if not area:
                 area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
-        self.onKeyPress = onKeyPress
-        self.osk = OSK(onkeyPress = self.onKeyPress, area = area, keymapPath = keymapPath)</code></pre>
+        self.osk = OSK(onKeyPress = onKeyPress, area = area, keymapPath = keymapPath)</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.PSSMScreen.OSKShow"><code class="name flex">
-<span>def <span class="ident">OSKShow</span></span>(<span>self)</span>
+<span>def <span class="ident">OSKShow</span></span>(<span>self, onKeyPress=None)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -3376,12 +4007,15 @@ screen = pssm.PSSMScreen("Kobo","Main"))</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def OSKShow(self):
+<pre><code class="python">def OSKShow(self,onKeyPress=None):
         if not self.osk:
                 print(&#34;OSK not initialized, it can&#39;t be shown&#34;)
                 return None
+        if onKeyPress:
+                self.osk.onKeyPress = onKeyPress
         self.addElt(self.osk)   # It has already been generated
-        self.isKeyboardShown = True</code></pre>
+        self.numberEltOnTop += 1
+        self.isOSKShown = True</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.PSSMScreen.addElt"><code class="name flex">
@@ -3417,9 +4051,14 @@ skipRegistration (bool): True if you don't want to add the Element to the stack<
                 if not skipRegistration:
                         # We append the element to the stack
                         myElement.parentPSSMScreen = self
-                        self.stack.append(myElement)
+                        if self.numberEltOnTop &gt; 0:
+                                # There is something on top, addnig it at position -2 (before the last one)
+                                pos = - 1 - self.numberEltOnTop
+                                self.stack.insert(pos,myElement)
+                        else:
+                                self.stack.append(myElement)
                         if not skipPrint:
-                                if self.isKeyboardShown:
+                                if self.numberEltOnTop &gt; 0 and not self.forcePrintOnTop:
                                         #TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything
                                         myElement.generator()
                                         self.printStack(area=myElement.area)
@@ -3519,7 +4158,8 @@ It also handles inversion.</p></div>
         else:
                 if elt.invertOnClick:
                         self.invertArea(elt.area,elt.default_invertDuration)
-                elt.onclickInside(elt,coords)</code></pre>
+                elt.pssmOnClickInside(coords)  # Execute PSSM action on click
+                elt.onclickInside(elt,coords)  # Execute user action attached to it too</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.pssm.PSSMScreen.findEltWithId"><code class="name flex">
@@ -3949,7 +4589,9 @@ another software from registering touch events</p>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -4027,7 +4669,9 @@ another software from registering touch events</p>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -4109,7 +4753,9 @@ another software from registering touch events</p>
 <ul class="hlist">
 <li><code><b><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></b></code>:
 <ul class="hlist">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
@@ -4129,6 +4775,12 @@ another software from registering touch events</p>
 <li><code><a title="Python-Screen-Stack-Manager" href="index.html">Python-Screen-Stack-Manager</a></code></li>
 </ul>
 </li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.insertStr" href="#Python-Screen-Stack-Manager.pssm.insertStr">insertStr</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.tools_parseKnownFonts" href="#Python-Screen-Stack-Manager.pssm.tools_parseKnownFonts">tools_parseKnownFonts</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
@@ -4146,13 +4798,23 @@ another software from registering touch events</p>
 <li>
 <h4><code><a title="Python-Screen-Stack-Manager.pssm.Element" href="#Python-Screen-Stack-Manager.pssm.Element">Element</a></code></h4>
 <ul class="">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.convertDimension" href="#Python-Screen-Stack-Manager.pssm.Element.convertDimension">convertDimension</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.generator" href="#Python-Screen-Stack-Manager.pssm.Element.generator">generator</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside" href="#Python-Screen-Stack-Manager.pssm.Element.pssmOnClickInside">pssmOnClickInside</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.setInverted" href="#Python-Screen-Stack-Manager.pssm.Element.setInverted">setInverted</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.pssm.Element.update" href="#Python-Screen-Stack-Manager.pssm.Element.update">update</a></code></li>
 </ul>
 </li>
 <li>
 <h4><code><a title="Python-Screen-Stack-Manager.pssm.Icon" href="#Python-Screen-Stack-Manager.pssm.Icon">Icon</a></code></h4>
+</li>
+<li>
+<h4><code><a title="Python-Screen-Stack-Manager.pssm.Input" href="#Python-Screen-Stack-Manager.pssm.Input">Input</a></code></h4>
+<ul class="">
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Input.getInput" href="#Python-Screen-Stack-Manager.pssm.Input.getInput">getInput</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Input.onKeyPress" href="#Python-Screen-Stack-Manager.pssm.Input.onKeyPress">onKeyPress</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.pssm.Input.setCursorPosition" href="#Python-Screen-Stack-Manager.pssm.Input.setCursorPosition">setCursorPosition</a></code></li>
+</ul>
 </li>
 <li>
 <h4><code><a title="Python-Screen-Stack-Manager.pssm.Layout" href="#Python-Screen-Stack-Manager.pssm.Layout">Layout</a></code></h4>

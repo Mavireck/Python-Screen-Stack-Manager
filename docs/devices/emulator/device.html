@@ -41,6 +41,7 @@ view_width=screen_width
 view_height=screen_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
+emulator_windows_scale = 0.8            # Scale the emulator window
 isEmulator= True
 isRGB     = True
 colorType = &#34;L&#34;
@@ -70,6 +71,10 @@ def wait(time_seconds):
         #Reminder : When using &#39;wait&#39; in the emulator, you can skip the wait by pressing any keyboard key
         cv2.waitKey(int(time_seconds*1000))
 
+def startMainLoop():
+    # Somehow necessary for it not to be killed in the emulator
+    while True:
+        wait(0) # We tell openCV to keep the window open until a key is pressed
 
 def closePrintHandler():
         #TODO : is there anything to do?
@@ -86,12 +91,15 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
         opencvImage = np.array(last_printed_PIL)
         # Convert RGB to BGR
         opencvImage = opencvImage[:, :, ::-1].copy()
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage)
+        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
+        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
         cv2.waitKey(1)
 
 def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
         #TODO: Honor inversion
-        print(&#34;Screen refresh and Inversion (partial and full) are not yet supported on the emulator&#34;)
+        #print(&#34;Screen refresh and Inversion (partial and full) are not yet supported on the emulator&#34;)
+        pass
 
 def do_screen_clear():
         pil_image = Image.new(&#39;L&#39;, (screen_width,screen_height), color=255).convert(&#34;RGB&#34;)
@@ -99,7 +107,9 @@ def do_screen_clear():
         opencvImage = np.array(pil_image)
         # Convert RGB to BGR
         opencvImage = opencvImage[:, :, ::-1].copy()
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage)
+        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
+        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
         cv2.waitKey(1)
 
 
@@ -125,7 +135,9 @@ def closeInteractionHandler():
 def cv2Link(event, x, y, flags, param):
         global eventCallbackFct
         if event == cv2.EVENT_LBUTTONUP:
-                eventCallbackFct(x,y)</code></pre>
+                scaled_x = int(x/emulator_windows_scale)
+                scaled_y = int(y/emulator_windows_scale)
+                eventCallbackFct(scaled_x,scaled_y)</code></pre>
 </details>
 </section>
 <section>
@@ -175,7 +187,9 @@ def cv2Link(event, x, y, flags, param):
 <pre><code class="python">def cv2Link(event, x, y, flags, param):
         global eventCallbackFct
         if event == cv2.EVENT_LBUTTONUP:
-                eventCallbackFct(x,y)</code></pre>
+                scaled_x = int(x/emulator_windows_scale)
+                scaled_y = int(y/emulator_windows_scale)
+                eventCallbackFct(scaled_x,scaled_y)</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.do_screen_clear"><code class="name flex">
@@ -193,7 +207,9 @@ def cv2Link(event, x, y, flags, param):
         opencvImage = np.array(pil_image)
         # Convert RGB to BGR
         opencvImage = opencvImage[:, :, ::-1].copy()
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage)
+        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
+        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
         cv2.waitKey(1)</code></pre>
 </details>
 </dd>
@@ -208,7 +224,8 @@ def cv2Link(event, x, y, flags, param):
 </summary>
 <pre><code class="python">def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
         #TODO: Honor inversion
-        print(&#34;Screen refresh and Inversion (partial and full) are not yet supported on the emulator&#34;)</code></pre>
+        #print(&#34;Screen refresh and Inversion (partial and full) are not yet supported on the emulator&#34;)
+        pass</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.eventBindings"><code class="name flex">
@@ -267,7 +284,9 @@ When a click or touch event is recorded</p></div>
         opencvImage = np.array(last_printed_PIL)
         # Convert RGB to BGR
         opencvImage = opencvImage[:, :, ::-1].copy()
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage)
+        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
+        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
         cv2.waitKey(1)</code></pre>
 </details>
 </dd>
@@ -308,6 +327,21 @@ When a click or touch event is recorded</p></div>
 </summary>
 <pre><code class="python">def setFrontlightLevel(level):
         print(&#34;setFrontlightLevel -  Not supported on the emulator&#34;)</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.devices.emulator.device.startMainLoop"><code class="name flex">
+<span>def <span class="ident">startMainLoop</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def startMainLoop():
+    # Somehow necessary for it not to be killed in the emulator
+    while True:
+        wait(0) # We tell openCV to keep the window open until a key is pressed</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.wait"><code class="name flex">
@@ -379,6 +413,7 @@ When a click or touch event is recorded</p></div>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.readBatteryPercentage" href="#Python-Screen-Stack-Manager.devices.emulator.device.readBatteryPercentage">readBatteryPercentage</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.readBatteryState" href="#Python-Screen-Stack-Manager.devices.emulator.device.readBatteryState">readBatteryState</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.setFrontlightLevel" href="#Python-Screen-Stack-Manager.devices.emulator.device.setFrontlightLevel">setFrontlightLevel</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.startMainLoop" href="#Python-Screen-Stack-Manager.devices.emulator.device.startMainLoop">startMainLoop</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.wait" href="#Python-Screen-Stack-Manager.devices.emulator.device.wait">wait</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.wifiDown" href="#Python-Screen-Stack-Manager.devices.emulator.device.wifiDown">wifiDown</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.wifiUp" href="#Python-Screen-Stack-Manager.devices.emulator.device.wifiUp">wifiUp</a></code></li>
