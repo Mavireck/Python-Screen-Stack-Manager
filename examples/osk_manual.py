@@ -87,4 +87,5 @@ screen.OSKShow()
 # And display it again
 #screen.device.wait(5)
 #screen.OSKShow()
-screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code
+if __name__ == "__main__":
+    screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code

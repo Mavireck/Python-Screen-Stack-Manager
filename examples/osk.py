@@ -35,4 +35,5 @@ mainLayout = pssm.Layout(mainLayout_array,screen.area)
 screen.addElt(mainLayout)
 
 
-screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code
+if __name__ == "__main__":
+    screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code
