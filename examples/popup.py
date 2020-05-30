@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # Start Touch listener, as a separate thread
     screen.startListenerThread(grabInput=True)
 
-
+    # Display prompt popup
     myPopup = pssm.PoputInput(
         titleText="Title",
         titleFont=pssm.DEFAULT_FONTBOLD,
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     screen.addElt(myPopup)
     user_input = myPopup.waitForResponse()  # This will wait for user response
 
+    # Confirm popup
     confirmPopup = pssm.PopupConfirm(
         titleText="Title",
         titleFont=pssm.DEFAULT_FONTBOLD,
@@ -51,6 +52,7 @@ if __name__ == "__main__":
     screen.addElt(confirmPopup)
     user_confirm = confirmPopup.waitForResponse()
 
+    # Print result
     text = "User typed : \n \n " + str(user_input) + "\n \n \n" + str(user_confirm)
     myButton  = pssm.Button(text=text,area=screen.area)
     screen.addElt(myButton)
