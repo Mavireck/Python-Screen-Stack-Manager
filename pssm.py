@@ -74,12 +74,8 @@ class PSSMScreen:
     Example of usage:
         screen = pssm.PSSMScreen("Kobo","Main"))
     """
-    def __init__(
-            self,
-            deviceName,
-            name="screen",
-            stack=[],
-            isInverted=False):
+    def __init__(self, deviceName, name="screen", stack=[], isInverted=False):
+        self.name = name
         if deviceName == "Kobo":
             import devices.kobo.device as pssm_device
         else:
@@ -93,7 +89,6 @@ class PSSMScreen:
         self.w_offset = self.device.w_offset
         self.h_offset = self.device.h_offset
         self.area = [(0, 0), (self.view_width, self.view_height)]
-        self.name = name
         self.stack = stack
         self.isInverted = isInverted
         self.isInputThreadStarted = False
@@ -195,17 +190,6 @@ class PSSMScreen:
             isInverted=myElement.isInverted
         )
 
-    def createCanvas(self, color="white"):
-        """
-        (Deprecated)
-        Creates a white Element at the bottom of the stack, displays it while
-        refreshing the screen.
-        """
-        color = get_Color(color, self.colorType)
-        img = Image.new(self.colorType, (self.width, self.height), color=color)
-        background = Static(img, 0, 0, name="Canvas")
-        self.addElt(background)
-
     def addElt(self, myElement, skipPrint=False, skipRegistration=False):
         """
         Adds Element to the stack and prints it
@@ -261,50 +245,6 @@ class PSSMScreen:
                     self.printStack(area=elt.area)
         else:
             print('No element given')
-
-    def getTagList(self):
-        """
-        Returns the set of all tags from all Elements in the stack
-        """
-        tags = {}
-        for elt in self.stack:
-            tags.update(elt.tags)
-        return tags
-
-    def removeAllWithTag(self, tag):
-        """
-        Removes every Element from the stack which have the specified tag
-        """
-        stackCopy = deepcopy(self.stack)
-        for elt in stackCopy:
-            if tag in elt.tags:
-                self.removeElt(elt.id, skipPrint=True, weAlreadyHaveTheElt=elt)
-        # Then we reprint the whole screen (Performance is not our goal)
-        self.printStack()
-
-    def invertAllWithTag(self, tag, invertDuration=-1):
-        """
-        Removes all the Element which have a specific tag
-        """
-        # We don't want to be looping through the object directly (mutability)
-        stackCopy = deepcopy(self.stack)
-        for elt in stackCopy:
-            if tag in elt.tags:
-                self.invertElt(
-                    myElementId=elt.id,
-                    invertDuration=-1,
-                    skipPrint=True
-                )
-        # Then we reprint the whole screen (performance is not our goal)
-        self.printStack()
-        # If an invert duration is given, then start a timer
-        if invertDuration > 0:
-            myTimer = threading.Timer(
-                invertDuration,
-                self.invertAllWithTag,
-                [tag, -1]
-            )
-            myTimer.start()
 
     def getStackLevel(self, myElementId):
         elt = self.findEltWithId(myElementId)
@@ -494,7 +434,6 @@ class Element:
             generator function takes care of generating one)
         onclickInside (function): A function to be executed when the user
             clicks on the Element
-        tags (set): A set of tags the element has. (deprecated)
         invertOnClick (bool): Invert the element when a click is registered ?
         invertDuration (int): Duration in seconds of the element invertion
             after a click is registered (use 0 for infinite)
@@ -502,7 +441,7 @@ class Element:
             stack, even if there is an on-screen keyboard or a popup
     """
     def __init__(self, area=None, imgData=None, onclickInside=returnFalse,
-                 isInverted=False, data={}, tags=set(), invertOnClick=False,
+                 isInverted=False, data={}, invertOnClick=False,
                  invertDuration=DEFAULT_INVERT_DURATION, forcePrintOnTop=False
                  ):
         global lastUsedId
@@ -515,7 +454,6 @@ class Element:
         self.isInverted = isInverted
         self.user_data = data
         self.invertOnClick = invertOnClick
-        self.tags = tags
         self.invertDuration = invertDuration
         self.forcePrintOnTop = forcePrintOnTop
         self.parentLayouts = []
