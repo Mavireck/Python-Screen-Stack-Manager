@@ -792,7 +792,7 @@ class Layout(Element):
         """
         Finds the element on which the user clicked
         """
-        self.dispatchClick_DICHOTOMY_colsOnly(coords)
+        self.dispatchClick_LINEAR(coords)
 
     def dispatchClick_LINEAR(self, coords):
         """
