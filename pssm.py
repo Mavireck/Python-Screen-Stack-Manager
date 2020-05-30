@@ -16,6 +16,10 @@ DEFAULT_FONT_SIZE = "H*0.036"
 CURSOR_CHAR = "|"
 DEFAULT_INVERT_DURATION = 0.15
 
+DEFAULT_POPUP_BUTTONS = [
+    {'text': 'OK'}
+]
+
 # Constants for the on-screen-keyboard:
 DEFAULT_KEYMAP_PATH_STANDARD = os.path.join(PATH_TO_PSSM,
                                             "config",
@@ -267,6 +271,7 @@ class PSSMScreen:
                   useFastPrint=True, skipPrint=False):
         """
         Inverts an Element
+
         Args:
             elt (Element): The PSSM Element to invert
             invertDuration (int) : -1 or 0 if permanent, else an integer
@@ -275,6 +280,7 @@ class PSSMScreen:
                 (much faster) instead of printing the whole stack.
         """
         if elt is None:
+            print("No element given")
             return False
         # First, let's get the Element's initial inverted state
         Element_initial_state = bool(elt.isInverted)
@@ -355,9 +361,10 @@ class PSSMScreen:
         self.isOSKShown = True
 
     def OSKHide(self):
-        self.removeElt(elt=self.osk)
-        self.numberEltOnTop -= 1
-        self.isOSKShown = False
+        if self.isOSKShown:
+            self.removeElt(elt=self.osk)
+            self.numberEltOnTop -= 1
+            self.isOSKShown = False
 
     def startListenerThread(self, grabInput=False):
         """
@@ -539,7 +546,7 @@ class Element:
             else:
                 # area not defined. Instead of being stuck, let's assume the
                 # screen height and width are a decent alternative
-                w, h = W, h
+                w, h = W, H
             for c in dimension:
                 if c == 'p' or c == 'P':
                     nd += '1'
@@ -563,7 +570,7 @@ class Element:
             print("[PSSM] Could not parse the dimension")
             return dimension
 
-    def pssmOnClickInside(self, coords):
+    def pssmOnClickInside(self, coords=None):
         """
         Each Element can also have a pssm function implemented on click.
         By default, it does nothing.
@@ -591,7 +598,8 @@ class Layout(Element):
         See [examples](examples/index.html)
     """
     def __init__(self, layout, area=None, background_color="white", **kwargs):
-        super().__init__(area=area)
+        super().__init__()
+        self.area = area
         self.layout = layout
         self.isValid = self.isLayoutValid()
         self.background_color = background_color
@@ -828,6 +836,7 @@ class Layout(Element):
         """
         Linear search through the rows, dichotomy for the columns
         (Because of the empty rows, a dichotomy for the rows doesn't work)
+        NEEDS TO BE FIXED TOO (example : two buttons in a row)
         """
         click_x, click_y = coords
         row_A = -1
@@ -1041,7 +1050,9 @@ class OSK(Layout):
                 color_condition = key["keyType"] != KTstandardChar
                 background_color = "gray12" if color_condition else "white"
                 outline_color = "white" if key["isPadding"] else "black"
-                willChangeLayout = key["keyType"] in [KTcapsLock, KTalt]
+                willChangeLayout = key["keyType"] in [
+                    KTcapsLock, KTalt, KTcarriageReturn
+                ]
                 invertOnClick = False if willChangeLayout else True
                 buttonElt = Button(
                     text=label,
@@ -1107,6 +1118,226 @@ class OSK(Layout):
         elif kt == KTdelete:
             return "DEL"
         return ""
+
+
+class Popup(Layout):
+    """
+    A popup to be displayed above everything else, to simple ask a question
+    Args:
+        layout (list): The list of PSSMElements to be displayed. cf Layout
+        width (str): The width of the popup
+        height (str): The height of the popup
+        xPos (float): Relative position on the x axis of the center point
+        yPos (float): Relative position on the y axis of the center point
+    """
+    def __init__(self, layout=[], width="W*0.7", height="H*0.5",
+                 xPos=0.5, yPos=0.3, **kwargs):
+        super().__init__(layout=layout)
+        self.width = width
+        self.height = height
+        self.xPos = xPos
+        self.yPos = yPos
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
+
+    def make_area(self):
+        w = self.convertDimension(self.width)
+        h = self.convertDimension(self.height)
+        x = self.convertDimension("W*" + str(self.xPos)) - int(0.5*w)
+        y = self.convertDimension("H*" + str(self.yPos)) - int(0.5*h)
+        self.area = [(x, y), (w, h)]
+        return self.area
+
+
+class PoputInput(Popup):
+    def __init__(self, titleText="", mainText="", confirmText="OK",
+                 titleFont=DEFAULT_FONT, titleFontSize=DEFAULT_FONT_SIZE,
+                 mainFont=DEFAULT_FONT, mainFontSize=DEFAULT_FONT_SIZE,
+                 inputFont=DEFAULT_FONT, inputFontSize=DEFAULT_FONT_SIZE,
+                 confirmFont=DEFAULT_FONT, confirmFontSize=DEFAULT_FONT_SIZE,
+                 titleFontColor="black", mainFontColor="black",
+                 inputFontColor="black", confirmFontColor="black",
+                 mainTextXPos="center", mainTextYPos="center",
+                 isMultiline=False, **kwargs):
+        super().__init__()
+        self.titleText = titleText
+        self.mainText = mainText
+        self.confirmText = confirmText
+        self.isMultiline = isMultiline
+        self.titleFont = titleFont
+        self.mainFont = mainFont
+        self.inputFont = inputFont
+        self.confirmFont = confirmFont
+        self.titleFontSize = titleFontSize
+        self.mainFontSize = mainFontSize
+        self.inputFontSize = inputFontSize
+        self.confirmFontSize = confirmFontSize
+        self.titleFontColor = titleFontColor
+        self.mainFontColor = mainFontColor
+        self.inputFontColor = inputFontColor
+        self.confirmFontColor = confirmFontColor
+        self.mainTextXPos = mainTextXPos
+        self.mainTextYPos = mainTextYPos
+        self.userConfirmed = False
+        self.inputBtn = None
+        self.okBtn = None
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
+        self.build_layout()
+
+    def generator(self,**kwargs):
+        self.make_area()
+        super().generator(**kwargs)
+
+    def build_layout(self):
+        titleBtn = Button(
+            text=self.titleText,
+            font=self.titleFont,
+            font_size=self.titleFontSize,
+            font_color=self.titleFontColor
+        )
+        mainBtn = Button(
+            text=self.mainText,
+            font=self.mainFont,
+            font_size=self.mainFontSize,
+            font_color=self.mainFontColor,
+            text_xPosition=self.mainTextXPos,
+            text_yPosition=self.mainTextYPos
+        )
+        if self.isMultiline:
+            onReturn = returnFalse
+        else:
+            onReturn = self.toggleConfirmation
+        inputBtn = Input(
+            font=self.inputFont,
+            font_size=self.inputFontSize,
+            font_color=self.inputFontColor,
+            isMultiline=self.isMultiline,
+            onReturn=onReturn
+        )
+        okBtn = Button(
+            text=self.confirmText,
+            font=self.confirmFont,
+            font_size=self.confirmFontSize,
+            font_color=self.confirmFontColor,
+            onclickInside=self.toggleConfirmation
+        )
+        self.inputBtn = inputBtn
+        lM = (None,1)
+        layout = [
+            ["?*1.5", (titleBtn, "?"), lM],
+            ["?*3", (mainBtn, "?"), lM],
+            ["?*2", (inputBtn, "?"), lM],
+            ["?*1", (okBtn, "?"), lM]
+        ]
+        self.layout = layout
+        return layout
+
+    def toggleConfirmation(self, elt=None, coords=None):
+            print("Toggling confirmation")
+            self.userConfirmed = True
+
+    def waitForResponse(self):
+        while not self.userConfirmed:
+            self.parentPSSMScreen.device.wait(0.01)
+        self.parentPSSMScreen.OSKHide()
+        input = self.inputBtn.getInput()
+        self.userConfirmed = False  # Reset the state
+        self.parentPSSMScreen.removeElt(self)
+        return input
+
+
+class PopupConfirm(Popup):
+    def __init__(self, titleText="", mainText="", confirmText="OK",
+                 cancelText="Cancel",
+                 titleFont=DEFAULT_FONT, titleFontSize=DEFAULT_FONT_SIZE,
+                 mainFont=DEFAULT_FONT, mainFontSize=DEFAULT_FONT_SIZE,
+                 confirmFont=DEFAULT_FONT, confirmFontSize=DEFAULT_FONT_SIZE,
+                 titleFontColor="black", mainFontColor="black",
+                 confirmFontColor="black",
+                 mainTextXPos="center", mainTextYPos="center",
+                 **kwargs):
+        super().__init__()
+        self.titleText = titleText
+        self.mainText = mainText
+        self.confirmText = confirmText
+        self.cancelText = cancelText
+        self.titleFont = titleFont
+        self.mainFont = mainFont
+        self.confirmFont = confirmFont
+        self.titleFontSize = titleFontSize
+        self.mainFontSize = mainFontSize
+        self.confirmFontSize = confirmFontSize
+        self.titleFontColor = titleFontColor
+        self.mainFontColor = mainFontColor
+        self.confirmFontColor = confirmFontColor
+        self.mainTextXPos = mainTextXPos
+        self.mainTextYPos = mainTextYPos
+        self.userAction = 0
+        self.okBtn = None
+        self.cancelBtn = None
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
+        self.build_layout()
+
+    def generator(self,**kwargs):
+        self.make_area()
+        super().generator(**kwargs)
+
+    def build_layout(self):
+        titleBtn = Button(
+            text=self.titleText,
+            font=self.titleFont,
+            font_size=self.titleFontSize,
+            font_color=self.titleFontColor
+        )
+        mainBtn = Button(
+            text=self.mainText,
+            font=self.mainFont,
+            font_size=self.mainFontSize,
+            font_color=self.mainFontColor,
+            text_xPosition=self.mainTextXPos,
+            text_yPosition=self.mainTextYPos
+        )
+        okBtn = Button(
+            text=self.confirmText,
+            font=self.confirmFont,
+            font_size=self.confirmFontSize,
+            font_color=self.confirmFontColor,
+            onclickInside=self.confirm
+        )
+        cancelBtn = Button(
+            text=self.cancelText,
+            font=self.confirmFont,
+            font_size=self.confirmFontSize,
+            font_color=self.confirmFontColor,
+            onclickInside=self.cancel
+        )
+        lM = (None,1)
+        layout = [
+            ["?*1.5", (titleBtn, "?"), lM],
+            ["?*3", (mainBtn, "?"), lM],
+            ["?*1", (okBtn, "?"), (cancelBtn, "?"), lM]
+        ]
+        self.layout = layout
+        return layout
+
+    def confirm(self, elt=None, coords=None):
+            self.userAction = 1
+
+    def cancel(self,elt=None, coords=None):
+            self.userAction = 2
+
+    def waitForResponse(self):
+        while self.userAction == 0:
+            self.parentPSSMScreen.device.wait(0.01)
+        self.parentPSSMScreen.OSKHide()
+        hasConfirmed = self.userAction == 1
+        self.userAction = 0  # Reset the state
+        self.parentPSSMScreen.removeElt(self)
+        return hasConfirmed
+
+
 
 
 # ########################## - Simple Elements - ##############################
@@ -1201,6 +1432,7 @@ class Button(Element):
     """
     Basically a rectangle (or rounded rectangle) with text printed on it
     Args:
+        text (str): The main text to be written on it
         font (str): Path to a font file (ttf file), or one of PSSM built-in
             fonts (e.g. "Merriweather-Bold", "default", "Merriweather-Regular",
             ...) (see the font folder for the complete list)
@@ -1468,12 +1700,19 @@ class Input(Button):
     others (and that was no easy task)
     It has a method to retrieve what was typed :
     Input.getInput()
+    Args:
+        isMultiline (bool): Allow carriage return
+        onReturn (function): Function to be executed on carriage return
     """
-    def __init__(self, **kwargs):
+    def __init__(self, isMultiline=True, onReturn=returnFalse, **kwargs):
         super().__init__()
         self.hideCursorWhenLast = True
+        self.isMultiline = isMultiline
+        self.onReturn = onReturn
         for param in kwargs:
             setattr(self, param, kwargs[param])
+        if 'font' in kwargs:
+            self.font = tools_parseKnownFonts(kwargs["font"])
         self.cursorPosition = len(self.text)
         self.typedText = self.text[:]
         self.text = self.typedText
@@ -1543,8 +1782,6 @@ class Input(Button):
                         wasFound = True
             if not wasFound:
                 self.setCursorPosition(None)
-            # TODO : find between which characters the user typed
-            # And set self.cursorPosition
             pass
 
     def onKeyPress(self, keyType, keyChar):
@@ -1556,8 +1793,11 @@ class Input(Button):
             self.typedText = insertStr(self.typedText, keyChar, c)
             self.setCursorPosition(self.cursorPosition+1, skipPrint=True)
         elif keyType == KTcarriageReturn:
-            self.typedText = insertStr(self.typedText, "\n", c)
-            self.setCursorPosition(self.cursorPosition+1, skipPrint=True)
+            if self.isMultiline:
+                self.typedText = insertStr(self.typedText, "\n", c)
+                self.setCursorPosition(self.cursorPosition+1, skipPrint=True)
+            else:
+                self.onReturn()
         elif keyType == KTbackspace:
             self.typedText = self.typedText[:c-1] + self.typedText[c:]
             self.setCursorPosition(self.cursorPosition-1, skipPrint=True)
