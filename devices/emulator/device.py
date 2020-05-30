@@ -22,7 +22,7 @@ colorType = "L"
 is_nightmode=False
 cv2.namedWindow("PSSM_Emulator")
 
-last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)
+last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=(255,255,255))
 
 def setFrontlightLevel(level):
 	print("setFrontlightLevel -  Not supported on the emulator")
@@ -104,7 +104,7 @@ def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True
 		is_nightmode = not is_nightmode
 
 def do_screen_clear():
-	pil_image = Image.new('L', (screen_width,screen_height), color=255).convert("RGB")
+	pil_image = Image.new('RGB', (screen_width,screen_height), color=(255,255,255))
 	last_printed_PIL = pil_image
 	print_openCV(last_printed_PIL)
 
