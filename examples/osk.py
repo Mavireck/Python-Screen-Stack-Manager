@@ -26,8 +26,8 @@ inputText = pssm.Input(
     text_yPosition="top"
 )
 mainLayout_array = [
-    ["p*20"                                                          ],
-    ["H*0.62", (None, "p*5"),    (inputText, "?"), (None, "p*5")     ]
+    ["p*20"],
+    ["H*0.62", (None, "p*5"), (inputText, "?"), (None, "p*5")]
 ]
 mainLayout = pssm.Layout(mainLayout_array, screen.area)
 screen.addElt(mainLayout)

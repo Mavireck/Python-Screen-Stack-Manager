@@ -2,38 +2,34 @@
 import sys
 sys.path.append("../")
 import pssm
-
 import platform
-if platform.machine() in ["x86","AMD64","i686","x86_64"]:
+if platform.machine() in ["x86", "AMD64", "i686", "x86_64"]:
     device = "Emulator"
 else:
     device = "Kobo"
 
 
-#Declare the Screen Stack Manager
-screen = pssm.PSSMScreen(device,'Main')
-#Start Touch listener, as a separate thread
+# Declare the Screen Stack Manager
+screen = pssm.PSSMScreen(device, 'Main')
+# Start Touch listener, as a separate thread
 screen.startListenerThread()
-#Clear and refresh the screen
+# Clear and refresh the screen
 screen.clear()
 screen.refresh()
-
-
-
 
 
 def demo1():
     """
     ![Demo1](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo1.jpg)
     """
-    def reactFctn(elt,coords):
-        print(coords," - ",elt.text)
+    def reactFctn(elt, coords):
+        print(coords, " - ", elt.text)
         print(elt.area)
         print("")
 
     button1 = pssm.Button("Hey", onclickInside=reactFctn)
-    button2 = pssm.Button("Hey2",onclickInside=reactFctn)
-    button3 = pssm.Button("Hey3",onclickInside=reactFctn)
+    button2 = pssm.Button("Hey2", onclickInside=reactFctn)
+    button3 = pssm.Button("Hey3", onclickInside=reactFctn)
     layout_demo = [
         [30                                                                             ],
         [100, (None,"?/2"), (button1,300), (None,"?/2")                                 ],
