@@ -1,1688 +1,1838 @@
 #!/usr/bin/env python
-import sys
 import os
 import json
 import threading
 # Load Pillow
-from PIL import Image, ImageDraw, ImageFont
-from PIL.ImageOps import invert as PILInvert
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from copy import deepcopy
 
-############################ - VARIABLES - #####################################
-lastUsedId=0
+# ########################## - VARIABLES - ####################################
+lastUsedId = 0
 
 PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT = "default"
 DEFAULT_FONTBOLD = "default-Bold"
-STANDARD_FONT_SIZE = "H*0.036"
+DEFAULT_FONT_SIZE = "H*0.036"
 CURSOR_CHAR = "|"
-
+DEFAULT_INVERT_DURATION = 0.15
 
 # Constants for the on-screen-keyboard:
-DEFAULT_KEYMAP_PATH_STANDARD = os.path.join(PATH_TO_PSSM,"config", "default-keymap-en_us.json")
-DEFAULT_KEYMAP_PATH_CAPS 	 = os.path.join(PATH_TO_PSSM,"config", "default-keymap-en_us_CAPS.json")
-DEFAULT_KEYMAP_PATH_ALT      = os.path.join(PATH_TO_PSSM,"config", "default-keymap-en_us_ALT.json")
+DEFAULT_KEYMAP_PATH_STANDARD = os.path.join(PATH_TO_PSSM,
+                                            "config",
+                                            "default-keymap-en_us.json")
+DEFAULT_KEYMAP_PATH_CAPS = os.path.join(PATH_TO_PSSM,
+                                        "config",
+                                        "default-keymap-en_us_CAPS.json")
+DEFAULT_KEYMAP_PATH_ALT = os.path.join(PATH_TO_PSSM,
+                                       "config",
+                                       "default-keymap-en_us_ALT.json")
 DEFAULT_KEYMAP_PATH = {
-	'standard' 	: DEFAULT_KEYMAP_PATH_STANDARD,
-	'caps' 		: DEFAULT_KEYMAP_PATH_CAPS,
-	'alt' 		: DEFAULT_KEYMAP_PATH_ALT
+    'standard': DEFAULT_KEYMAP_PATH_STANDARD,
+    'caps': DEFAULT_KEYMAP_PATH_CAPS,
+    'alt': DEFAULT_KEYMAP_PATH_ALT
 }
 
-KTstandardChar   = 0
+KTstandardChar = 0
 KTcarriageReturn = 1
-KTbackspace      = 2
-KTdelete         = 3
-KTcapsLock       = 4
-KTcontrol        = 5
-KTalt            = 6
+KTbackspace = 2
+KTdelete = 3
+KTcapsLock = 4
+KTcontrol = 5
+KTalt = 6
 
 
-############################# - One liners - ###################################
+# ########################## - One liners - ###################################
 def returnFalse(*args): return False
 
-############################# - StackManager 	- ##############################
+
+# ########################## - StackManager    - ##############################
 class PSSMScreen:
-	"""
-	This is the class which handles most of the logic.
+    """
+    This is the class which handles most of the logic.
 
-	Args:
-		deviceName (str): "Kobo" for Kobo ereaders (and probably all FBInk supported devices)
-		name (str): The name of the class instance (deprecated, I will eventually remove it)
-		stack (list): Do not use it unless you know what you are doing. It is the list of all the pssm Elements which are on the screen
-		isInverted (bool)
+    Args:
+        deviceName (str): "Kobo" for Kobo ereaders
+            (and probably all FBInk supported devices)
+        name (str): The name of the class instance
+            (deprecated, I will eventually remove it)
+        stack (list): Do not use it unless you know what you are doing.
+            The list of all the pssm Elements which are on the screen.
+        isInverted (bool): ...
 
-	Attributes:
-		device: the device.py module.  You can with it access a few useful functions like `self.device.readBatteryPercentage()`
-		colorType: "L" for grayscale devices, "RGBA" for others
-		width: The screen width
-		height : The screen height
-		view_width: The width of the part of the screen not hidden behind bezels
-		view_height: ...
-		name: ...
-		isInverted: ...
+    Attributes:
+        device: the device.py module.
+            You can with it access a few useful functions like
+            `self.device.readBatteryPercentage()`
+        colorType: "L" for grayscale devices, "RGBA" for others
+        width: The screen width
+        height : The screen height
+        view_width: The width of the screen portion not hidden behind bezels
+        view_height: ...
+        name: ...
+        isInverted: ...
 
-	Example of usage:
-		screen = pssm.PSSMScreen("Kobo","Main"))
+    Example of usage:
+        screen = pssm.PSSMScreen("Kobo","Main"))
+    """
+    def __init__(
+            self,
+            deviceName,
+            name="screen",
+            stack=[],
+            isInverted=False):
+        if deviceName == "Kobo":
+            import devices.kobo.device as pssm_device
+        else:
+            import devices.emulator.device as pssm_device
+        self.device = pssm_device
+        self.colorType = self.device.colorType
+        self.width = self.device.screen_width
+        self.height = self.device.screen_height
+        self.view_width = self.device.view_width
+        self.view_height = self.device.view_height
+        self.w_offset = self.device.w_offset
+        self.h_offset = self.device.h_offset
+        self.area = [(0, 0), (self.view_width, self.view_height)]
+        self.name = name
+        self.stack = stack
+        self.isInverted = isInverted
+        self.isInputThreadStarted = False
+        self.lastX = -1
+        self.lastY = -1
+        self.osk = None
+        self.numberEltOnTop = 0
+        self.isOSKShown = False
 
-	"""
-	def __init__(
-			self,
-			deviceName,
-			name="screen",
-			stack=[],
-			isInverted=False
-		):
-		if deviceName == "Kobo":
-			import devices.kobo.device as pssm_device
-		else:
-			import devices.emulator.device as pssm_device
-		self.device = pssm_device
-		self.colorType = self.device.colorType
-		self.width = self.device.screen_width
-		self.height = self.device.screen_height
-		self.view_width = self.device.view_width
-		self.view_height = self.device.view_height
-		self.w_offset = self.device.w_offset
-		self.h_offset = self.device.h_offset
-		self.area = [(0,0),(self.view_width,self.view_height)]
-		self.name = name
-		self.stack = stack
-		self.isInverted = isInverted
-		self.isInputThreadStarted = False
-		self.lastX = -1
-		self.lastY = -1
-		self.osk = None
-		self.numberEltOnTop = 0
-		self.isOSKShown = False
+    def findEltWithId(self, myElementId, stack=None):
+        """
+        Returns the element which has such an ID.
+        Avoid using this function as much as possible:
+        it has terrible performance.
+        (Recursive search through all the elements of the stack)
+        And anyway there is no reason why you should use it.
+        """
+        if stack is None:
+            stack = self.stack
+        for elt in stack:
+            if elt.id == myElementId:
+                return elt
+            elif elt.isLayout:
+                layoutEltList = elt.createEltList()
+                search = self.findEltWithId(myElementId, stack=layoutEltList)
+                if search is not None:
+                    return search
+        return None
 
-	def findEltWithId(self,myElementId,stack=None):
-		"""
-		Returns the element which has such an ID.
-		Avoid using this function as much as possible, as it is really not Performance-friendly
-		(Recursive search through all the elements of the stack)
-		And anyway there is no reason why you should use it.
-		"""
-		if stack == None:
-			stack = self.stack
-		for elt in stack:
-			if elt.id == myElementId:
-				return elt
-			elif elt.isLayout:
-				layoutEltList = elt.createEltList()
-				search = self.findEltWithId(myElementId,stack=layoutEltList)
-				if search != None:
-					return search
-		return None
+    def printStack(self, area=None):
+        """
+        Prints the stack Elements in the stack order
+        If a area is set, then, we only display
+        the part of the stack which is in this area
+        """
+        # TODO : Must be retought to work with the new nested structure
+        # TODO : Must honor the 'area' argument
+        # for now it will just reegenerate the whole stack and crop the area
+        white = get_Color("white", self.colorType)
+        dim = (self.width, self.height)
+        img = Image.new(self.colorType, dim, color=white)
+        for elt in self.stack:
+            [(x, y), (w, h)] = elt.area
+            if elt.isInverted:
+                pil_image = ImageOps.invert(elt.imgData)
+            else:
+                pil_image = elt.imgData
+            img.paste(pil_image, (x, y))
+        if area:
+            [(x, y), (w, h)] = area
+            box = (x, y, x+w, y+h)
+            crop = img.crop(box=box)
+            self.device.print_pil(crop, x, y, w, h, isInverted=self.isInverted)
+        else:
+            [(x, y), (w, h)] = self.area
+            self.device.print_pil(img, x, y, w, h, isInverted=self.isInverted)
 
-	def printStack(self,area=None):
-		"""
-		Prints the stack Elements in the stack order
-		If a area is set, then, we only display
-		the part of the stack which is in this area
-		"""
-		#TODO : Must be retought to work with the new nested structure
-		#TODO : Must honor the 'area' argument
-		# for now it will just reprint the whole stack
-		white = get_Color("white",self.colorType)
-		placeholder = Image.new(self.colorType, (self.width, self.height), color=white)
-		for elt in self.stack:
-			[(x,y),(w,h)] = elt.area
-			placeholder.paste(elt.imgData, (x,y))
-		[(x,y),(w,h)] = self.area
-		self.device.print_pil(placeholder,x, y, w, h, isInverted=self.isInverted)
+    def getPartialEltImg(self, elt, rectIntersection):
+        """
+        (Deprecated)
+        Returns a PIL image of the the interesection of the Element image and
+        the rectangle coordinated given as parameter.
+        Args:
+            elt (Element): a PSSM Element
+            rectIntersection (list): a [(x1, y1), (w, h)] array
+        """
+        # TODO :TO BE removed
+        [(x, y), (w, h)] = elt.area
+        [(x1, y1), (w, h)] = rectIntersection
+        img = deepcopy(elt.imgData)
+        # Then, lets crop it:
+        img = img.crop((x1-x, y1-y, w, h))
+        if elt.isInverted:
+            inverted_img = ImageOps.invert(img)
+            return inverted_img
+        else:
+            return img
 
-	def getPartialEltImg(self,elt,rectIntersection):
-		"""
-		Returns a PIL image of the the interesection of the Element image and the
-		rectangle coordinated given as parameter.
-			elt : a PSSM Element
-			rectIntersection : a [[x1,y1],[x2,y2]] array
-		"""
-		#TODO : MUST HONOR INVERSION
-		# We crop and print a part of the Element
-		# First, lets make a PILLOW Element:
-		[(x,y),(w,h)] = elt.area
-		img = deepcopy(elt.imgData)
-		# Then, lets crop it:
-		img = img.crop((rectIntersection[0][0]-x, rectIntersection[0][1]-y, rectIntersection[1][0]-x, rectIntersection[1][1]-y))
-		if elt.isInverted:
-			inverted_img = PILInvert(img)
-			return inverted_img
-		else:
-			return img
+    def simplePrintElt(self, myElement, skipGeneration=False):
+        """
+        Prints the Element without adding it to the stack.
+        Args:
+            myElement (PSSM Element): The element you want to display
+            skipGeneration (bool): Do you want to regenerate the image?
+        """
+        if not skipGeneration:
+            # First, the element must be generated
+            myElement.generator()
+        # Then, we print it
+        [(x, y), (w, h)] = myElement.area
+        # What follows is a Workaround :
+        # TODO : this Workaround must be investigated
+        if not myElement.isLayout:
+            w += 1
+            h += 1
+        self.device.print_pil(
+            myElement.imgData,
+            x, y, w, h,
+            isInverted=myElement.isInverted
+        )
 
-	def simplePrintElt(self,myElement,skipGeneration = False):
-		"""
-		Prints the Element without adding it to the stack.
-		Args:
-			myElement (PSSM Element): The element you want to display
-			skipGeneration (bool): Do you want to regenerate the image?
-		"""
-		if not skipGeneration:
-			# First, the element must be generated
-			myElement.generator()
-		# Then, we print it
-		[(x,y),(w,h)] = myElement.area
-		# What follows is a Workaround :
-		# TODO : this Workaround must be investigated
-		if not myElement.isLayout:
-			w += 1
-			h += 1
-		self.device.print_pil(myElement.imgData,x, y, w, h, isInverted=myElement.isInverted)
+    def createCanvas(self, color="white"):
+        """
+        (Deprecated)
+        Creates a white Element at the bottom of the stack, displays it while
+        refreshing the screen.
+        """
+        color = get_Color(color, self.colorType)
+        img = Image.new(self.colorType, (self.width, self.height), color=color)
+        background = Static(img, 0, 0, name="Canvas")
+        self.addElt(background)
 
-	def createCanvas(self,color="white"):
-		"""
-		(Deprecated)
-		Creates a white Element at the bottom of the stack, displays it while refreshing the screen.
-		"""
-		color = get_Color(color,self.colorType)
-		img = Image.new(self.colorType, (self.width,self.height), color=color)
-		background = Static(img,0,0,name="Canvas")
-		self.addElt(background)
+    def addElt(self, myElement, skipPrint=False, skipRegistration=False):
+        """
+        Adds Element to the stack and prints it
+            myElement (PSSM Element): The Element you want to add
+            skipPrint (bool): True if you don't want to update the screen
+            skipRegistration (bool): True if you don't want to add the Element
+                to the stack
+        """
+        for i in range(len(self.stack)):
+            elt = self.stack[i]
+            if elt.id == myElement.id:
+                # There is already an Element in the stack with the same ID.
+                # Let's update the Element in the stack
+                if not skipPrint:
+                    self.stack[i] = myElement
+                    self.printStack(area=myElement.area)
+                break   # The Element is already in the stack
+        else:
+            # the Element is not already in the stack
+            if not skipRegistration:
+                # We append the element to the stack
+                myElement.parentPSSMScreen = self
+                if self.numberEltOnTop > 0:
+                    # There is something on top, addnig it at position -2
+                    # (before the last one)
+                    pos = - 1 - self.numberEltOnTop
+                    self.stack.insert(pos, myElement)
+                else:
+                    self.stack.append(myElement)
+                if not skipPrint:
+                    if self.numberEltOnTop > 0 and not self.forcePrintOnTop:
+                        # TODO : make it faster, we only need to display the
+                        # image behind the keyboard, not reprint everything
+                        myElement.generator()
+                        self.printStack(area=myElement.area)
+                    else:
+                        # No keyboard on the horizon, let's do it
+                        self.simplePrintElt(myElement)
 
-	def addElt(self,myElement,skipPrint=False,skipRegistration=False):
-		"""
-		Adds Element to the stack and prints it
-			myElement (PSSM Element): The Element you want to add
-			skipPrint (bool): True if you don't want to update the screen
-			skipRegistration (bool): True if you don't want to add the Element to the stack
-		"""
-		for i in range(len(self.stack)):
-			elt=self.stack[i]
-			if elt.id == myElement.id:
-				# There is already an Element in the stack with the same ID.
-				# Let's update the Element in the stack
-				if not skipPrint:
-					self.stack[i] = myElement
-					self.printStack(area=myElement.area)
-				break	#The Element is already in the stack
-		else:
-			# the Element is not already in the stack
-			if not skipRegistration:
-				# We append the element to the stack
-				myElement.parentPSSMScreen = self
-				if self.numberEltOnTop > 0:
-					# There is something on top, addnig it at position -2 (before the last one)
-					pos = - 1 - self.numberEltOnTop
-					self.stack.insert(pos,myElement)
-				else:
-					self.stack.append(myElement)
-				if not skipPrint:
-					if self.numberEltOnTop > 0 and not self.forcePrintOnTop:
-						#TODO : make it faster, we only need to display the image behind the keyboard, not reprint everything
-						myElement.generator()
-						self.printStack(area=myElement.area)
-					else:
-						#No keyboard on the horizon, let's do it
-						self.simplePrintElt(myElement)
+    def removeElt(self, elt=None, eltid=None, skipPrint=False):
+        """
+        Removes the Element from the stack and hides it from the screen
+        """
+        if elt:
+            self.stack.remove(elt)
+            if not skipPrint:
+                self.printStack(area=elt.area)
+        elif eltid:
+            elt = self.findEltWithId(eltid)
+            if elt:
+                self.stack.remove(elt)
+                if not skipPrint:
+                    self.printStack(area=elt.area)
+        else:
+            print('No element given')
 
-	def removeElt(self,elt=None,eltid=None,skipPrint=False):
-		"""
-		Removes the Element from the stack and hides it from the screen
-		"""
-		if elt:
-			self.stack.remove(elt)
-			if not skipPrint:
-				self.printStack(area=elt.area)
-		elif eltid :
-			elt = self.findEltWithId(myElementId)
-			if elt:
-				self.stack.remove(elt)
-				if not skipPrint:
-					self.printStack(area=elt.area)
-		else:
-			print('No element given')
+    def getTagList(self):
+        """
+        Returns the set of all tags from all Elements in the stack
+        """
+        tags = {}
+        for elt in self.stack:
+            tags.update(elt.tags)
+        return tags
 
-	def getTagList(self):
-		"""
-		Returns the set of all tags from all Elements in the stack
-		"""
-		tags={}
-		for elt in self.stack:
-			tags.update(elt.tags)
-		return tags
+    def removeAllWithTag(self, tag):
+        """
+        Removes every Element from the stack which have the specified tag
+        """
+        stackCopy = deepcopy(self.stack)
+        for elt in stackCopy:
+            if tag in elt.tags:
+                self.removeElt(elt.id, skipPrint=True, weAlreadyHaveTheElt=elt)
+        # Then we reprint the whole screen (Performance is not our goal)
+        self.printStack()
 
-	def removeAllWithTag(self,tag):
-		"""
-		Removes every Element from the stack which have the specified tag
-		"""
-		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
-		for elt in stackCopy:
-			if tag in elt.tags:
-				self.removeElt(elt.id,skipPrint=True,weAlreadyHaveTheElt=elt)
-		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
-		self.printStack()
+    def invertAllWithTag(self, tag, invertDuration=-1):
+        """
+        Removes all the Element which have a specific tag
+        """
+        # We don't want to be looping through the object directly (mutability)
+        stackCopy = deepcopy(self.stack)
+        for elt in stackCopy:
+            if tag in elt.tags:
+                self.invertElt(
+                    myElementId=elt.id,
+                    invertDuration=-1,
+                    skipPrint=True
+                )
+        # Then we reprint the whole screen (performance is not our goal)
+        self.printStack()
+        # If an invert duration is given, then start a timer
+        if invertDuration > 0:
+            myTimer = threading.Timer(
+                invertDuration,
+                self.invertAllWithTag,
+                [tag, -1]
+            )
+            myTimer.start()
 
-	def invertAllWithTag(self,tag,invertDuration=-1):
-		"""
-		Removes all the Element which have a specific tag
-		"""
-		stackCopy = deepcopy(self.stack) #It is unsage to loop through a mutable list which is being edited afterwards : some items are skipped
-		for elt in stackCopy:
-			if tag in elt.tags:
-				self.invertElt(myElementId=elt.id,invertDuration=-1,skipPrint=True)
-		#Then we reprint the whole screen (yeah, the *whole* screen... Performance is not our goal)
-		self.printStack()
-		# If an invert duration is given, then start a timer to go back to the original state
-		if invertDuration>0:
-			threading.Timer(invertDuration,self.invertAllWithTag,[tag,-1]).start()
+    def getStackLevel(self, myElementId):
+        elt = self.findEltWithId(myElementId)
+        return self.stack.index(elt)
 
-	def getStackLevel(self,myElementId):
-		elt = self.findEltWithId(myElementId)
-		return self.stack.index(elt)
+    def setStackLevel(self, elt, stackLevel="last"):
+        """
+        Set the position of said Element
+        Then prints every Element above it (including itself)
+        """
+        # TODO : Must be able to accept another stackLevel
+        if stackLevel == "last" or stackLevel == -1:
+            stackLevel = len(self.stack)
+            self.removeElt(elt, skipPrint=True)
+            self.stack.insert(stackLevel, elt)
+            self.printStack(area=[elt.xy, elt.xy2])
+            return True
 
-	def setStackLevel(self,myElementId,stackLevel="last"):
-		"""
-		Set the position of said Element
-		Then prints every Element above it (including itself)
-		"""
-		#TODO : Must be able to accept another stackLevel
-		if stackLevel=="last" or stackLevel==-1:
-			stackLevel=len(self.stack)
-			elt = self.findEltWithId(myElementId)
-			self.removeElt(myElementId,skipPrint=True)
-			self.stack.insert(stackLevel,elt)
-			self.printStack(area=[elt.xy,elt.xy2])
-			return True
+    def invertElt(self, elt, invertDuration=-1,
+                  useFastPrint=True, skipPrint=False):
+        """
+        Inverts an Element
+        Args:
+            elt (Element): The PSSM Element to invert
+            invertDuration (int) : -1 or 0 if permanent, else an integer
+            skipPrint (bool): Save only or save + print?
+            useFastPrint (bool): Use FBInk's partial refresh with nightmode
+                (much faster) instead of printing the whole stack.
+        """
+        if elt is None:
+            return False
+        # First, let's get the Element's initial inverted state
+        Element_initial_state = bool(elt.isInverted)
+        elt.setInverted(not Element_initial_state)
+        if not skipPrint:
+            if useFastPrint:
+                self.invertArea_helper(elt.area, invertDuration, True)
+            else:
+                elt.update()
+        # Then, if an invertDuration is given, we setup a timer
+        if invertDuration and invertDuration > 0:
+            # Then, we start a timer to set it back to its intial state
+            threading.Timer(invertDuration, self.invertElt, [elt, -1]).start()
 
-	def invertElt(self,myElementId,invertDuration=-1,skipPrint=False):
-		"""
-		Inverts an Element
-		> myElementId
-		> invertDuration (int) : -1 or 0 if permanent, else an integer
-		"""
-		myElement = self.findEltWithId(myElementId)
-		if myElement==None:
-			return False
-		# First, let's get the Element's initial inverted state
-		Element_initial_state = bool(myElement.isInverted)
-		# Then, we change the Element's state
-		myElement.setInverted(not Element_initial_state)
-		if not skipPrint:
-			# Then we print the inverted version
-			self.printStack(skipEltId=None, area=myElement.area)
-		# Then, if an invertDuration is given, we setup a timer to go back to the original state
-		if invertDuration and invertDuration>0:
-			#Then, we start a timer to set it back to its intial state
-			threading.Timer(invertDuration,myElement.setInverted,[Element_initial_state]).start()
-			threading.Timer(invertDuration,self.invertElt,[myElementId,-1]).start()
+    def invertArea_helper(self, area, invertDuration, isInverted=False):
+        """
+        Helper function to properly setup the timer.
+        """
+        # TODO: To be tested
+        initial_mode = isInverted
+        isTemporaryInversion = invertDuration > 0
+        self.device.do_screen_refresh(
+            isInverted=not isInverted,
+            area=area,
+            isInvertionPermanent=False,
+            isFlashing=False
+        )
+        if isTemporaryInversion:
+            # Now we call this funcion, without starting a timer
+            # And the screen is now in an opposite state as the initial one
+            myTimer = threading.Timer(
+                invertDuration,
+                self.invertArea_helper,
+                [area, -1, not initial_mode]
+            )
+            myTimer.start()
+        return True
 
-	def invertArea(self,area,invertDuration,isInverted=False):
-		"""
-		Inverts an area
-		"""
-		# TODO: To be tested
-		initial_mode = isInverted
-		self.device.do_screen_refresh(
-			isInverted	= not isInverted,
-			area		= area,
-			isPermanent	= False,
-			isFlashing 	= False,
-			w_offset	= self.w_offset,
-			h_offset	= self.h_offset
-		)
-		if invertDuration>0:
-			# Now we call this funcion, without starting a timer
-			# And the screen is now in an opposite state as the initial one
-			threading.Timer(invertDuration,self.invertArea,[area,-1,not initial_mode]).start()
-		return True
+    def invert(self):
+        """
+        Inverts the whole screen
+        """
+        self.isInverted = not self.isInverted
+        self.device.do_screen_refresh(self.isInverted)
+        return True
 
-	def invert(self):
-		"""
-		Inverts the whole screen
-		"""
-		self.isInverted = not self.isInverted
-		self.device.do_screen_refresh(self.isInverted)
-		return True
+    def refresh(self):
+        """
+        Refreshes the screeen
+        """
+        self.device.do_screen_refresh()
+        return True
 
-	def refresh(self):
-		"""
-		Refreshes the screeen
-		"""
-		self.device.do_screen_refresh()
-		return True
+    def clear(self):
+        """
+        Clears the screen
+        """
+        self.device.do_screen_clear()
+        return True
 
-	def clear(self):
-		"""
-		Clears the screen
-		"""
-		self.device.do_screen_clear()
-		return True
+    def OSKInit(self, onKeyPress=None, area=None, keymapPath=None):
+        if not area:
+            x = 0
+            y = int(2*self.view_height/3)
+            w = self.view_width
+            h = int(self.view_height/3)
+            area = [(x, y), (w, h)]
+        self.osk = OSK(onKeyPress=onKeyPress, area=area, keymapPath=keymapPath)
 
-	def OSKInit(
-			self,
-			onKeyPress = None,
-			area = None,
-			keymapPath = None
-		):
-		if not area:
-			area = [(0,int(2*self.view_height/3)),(self.view_width,int(self.view_height/3))]
-		self.osk = OSK(onKeyPress = onKeyPress, area = area, keymapPath = keymapPath)
+    def OSKShow(self, onKeyPress=None):
+        if not self.osk:
+            print("OSK not initialized, it can't be shown")
+            return None
+        if onKeyPress:
+            self.osk.onKeyPress = onKeyPress
+        self.addElt(self.osk)   # It has already been generated
+        self.numberEltOnTop += 1
+        self.isOSKShown = True
 
-	def OSKShow(self,onKeyPress=None):
-		if not self.osk:
-			print("OSK not initialized, it can't be shown")
-			return None
-		if onKeyPress:
-			self.osk.onKeyPress = onKeyPress
-		self.addElt(self.osk) 	# It has already been generated
-		self.numberEltOnTop += 1
-		self.isOSKShown = True
+    def OSKHide(self):
+        self.removeElt(elt=self.osk)
+        self.numberEltOnTop -= 1
+        self.isOSKShown = False
 
-	def OSKHide(self):
-		self.removeElt(elt=self.osk)
-		self.numberEltOnTop -= 1
-		self.isOSKShown = False
+    def startListenerThread(self, grabInput=False):
+        """
+        Starts the touch listener as a separate thread
+        Args:
+            grabInput (boolean): Do an EVIOCGRAB IOCTL call to prevent
+                any other software from registering touch events
+        """
+        self.isInputThreadStarted = True
+        self.device.isInputThreadStarted = True
+        print("[PSSM - Touch handler] : Input thread started")
+        args = [self.clickHandler, True, grabInput]
+        inputThread = threading.Thread(
+            target=self.device.eventBindings,
+            args=args
+        )
+        inputThread.start()
 
-	def startListenerThread(self,grabInput=False):
-		"""
-		Starts the touch listener as a separate thread
-		> grabInput : (boolean) Whether to do an EVIOCGRAB IOCTL call to prevent
-			another software from registering touch events
-		"""
-		self.isInputThreadStarted = True
-		self.device.isInputThreadStarted = True
-		print("[PSSM - Touch handler] : Input thread started")
-		args = [self.clickHandler,True,grabInput]
-		inputThread = threading.Thread(target=self.device.eventBindings,args=args)
-		inputThread.start()
+    def clickHandler(self, x, y):
+        n = len(self.stack)
+        for i in range(n):
+            j = n-1-i   # We go through the stack in descending order
+            elt = self.stack[j]
+            if elt.area is None:
+                # An object without area, it should not happen, but if it does,
+                # it can be skipped
+                continue
+            if coordsInArea(x, y, elt.area):
+                if elt.onclickInside is not None:
+                    self.lastX = x
+                    self.lastY = y
+                    if elt is not None:
+                        self.dispatchClickToElt((x, y), elt)
+                break
 
-	def clickHandler(self,x,y):
-		n = len(self.stack)
-		for i in range(n):
-			j = n-1-i 	# We go through the stack in descending order
-			elt = self.stack[j]
-			if elt.area == None:
-				# An object without area, it should not happen, but if it does,
-				# it can be skipped
-				continue
-			if coordsInArea(x,y,elt.area):
-				if elt.onclickInside != None:
-					self.lastX = x
-					self.lastY = y
-					if elt != None:
-						self.dispatchClickToElt((x,y),elt)
-				break 		# we quit the for loop
+    def dispatchClickToElt(self, coords, elt):
+        """
+        Once given an object on which the user clicked, this function calls the
+        appropriate function on the object
+        (ie elt.onclickInside or elt.dispatchClick)
+        It also handles inversion.
+        """
+        if elt.isLayout:
+            if elt.onclickInside is not None:
+                elt.onclickInside(elt, coords)
+            if elt.invertOnClick:
+                self.invertElt(elt, elt.invertDuration)
+            elt.dispatchClick(coords)
+        else:
+            if elt.invertOnClick:
+                self.invertElt(elt, elt.invertDuration)
+            # Execute PSSM action on click
+            elt.pssmOnClickInside(coords)
+            # Execute user action attached to it too
+            elt.onclickInside(elt, coords)
 
-	def dispatchClickToElt(self,coords,elt):
-		"""
-		Once given an object on which the user clicked, this function calls the
-		appropriate function on the object (ie elt.onclickInside or elt.dispatchClick)
-		It also handles inversion.
-		"""
-		if elt.isLayout:
-			if elt.onclickInside != None:
-				elt.onclickInside(elt,coords)
-			if elt.invertOnClick:
-				self.invertArea(elt.area,elt.default_invertDuration)
-			elt.dispatchClick(coords)
-		else:
-			if elt.invertOnClick:
-				self.invertArea(elt.area,elt.default_invertDuration)
-			elt.pssmOnClickInside(coords)  # Execute PSSM action on click
-			elt.onclickInside(elt,coords)  # Execute user action attached to it too
-
-	def stopListenerThread(self):
-		self.isInputThreadStarted = False
-		self.device.isInputThreadStarted = False
-		print("[PSSM - Touch handler] : Input thread stopped")
+    def stopListenerThread(self):
+        self.isInputThreadStarted = False
+        self.device.isInputThreadStarted = False
+        print("[PSSM - Touch handler] : Input thread stopped")
 
 
-############################# - Core Element	- ##############################
+# ########################## - Core Element    - ##############################
 class Element:
-	"""
-	Everything which is going to be displayed on the screen is an Element.
+    """
+    Everything which is going to be displayed on the screen is an Element.
 
-	Args:
-		isInverted (bool): Is the element inverted
-		data (dict, or whatever): A parameter for you to store whatever you want
-		area (list): a [(x,y),(w,h)] list. If used in a Layout, the layout will take care of calculating the area.
-		imgData (PILImage): the PIL image of the object (None by default, the generator function takes care of generating one on supported Elements)
-		onclickInside (function): A function to be executed when the user clicks on the Element
-		tags (set): A set of tags the element has. (deprecated)
-		invertOnClick (bool): Invert the element when a click is registered ?
-		invertDuration (int): Duration in seconds of the element invertion after a click is registered (use 0 for infinite)
-		forcePrintOnTop (bool): Force the element to be printed on top of the stack, even if there is an on-screen keyboard or a popup
-	"""
-	def __init__(
-			self,
-			area 			= None,
-			imgData 		= None,
-			onclickInside 	= returnFalse,
-			isInverted 		= False,
-			data 			= {},
-			tags 			= set(),
-			invertOnClick 	= False,
-			invertDuration 	= 0.2,
-			forcePrintOnTop = False
-		):
-		global lastUsedId
-		self.id = lastUsedId
-		lastUsedId += 1
-		self.isLayout = False
-		self.imgData = imgData
-		self.area = area
-		self.onclickInside = onclickInside
-		self.isInverted = isInverted
-		self.user_data = data
-		self.invertOnClick = invertOnClick
-		self.tags=tags
-		self.default_invertDuration = invertDuration
-		self.forcePrintOnTop = forcePrintOnTop
-		self.parentLayouts = []
-		self.parentPSSMScreen = None
+    Args:
+        isInverted (bool): Is the element inverted
+        data (dict, or any): A parameter for you to store whatever you want
+        area (list): a [(x, y), (w, h)] list. If used in a Layout, the layout
+            will take care of calculating the area.
+        imgData (PILImage): the PIL image of the object (None by default, the
+            generator function takes care of generating one)
+        onclickInside (function): A function to be executed when the user
+            clicks on the Element
+        tags (set): A set of tags the element has. (deprecated)
+        invertOnClick (bool): Invert the element when a click is registered ?
+        invertDuration (int): Duration in seconds of the element invertion
+            after a click is registered (use 0 for infinite)
+        forcePrintOnTop (bool): Force the element to be printed on top of the
+            stack, even if there is an on-screen keyboard or a popup
+    """
+    def __init__(self, area=None, imgData=None, onclickInside=returnFalse,
+                 isInverted=False, data={}, tags=set(), invertOnClick=False,
+                 invertDuration=DEFAULT_INVERT_DURATION, forcePrintOnTop=False
+                 ):
+        global lastUsedId
+        self.id = lastUsedId
+        lastUsedId += 1
+        self.isLayout = False
+        self.imgData = imgData
+        self.area = area
+        self.onclickInside = onclickInside
+        self.isInverted = isInverted
+        self.user_data = data
+        self.invertOnClick = invertOnClick
+        self.tags = tags
+        self.invertDuration = invertDuration
+        self.forcePrintOnTop = forcePrintOnTop
+        self.parentLayouts = []
+        self.parentPSSMScreen = None
 
-	def __hash__(self):
-		return hash(self.id)
+    def __hash__(self):
+        return hash(self.id)
 
-	def __eq__(self, other):
-		if isinstance(other, self.__class__):
-			return self.id == other.id
-		return NotImplemented
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.id == other.id
+        return NotImplemented
 
-	def update(self,newAttributes={},skipGeneration=False,skipThisEltGeneration=False,skipPrint=False):
-		"""
-		Pass a dict as argument, and it will update the Element's attributes accordingly
-		Args :
-			newAttributes (dict): The element's new attributes
-			skipGeneration (bool): Just update the element's attribute, but do not do any generation or printing
-			skipThisEltGeneration (bool): Do not regenerate this element but do update the parent layouts
-			skipPrint (bool): Do not update the screen, but do regenerate.
-		"""
-		# First, we set the attributes
-		for param in newAttributes:
-			setattr(self, param, newAttributes[param])
-		if not skipGeneration:
-			# Then we recreate the pillow image of this particular object
-			if not skipThisEltGeneration:
-				self.generator()
-			if len(self.parentLayouts) > 0:
-				# We recreate the pillow image of the oldest parent
-				# And it is not needed to regenerate standard objects, since
-				oldest_parent = self.parentLayouts[0]
-				oldest_parent.generator(skipNonLayoutEltGeneration=True)
-			#then, let's reprint the stack
-			if not skipPrint:
-				self.parentPSSMScreen.printStack(area=self.area)
-		return True
+    def update(self, newAttributes={}, skipGeneration=False,
+               skipThisEltGeneration=False, skipPrint=False):
+        """
+        Pass a dict as argument, and it will update the Element's attributes
+        accordingly
+        Args :
+            newAttributes (dict): The element's new attributes
+            skipGeneration (bool): Just update the element's attribute, but do
+                not do any generation or printing
+            skipThisEltGeneration (bool): Do not regenerate this element but do
+                update the parent layouts
+            skipPrint (bool): Do not update the screen, but do regenerate.
+        """
+        # First, we set the attributes
+        for param in newAttributes:
+            setattr(self, param, newAttributes[param])
+        if not skipGeneration:
+            # Then we recreate the pillow image of this particular object
+            if not skipThisEltGeneration:
+                self.generator()
+            if len(self.parentLayouts) > 0:
+                # We recreate the pillow image of the oldest parent
+                # And it is not needed to regenerate standard objects, since
+                oldest_parent = self.parentLayouts[0]
+                oldest_parent.generator(skipNonLayoutEltGeneration=True)
+            # Then, let's reprint the stack
+            if not skipPrint:
+                self.parentPSSMScreen.printStack(area=self.area)
+        return True
 
-	def generator(self):
-		"""
-		The generator is the function which is called when the container layout wants to
-		build an image. It therefore returns a pillow image.
-		"""
-		return NotImplemented
+    def generator(self):
+        """
+        The generator is the function which is called when the container layout
+        wants to build an image. It therefore returns a pillow image.
+        """
+        return NotImplemented
 
-	def setInverted(self,mode):
-		# TODO : actually invert it ? or delete this function
-		self.isInverted = mode
+    def setInverted(self, mode):
+        # TODO : actually invert it ? or delete this function
+        self.isInverted = mode
 
-	def convertDimension(self,dimension):
-		"""
-		Converts the user dimension input (like "h*0.1") to to proper integer amout of pixels.
-		Basically, you give it a string. And it will change a few characters to their corresponding value, then return the evaluated string.
+    def convertDimension(self, dimension):
+        """
+        Converts the user dimension input (like "h*0.1") to to proper integer
+        amount of pixels.
+        Basically, you give it a string. And it will change a few characters to
+        their corresponding value, then return the evaluated string.
 
-		Examples:
-			I HIGHLY recommend doing only simple operation, like "H*0.1", "W/10", always starting with the corresponding variable.
-			But you can if you want do more complicated things:
-			elt.convertDimension("H+W")   ->  screen_height + screen_width
-			elt.convertDimension("p*300+max(w,H)")   ->   300 + max(element_width, screen_height)
+        Examples:
+            I HIGHLY recommend doing only simple operation, like "H*0.1", or
+            "W/10", always starting with the corresponding variable.
+            But you can if you want do more complicated things:
+            elt.convertDimension("H+W")
+                    ->  screen_height + screen_width
+            elt.convertDimension("p*300+max(w, h)")
+                    -> 300 + max(element_width, screen_height)
 
-		Note:
-			When using question mark dimension (like "?*2"), the question mark MUST be at the beginning of the string
-		"""
-		if isinstance(dimension,int):
-			return dimension
-		elif isinstance(dimension,str):
-			nd = ""
-			W = self.parentPSSMScreen.width
-			H = self.parentPSSMScreen.height
-			if self.area:
-				(x,y),(w,h) = self.area
-			else:		# area not defined. Instead of being stuck, let's assume the screen height and width are a decent alternative
-				w,h = W,H
-			for c in dimension:
-				if c == 'p' or c== 'P':
-					nd += '1'
-				elif c == 'W':		# screen width
-					nd += str(W)
-				elif c == 'H':		# screen height
-					nd += str(H)
-				elif c == 'w':		# element width
-					nd += str(w)
-				elif c == 'h':		# element height
-					nd += str(h)
-				else: 			# A standard character
-					nd += c
-			if dimension[0] == '?':
-				return nd			# We return a string, another function will take care of evaluating it
-			else:
-				return int(eval(nd))		# Then we can evaluate the input
-		else:
-			print("[PSSM] Could not parse the dimension")
-			return dimension
+        Note:
+            When using question mark dimension (like "?*2"), the question mark
+            MUST be at the beginning of the string
+        """
+        if isinstance(dimension, int):
+            return dimension
+        elif isinstance(dimension, str):
+            nd = ""
+            W = self.parentPSSMScreen.width
+            H = self.parentPSSMScreen.height
+            if self.area:
+                (x, y), (w, h) = self.area
+            else:
+                # area not defined. Instead of being stuck, let's assume the
+                # screen height and width are a decent alternative
+                w, h = W, h
+            for c in dimension:
+                if c == 'p' or c == 'P':
+                    nd += '1'
+                elif c == 'W':      # screen width
+                    nd += str(W)
+                elif c == 'H':      # screen height
+                    nd += str(H)
+                elif c == 'w':      # element width
+                    nd += str(w)
+                elif c == 'h':      # element height
+                    nd += str(h)
+                else:           # A standard character
+                    nd += c
+            if dimension[0] == '?':
+                # We return the string, another function will take care of
+                # evaluating it
+                return nd
+            else:
+                return int(eval(nd))        # Then we can evaluate the input
+        else:
+            print("[PSSM] Could not parse the dimension")
+            return dimension
 
-	def pssmOnClickInside(self,coords):
-		"""
-		Each Element can also have a pssm function implemented on click.
-		By default, it does nothing.
-		"""
-		return None
+    def pssmOnClickInside(self, coords):
+        """
+        Each Element can also have a pssm function implemented on click.
+        By default, it does nothing.
+        """
+        return None
 
 
-
-############################# - Layout Elements	- ##############################
+# ########################## - Layout Elements - ##############################
 class Layout(Element):
-	"""
-	A layout is a quite general kind of Element :
-	If must be given the working area, and a layout, and will generate every element of the layout
+    """
+    A layout is a quite general kind of Element :
+    If must be given the working area, and a layout, and will generate every
+    element of the layout
 
-	Args:
-		layout (list): The given layout (see example below). It is basically a list of rows. Each row is a list containing : the height of the row, then as many tuples as you want, each tuple being a (pssm.Element, width) instance
-		background_color
-		area
-		... all other arguments from the pssm.Element class
+    Args:
+        layout (list): The given layout (see example below). It is basically a
+        list of rows. Each row is a list containing : the height of the row,
+        then as many tuples as you want, each tuple being a
+        (pssm.Element, width) instance
+        background_color
+        area
+        ... all other arguments from the pssm.Element class
 
-	Example of usage:
-		layout_demo = [
-	        [30                                                                                         ],
-	        ["h*0.1", (None,"?/2"),        (pssm.Button("But1"),200),        (None,"?/2")               ],
-	        ["?"                                                                                        ],
-	        ["p*100", (None,"w*0.3"),       (pssm.Button("But2"),200),        (None,"w*0.3")            ],
-	        [30                                                                                         ],
-	        [100, (None,20), (pssm.Button("But3"),200), (None,20), (pssm.Button("nope"),300), (None,10) ],
-	        [40                                                                                         ]
-	    ]
-	    myLayout = pssm.Layout(layout_demo,screen.area)
-	    screen.addElt(myLayout)
-	"""
-	def __init__(self,layout,area=None,background_color="white",**kwargs):
-		super().__init__(area=area)
-		self.layout      = layout
-		self.isValid = self.isLayoutValid()
-		self.background_color = background_color
-		self.areaMatrix = None
-		self.imgMatrix  = None
-		self.borders    = None
-		self.isLayout   = True
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
+    Example of usage:
+        See [examples](examples/index.html)
+    """
+    def __init__(self, layout, area=None, background_color="white", **kwargs):
+        super().__init__(area=area)
+        self.layout = layout
+        self.isValid = self.isLayoutValid()
+        self.background_color = background_color
+        self.areaMatrix = None
+        self.imgMatrix = None
+        self.borders = None
+        self.isLayout = True
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
 
-	def isLayoutValid(self):
-		# TODO : to be tested
-		l = self.layout
-		if not isinstance(l,list):
-			raise Exception("Layout Element is supposed to be a list")
-		for row in l:
-			if not isinstance(row,list):
-				raise Exception("A layout row is supposed to be a list")
-			elif len(row) == 0:
-				raise Exception("A layout row cannot be empty")
-			elif not isinstance(row[0],str) and not isinstance(row[0],int):
-				raise Exception("The first element of a row (its height) should be a string or an integer")
-			for j in range(1,len(row)):
-				eltTuple = row[j]
-				if not (isinstance(eltTuple,tuple) or isinstance(eltTuple,list)):
-					raise Exception("A layout row should be a list of Tuple (except for its first element)")
-				if len(eltTuple) != 2:
-					raise Exception("A layout element should be a Tuple : (Element, elementWidth)")
-				if not (isinstance(eltTuple[1],str) or isinstance(eltTuple[1],int)):
-					raise Exception("An element width should be a string or an integer")
-				if not (isinstance(eltTuple[0],Element) or eltTuple[0] == None):
-					raise Exception("A layout element should be a Tuple : (Element, elementWidth), with Element designating a PSSM Element")
-		return True
+    def isLayoutValid(self):
+        # TODO : to be tested
+        layout = self.layout
+        if not isinstance(layout, list):
+            raise Exception("Layout Element is supposed to be a list")
+        for row in layout:
+            if not isinstance(row, list):
+                raise Exception("A layout row is supposed to be a list")
+            elif len(row) == 0:
+                raise Exception("A layout row cannot be empty")
+            elif not isinstance(row[0], str) and not isinstance(row[0], int):
+                raise Exception(
+                    "The first element of a row (its height) should be a " +
+                    "string or an integer"
+                )
+            for j in range(1, len(row)):
+                eltTuple = row[j]
+                isTuple = isinstance(eltTuple, tuple)
+                isList = isinstance(eltTuple, list)
+                if not (isTuple or isList):
+                    raise Exception(
+                        "A layout row should be a list of Tuple " +
+                        "(except for its first element)"
+                    )
+                if len(eltTuple) != 2:
+                    raise Exception(
+                        "A layout element should be a Tuple : " +
+                        "(Element, elementWidth)"
+                    )
+                isStr = isinstance(eltTuple[1], str)
+                isInt = isinstance(eltTuple[1], int)
+                if not (isInt or isStr):
+                    raise Exception(
+                        "An element width should be a string or an integer"
+                    )
+                isElement = isinstance(eltTuple[0], Element)
+                if not (isElement or eltTuple[0] is None):
+                    raise Exception(
+                        "A layout element should be a Tuple : " +
+                        "(Element, elementWidth), with Element designating " +
+                        " a PSSM Element"
+                    )
+        return True
 
-	def generator(self,area=None, skipNonLayoutEltGeneration=False):
-		"""
-		Builds one img out of all the Elements it is being given
-		"""
-		if area != None:
-			self.area = area
-		self.createAreaMatrix()
-		self.createImgMatrix(skipNonLayoutEltGeneration=skipNonLayoutEltGeneration)
-		[(x,y),(w,h)] = self.area
-		placeholder = Image.new(
-			self.parentPSSMScreen.colorType,
-			(w,h),
-			color=get_Color(self.background_color,self.parentPSSMScreen.colorType)
-		)
-		for i in range(len(self.areaMatrix)):
-			for j in range(len(self.areaMatrix[i])):
-				[(elt_x,elt_y),(elt_w,elt_h)] = self.areaMatrix[i][j]
-				relative_x = elt_x - x
-				relative_y = elt_y - y
-				elt_img = self.imgMatrix[i][j]
-				if elt_img != None:
-					placeholder.paste(self.imgMatrix[i][j],(relative_x,relative_y))
-		self.imgData = placeholder
-		return self.imgData
+    def generator(self, area=None, skipNonLayoutEltGeneration=False):
+        """
+        Builds one img out of all the Elements it is being given
+        """
+        if area is not None:
+            self.area = area
+        self.createAreaMatrix()
+        self.createImgMatrix(
+            skipNonLayoutEltGeneration=skipNonLayoutEltGeneration
+        )
+        [(x, y), (w, h)] = self.area
+        colorType = self.parentPSSMScreen.colorType
+        color = get_Color(self.background_color, colorType)
+        placeholder = Image.new(colorType, (w, h), color=color)
+        for i in range(len(self.areaMatrix)):
+            for j in range(len(self.areaMatrix[i])):
+                [(elt_x, elt_y), (elt_w, elt_h)] = self.areaMatrix[i][j]
+                relative_x = elt_x - x
+                relative_y = elt_y - y
+                elt_img = self.imgMatrix[i][j]
+                if elt_img is not None:
+                    pos = (relative_x, relative_y)
+                    placeholder.paste(self.imgMatrix[i][j], pos)
+        self.imgData = placeholder
+        return self.imgData
 
-	def createImgMatrix(self,skipNonLayoutEltGeneration=False):
-		matrix = []
-		if not self.areaMatrix:
-			print("[PSSM Layout Element] Error, areaMatrix has to be defined first")
-			return None
-		for i in range(len(self.layout)):
-			row = []
-			for j in range(1,len(self.layout[i])):
-				myElement,_   = self.layout[i][j]
-				if myElement == None:
-					myElement_area  = self.areaMatrix[i][j-1]
-					myElement_img   = None
-				else:
-					myElement_area  = self.areaMatrix[i][j-1]
-					if not myElement.isLayout and skipNonLayoutEltGeneration:
-						myElement_img = myElement.imgData
-					else:
-						myElement_img   = myElement.generator(area=myElement_area)
-				row.append(myElement_img)
-			matrix.append(row)
-		self.imgMatrix = matrix
+    def createImgMatrix(self, skipNonLayoutEltGeneration=False):
+        matrix = []
+        if not self.areaMatrix:
+            print("[PSSM Layout] Error, areaMatrix has to be defined first")
+            return None
+        for i in range(len(self.layout)):
+            row = []
+            for j in range(1, len(self.layout[i])):
+                elt, _ = self.layout[i][j]
+                if elt is None:
+                    elt_area = self.areaMatrix[i][j-1]
+                    elt_img = None
+                else:
+                    elt_area = self.areaMatrix[i][j-1]
+                    if not elt.isLayout and skipNonLayoutEltGeneration:
+                        elt_img = elt.imgData
+                    else:
+                        elt_img = elt.generator(area=elt_area)
+                row.append(elt_img)
+            matrix.append(row)
+        self.imgMatrix = matrix
 
-	def createAreaMatrix(self):
-		# TODO : must honor min and max
-		matrix = []
-		n_rows = len(self.layout)
-		[(x,y),(w,h)] = self.area[:]
-		x0,y0=x,y
-		for i in range(len(self.layout)):     # Lets loop through the rows
-			row = self.layout[i]
-			row_cols = []           # All the columns of this particular row
-			row_height = row[0]
-			converted_height = self.convertDimension(row_height)
-			if isinstance(converted_height,int):
-				true_row_height = converted_height
-			else:
-				remaining_height = self.calculate_remainingHeight()
-				true_row_height = int(eval(str(remaining_height) + converted_height[1:]))
-			for j in range(1,len(row)):
-				(element,element_width) = row[j]
-				converted_width = self.convertDimension(element_width)
-				if element != None:
-					for parent in self.parentLayouts:
-						self.layout[i][j][0].parentLayouts.append(parent)
-					self.layout[i][j][0].parentLayouts.append(self)
-					self.layout[i][j][0].parentPSSMScreen = self.parentPSSMScreen
-				if isinstance(converted_width,int):
-					true_element_width = converted_width
-				else:
-					remaining_width = self.calculate_remainingWidth(i)
-					true_element_width = int(eval(str(remaining_width) + converted_width[1:]))
-					self.layout[i][j] = (self.layout[i][j][0], true_element_width)
-				element_area = [(x0,y0),(true_element_width,true_row_height)]
-				x0 += true_element_width
-				row_cols.append(element_area)
-			y0 += true_row_height
-			x0 = x
-			matrix.append(row_cols)
-		self.areaMatrix = matrix
+    def createAreaMatrix(self):
+        # TODO : must honor min and max
+        matrix = []
+        n_rows = len(self.layout)
+        [(x, y), (w, h)] = self.area[:]
+        x0, y0 = x, y
+        for i in range(n_rows):     # Lets loop through the rows
+            row = self.layout[i]
+            row_cols = []           # All the columns of this particular row
+            row_height = row[0]
+            converted_height = self.convertDimension(row_height)
+            if isinstance(converted_height, int):
+                true_row_height = converted_height
+            else:
+                remaining_height = self.calculate_remainingHeight()
+                dim = str(remaining_height) + converted_height[1:]
+                true_row_height = int(eval(dim))
+            for j in range(1, len(row)):
+                (element, element_width) = row[j]
+                converted_width = self.convertDimension(element_width)
+                if element is not None:
+                    for parent in self.parentLayouts:
+                        self.layout[i][j][0].parentLayouts.append(parent)
+                    self.layout[i][j][0].parentLayouts.append(self)
+                    self.layout[i][j][0].parentPSSMScreen = \
+                        self.parentPSSMScreen
+                if isinstance(converted_width, int):
+                    true_elt_width = converted_width
+                else:
+                    remaining_width = self.calculate_remainingWidth(i)
+                    dim = str(remaining_width) + converted_width[1:]
+                    true_elt_width = int(eval(dim))
+                    self.layout[i][j] = (self.layout[i][j][0], true_elt_width)
+                element_area = [(x0, y0), (true_elt_width, true_row_height)]
+                x0 += true_elt_width
+                row_cols.append(element_area)
+            y0 += true_row_height
+            x0 = x
+            matrix.append(row_cols)
+        self.areaMatrix = matrix
 
-	def createEltList(self):
-		"""
-		Returns a list of all the elements the Layout Element contains
-		"""
-		eltList=[]
-		for row in self.layout:
-			for i in range(1,len(row)):
-				elt,_ = row[i]
-				if elt != None:
-					eltList.append(elt)
-		return eltList
+    def createEltList(self):
+        """
+        Returns a list of all the elements the Layout Element contains
+        """
+        eltList = []
+        for row in self.layout:
+            for i in range(1, len(row)):
+                elt, _ = row[i]
+                if elt is not None:
+                    eltList.append(elt)
+        return eltList
 
-	def calculate_remainingHeight(self):
-		rows = self.extract_rowsHeight()
-		total_questionMarks_weight = 0
-		total_height = 0
-		for dimension in rows:
-			converted_dimension = self.convertDimension(dimension)
-			if isinstance(converted_dimension,int):
-				total_height += converted_dimension
-			else:
-				weight = eval("1" + converted_dimension[1:])
-				total_questionMarks_weight += weight
-		layout_height = self.area[1][1]
-		return int((layout_height - total_height)/total_questionMarks_weight)
+    def calculate_remainingHeight(self):
+        rows = self.extract_rowsHeight()
+        total_questionMarks_weight = 0
+        total_height = 0
+        for dimension in rows:
+            converted_dimension = self.convertDimension(dimension)
+            if isinstance(converted_dimension, int):
+                total_height += converted_dimension
+            else:
+                weight = eval("1" + converted_dimension[1:])
+                total_questionMarks_weight += weight
+        layout_height = self.area[1][1]
+        return int((layout_height - total_height)/total_questionMarks_weight)
 
-	def calculate_remainingWidth(self,rowIndex):
-		cols = self.extract_colsWidth(rowIndex)
-		total_width = 0
-		total_questionMarks_weight = 0
-		for dimension in cols:
-			converted_dimension = self.convertDimension(dimension)
-			if isinstance(converted_dimension,int):
-				total_width += converted_dimension
-			else:
-				weight = eval("1" + converted_dimension[1:])
-				total_questionMarks_weight += weight
-		layout_width = self.area[1][0]
-		return int((layout_width - total_width)/total_questionMarks_weight)
+    def calculate_remainingWidth(self, rowIndex):
+        cols = self.extract_colsWidth(rowIndex)
+        total_width = 0
+        total_questionMarks_weight = 0
+        for dimension in cols:
+            converted_dimension = self.convertDimension(dimension)
+            if isinstance(converted_dimension, int):
+                total_width += converted_dimension
+            else:
+                weight = eval("1" + converted_dimension[1:])
+                total_questionMarks_weight += weight
+        layout_width = self.area[1][0]
+        return int((layout_width - total_width)/total_questionMarks_weight)
 
-	def extract_rowsHeight(self):
-		rows = []
-		for row in self.layout:
-			rows.append(row[0])
-		return rows
+    def extract_rowsHeight(self):
+        rows = []
+        for row in self.layout:
+            rows.append(row[0])
+        return rows
 
-	def extract_colsWidth(self,rowIndex):
-		cols = []
-		for col in self.layout[rowIndex]:
-			if isinstance(col,tuple):
-				cols.append(col[1])
-		return cols
+    def extract_colsWidth(self, rowIndex):
+        cols = []
+        for col in self.layout[rowIndex]:
+            if isinstance(col, tuple):
+                cols.append(col[1])
+        return cols
 
-	def dispatchClick(self,coords):
-		"""
-		Finds the element on which the user clicked
-		"""
-		self.dispatchClick_DICHOTOMY_colsOnly(coords)
+    def dispatchClick(self, coords):
+        """
+        Finds the element on which the user clicked
+        """
+        self.dispatchClick_DICHOTOMY_colsOnly(coords)
 
-	def dispatchClick_LINEAR(self,coords):
-		"""
-		Linear search throuh both the rows and the columns
-		"""
-		click_x,click_y = coords
-		for i in range(len(self.areaMatrix)):			# Linear search though the rows
-			if len(self.areaMatrix[i]) == 0:
-				# That's a fake row (a margin row)
-				continue
-			first_row_elt = self.areaMatrix[i][0]
-			last_row_elt = self.areaMatrix[i][-1]
-			x = first_row_elt[0][0]
-			y = first_row_elt[0][1]
-			w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
-			h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
-			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):		# CLick was in that row
-				for j in range(len(self.areaMatrix[i])):			# Linear search through the columns
-					if coordsInArea(click_x,click_y,self.areaMatrix[i][j]):
-						# Click was on that element
-						elt,_ = self.layout[i][j+1]
-						if elt != None and elt.onclickInside != None:
-							self.parentPSSMScreen.dispatchClickToElt(coords,elt)
-						return True
-		return False
+    def dispatchClick_LINEAR(self, coords):
+        """
+        Linear search throuh both the rows and the columns
+        """
+        click_x, click_y = coords
+        # Linear search though the rows
+        for i in range(len(self.areaMatrix)):
+            if len(self.areaMatrix[i]) == 0:
+                # That's a fake row (a margin row)
+                continue
+            first_row_elt = self.areaMatrix[i][0]
+            last_row_elt = self.areaMatrix[i][-1]
+            x = first_row_elt[0][0]
+            y = first_row_elt[0][1]
+            w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
+            h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
+            if coordsInArea(click_x, click_y, [(x, y), (w, h)]):
+                # CLick was in that row
+                for j in range(len(self.areaMatrix[i])):
+                    # Linear search through the columns
+                    if coordsInArea(click_x, click_y, self.areaMatrix[i][j]):
+                        # Click was on that element
+                        elt, _ = self.layout[i][j+1]
+                        if elt is not None and elt.onclickInside is not None:
+                            self.parentPSSMScreen.dispatchClickToElt(
+                                coords, elt
+                            )
+                        return True
+        return False
 
-	def dispatchClick_DICHOTOMY_colsOnly(self,coords):
-		"""
-		Linear search through the rows, dichotomy for the columns
-		(Because of the empty rows, a dichotomy for the rows doesn't work)
-		"""
-		click_x,click_y = coords
-		row_A = -1
-		for i in range(len(self.areaMatrix)):						# Linear search though the rows
-			if len(self.areaMatrix[i]) == 0:
-				# That's a fake row (a margin row)
-				continue
-			first_row_elt = self.areaMatrix[i][0]
-			last_row_elt = self.areaMatrix[i][-1]
-			x = first_row_elt[0][0]
-			y = first_row_elt[0][1]
-			w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
-			h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
-			if coordsInArea(click_x, click_y, [(x,y),(w,h)]):		# CLick was in that row
-				row_A = i
-				break
-		if row_A ==-1:
-			return None
-		col_A = 0
-		col_C = max(len(self.areaMatrix[row_A]) - 1,0)
-		xA = self.areaMatrix[row_A][col_A][0][0]
-		xC = self.areaMatrix[row_A][col_C][0][0]
-		if click_x < xA:
-			return None
-		if click_x > xC + self.areaMatrix[row_A][col_C][1][0]:
-			return None
-		while col_C > col_A +1:
-			col_B = int(0.5*(col_A+col_C))  	# The average of the two
-			xB = self.areaMatrix[row_A][col_B][0][0]
-			if click_x >= xB or col_B==col_C:
-				col_A = col_B
-				xA = xB
-			else:
-				col_C = col_B
-				xC = xB
-		## Element is at indexes row_A, col_A
-		elt,_ = self.layout[row_A][col_A+1]
-		if elt != None and elt.onclickInside != None:
-			self.parentPSSMScreen.dispatchClickToElt(coords,elt)
-		return True
+    def dispatchClick_DICHOTOMY_colsOnly(self, coords):
+        """
+        Linear search through the rows, dichotomy for the columns
+        (Because of the empty rows, a dichotomy for the rows doesn't work)
+        """
+        click_x, click_y = coords
+        row_A = -1
+        for i in range(len(self.areaMatrix)):
+            # Linear search though the rows
+            if len(self.areaMatrix[i]) == 0:
+                # That's a fake row (a margin row)
+                continue
+            first_row_elt = self.areaMatrix[i][0]
+            last_row_elt = self.areaMatrix[i][-1]
+            x = first_row_elt[0][0]
+            y = first_row_elt[0][1]
+            w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
+            h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
+            if coordsInArea(click_x, click_y, [(x, y), (w, h)]):
+                # CLick was in that row
+                row_A = i
+                break
+        if row_A == -1:
+            return None
+        col_A = 0
+        col_C = max(len(self.areaMatrix[row_A]) - 1, 0)
+        xA = self.areaMatrix[row_A][col_A][0][0]
+        xC = self.areaMatrix[row_A][col_C][0][0]
+        if click_x < xA:
+            return None
+        if click_x > xC + self.areaMatrix[row_A][col_C][1][0]:
+            return None
+        while col_C > col_A + 1:
+            col_B = int(0.5*(col_A+col_C))      # The average of the two
+            xB = self.areaMatrix[row_A][col_B][0][0]
+            if click_x >= xB or col_B == col_C:
+                col_A = col_B
+                xA = xB
+            else:
+                col_C = col_B
+                xC = xB
+        # Element is at indexes row_A, col_A
+        elt, _ = self.layout[row_A][col_A+1]
+        if elt is not None and elt.onclickInside is not None:
+            self.parentPSSMScreen.dispatchClickToElt(coords, elt)
+        return True
 
-	def dispatchClick_DICHOTOMY_Full_ToBeFixed(self,coords):
-		"""
-		Finds the element on which the user clicked
-		Implemented with dichotomy search (with the hope of making things faster,
-		especially the integrated keyboard)
-		"""
-		# TODO : To be fixed
-		# For now it does not work, because there are empty rows which break the loop
-		click_x,click_y = coords
-		row_A = 0
-		row_C = max(len(self.areaMatrix) - 1,0)
-		print(self.areaMatrix[row_C])
-		while len(self.areaMatrix[row_A])==0:
-			row_A += 1
-		while len(self.areaMatrix[row_C])==0:
-			row_C -= 1
-		yA = self.areaMatrix[row_A][0][0][1]  # First column THEN first row , [(x,y),(w,h)] THUS first tuple of list THEN second coordinate of tuple
-		yC = self.areaMatrix[row_C][0][0][1]
-		if click_y < yA:
-			return None
-		if click_y > yC + self.areaMatrix[row_C][0][1][1]:
-			return None
-		while row_C > row_A+1:
-			row_B = int(0.5*(row_A+row_C))  	# The average of the two
-			while len(self.areaMatrix[row_B])==0:
-				row_B += 1
-			yB = self.areaMatrix[row_B][0][0][1]
-			if click_y >= yB or row_B==row_C:
-				row_A = row_B
-				yA = yB
-			else:
-				row_C = row_B
-				yC = yB
-		# User clicked on element ar row of index row_A
-		# Let's do the same for the column
-		col_A = 0
-		col_C = max(len(self.areaMatrix[row_A]) - 1,0)
-		xA = self.areaMatrix[row_A][col_A][0][0]
-		xC = self.areaMatrix[row_A][col_C][0][0]
-		if click_x < xA:
-			return None
-		if click_x > xC + self.areaMatrix[row_A][col_C][1][0]:
-			return None
-		while col_C > col_A +1:
-			col_B = int(0.5*(col_A+col_C))  	# The average of the two
-			xB = self.areaMatrix[row_A][col_B][0][0]
-			if click_x >= xB or col_B==col_C:
-				col_A = col_B
-				xA = xB
-			else:
-				col_C = col_B
-				xC = xB
-		## Element is at indexes row_A, col_A
-		elt,_ = self.layout[row_A-2][col_A+1]
-		if elt != None and elt.onclickInside != None:
-			self.parentPSSMScreen.dispatchClickToElt(coords,elt)
-		return True
+    def dispatchClick_DICHOTOMY_Full_ToBeFixed(self, coords):
+        """
+        Finds the element on which the user clicked
+        Implemented with dichotomy search (with the hope of making things
+        faster, especially the integrated keyboard)
+        """
+        # TODO : To be fixed
+        # For now it does not work, because there are empty rows which
+        # break the loop
+        click_x, click_y = coords
+        row_A = 0
+        row_C = max(len(self.areaMatrix) - 1, 0)
+        print(self.areaMatrix[row_C])
+        while len(self.areaMatrix[row_A]) == 0:
+            row_A += 1
+        while len(self.areaMatrix[row_C]) == 0:
+            row_C -= 1
+        # First column THEN first row , [(x, y), (w, h)] THUS first tuple of
+        # list THEN second coordinate of tuple
+        yA = self.areaMatrix[row_A][0][0][1]
+        yC = self.areaMatrix[row_C][0][0][1]
+        if click_y < yA:
+            return None
+        if click_y > yC + self.areaMatrix[row_C][0][1][1]:
+            return None
+        while row_C > row_A+1:
+            row_B = int(0.5*(row_A+row_C))      # The average of the two
+            while len(self.areaMatrix[row_B]) == 0:
+                row_B += 1
+            yB = self.areaMatrix[row_B][0][0][1]
+            if click_y >= yB or row_B == row_C:
+                row_A = row_B
+                yA = yB
+            else:
+                row_C = row_B
+                yC = yB
+        # User clicked on element ar row of index row_A
+        # Let's do the same for the column
+        col_A = 0
+        col_C = max(len(self.areaMatrix[row_A]) - 1, 0)
+        xA = self.areaMatrix[row_A][col_A][0][0]
+        xC = self.areaMatrix[row_A][col_C][0][0]
+        if click_x < xA:
+            return None
+        if click_x > xC + self.areaMatrix[row_A][col_C][1][0]:
+            return None
+        while col_C > col_A + 1:
+            col_B = int(0.5*(col_A+col_C))      # The average of the two
+            xB = self.areaMatrix[row_A][col_B][0][0]
+            if click_x >= xB or col_B == col_C:
+                col_A = col_B
+                xA = xB
+            else:
+                col_C = col_B
+                xC = xB
+        # Element is at indexes row_A, col_A
+        elt, _ = self.layout[row_A-2][col_A+1]
+        if elt is not None and elt.onclickInside is not None:
+            self.parentPSSMScreen.dispatchClickToElt(coords, elt)
+        return True
 
 
 class ButtonList(Layout):
-	"""
-	Generates a Layout with only one item per row, all the same type (buttons) and same height and width
-	Args:
-		button (list): a [{"text":"my text","onclickInside":onclickInside},someOtherDict,someOtherDict] array. Each dict will contain the parameters of each button of the button list
-		borders (list): a [top,bottom,left,right] array
-	"""
-	def __init__(self,buttons, margins=[0,0,0,0],spacing=0,**kwargs):
-		self.buttons = buttons
-		self.margins = margins
-		self.spacing = spacing
-		layout = self.build_layoutFromButtons()
-		super().__init__(layout)
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
+    """
+    Generates a Layout with only one item per row, all the same type (buttons)
+    and same height and width
+    Args:
+        button (list): a [{"text":"my text","onclickInside":onclickInside},
+            someOtherDict, someOtherDict] array. Each dict will contain the
+            parameters of each button of the button list
+        borders (list): a [top, bottom,left,right] array
+    """
+    def __init__(self, buttons, margins=[0, 0, 0, 0], spacing=0, **kwargs):
+        self.buttons = buttons
+        self.margins = margins
+        self.spacing = spacing
+        layout = self.build_layoutFromButtons()
+        super().__init__(layout)
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
 
-	def build_layoutFromButtons(self):
-		#TODO : must honor min_width,max_width etc
-		[top,bottom,left,right] = self.margins
-		buttonLayout = [[top-self.spacing]]
-		for button in self.buttons:
-			buttonElt = Button(text=button['text'])
-			for param in button:
-				setattr(buttonElt, param, button[param])
-			row_height = "?"
-			buttonLayout.append([self.spacing])
-			row = [row_height,(None,left),(buttonElt,"?"),(None,right)]
-			buttonLayout.append(row)
-		buttonLayout.append([bottom])
-		return buttonLayout
+    def build_layoutFromButtons(self):
+        # TODO : must honor min_width,max_width etc
+        [top, bottom, left, right] = self.margins
+        buttonLayout = [[top-self.spacing]]
+        for button in self.buttons:
+            buttonElt = Button(text=button['text'])
+            for param in button:
+                setattr(buttonElt, param, button[param])
+            row_height = "?"
+            buttonLayout.append([self.spacing])
+            row = [row_height, (None, left), (buttonElt, "?"), (None, right)]
+            buttonLayout.append(row)
+        buttonLayout.append([bottom])
+        return buttonLayout
 
 
 class OSK(Layout):
-	"""
-	A PSSM Layout element which builds an on-screen keyboard
-	Args:
-		keymapPath (str): a path to a PSSMOSK keymap (like the one included)
-		onKeyPress (function): A callback function. Will be given keyType and keyChar as argument
-	"""
-	def __init__(self,keymapPath=DEFAULT_KEYMAP_PATH,onKeyPress = None, area=None,**kwargs):
-		if not keymapPath:
-			keymapPath = DEFAULT_KEYMAP_PATH
-		self.keymapPaths = keymapPath
-		self.keymap = {'standard':None,'caps':None,'alt':None}
-		self.keymap_layouts = {'standard':None,'caps':None,'alt':None}
-		self.keymap_imgs = {'standard':None,'caps':None,'alt':None}
-		with open(self.keymapPaths['standard']) as json_file:
-			self.keymap['standard'] = json.load(json_file)
-		with open(self.keymapPaths['caps']) as json_file:
-			self.keymap['caps'] = json.load(json_file)
-		with open(self.keymapPaths['alt']) as json_file:
-			self.keymap['alt'] = json.load(json_file)
-		self.lang     	= self.keymap['standard']["lang"]
-		self.onKeyPress	= onKeyPress
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
-		self.view = 'standard'
-		self.keymap_layouts['standard'] = self.build_layout(self.keymap['standard'])
-		self.keymap_layouts['caps'] = self.build_layout(self.keymap['caps'])
-		self.keymap_layouts['alt'] = self.build_layout(self.keymap['alt'])
-		# Initialize layout with standard view
-		self.layout = self.keymap_layouts['standard']
-		super().__init__(self.layout)
-		self.area     	= area
+    """
+    A PSSM Layout element which builds an on-screen keyboard
+    Args:
+        keymapPath (str): a path to a PSSMOSK keymap (like the one included)
+        onKeyPress (function): A callback function. Will be given keyType and
+            keyChar as argument
+    """
+    def __init__(self, keymapPath=DEFAULT_KEYMAP_PATH, onKeyPress=None,
+                 area=None, **kwargs):
+        if not keymapPath:
+            keymapPath = DEFAULT_KEYMAP_PATH
+        self.keymapPaths = keymapPath
+        self.keymap = {'standard': None, 'caps': None, 'alt': None}
+        self.keymap_layouts = {'standard': None, 'caps': None, 'alt': None}
+        self.keymap_imgs = {'standard': None, 'caps': None, 'alt': None}
+        with open(self.keymapPaths['standard']) as json_file:
+            self.keymap['standard'] = json.load(json_file)
+        with open(self.keymapPaths['caps']) as json_file:
+            self.keymap['caps'] = json.load(json_file)
+        with open(self.keymapPaths['alt']) as json_file:
+            self.keymap['alt'] = json.load(json_file)
+        self.lang = self.keymap['standard']["lang"]
+        self.onKeyPress = onKeyPress
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
+        self.view = 'standard'
+        self.keymap_layouts['standard'] = self.build_layout(
+                                               self.keymap['standard'])
+        self.keymap_layouts['caps'] = self.build_layout(self.keymap['caps'])
+        self.keymap_layouts['alt'] = self.build_layout(self.keymap['alt'])
+        # Initialize layout with standard view
+        self.layout = self.keymap_layouts['standard']
+        super().__init__(self.layout)
+        self.area = area
 
-	def generator(self, area=None, forceRegenerate = False):
-		"""
-		This generator is a bit special : we don't want it to regenerate everything
-		everytime we change view. So we will generate all the views at once the first time.
-		Then, unless asked to, we will only return the appropriate image
-		"""
-		if forceRegenerate or (not self.keymap_imgs['standard']) or (not self.keymap_imgs['caps']) or (not self.keymap_imgs['alt']):
-			print("[PSSM OSK] Regenration started")
-			# Let's create all the Images
-			# Standard view is created last, because it is the one which is to be displayed
-			self.layout = self.keymap_layouts['caps']
-			self.keymap_imgs['caps'] = super(OSK, self).generator(area=area)
-			self.layout = self.keymap_layouts['alt']
-			self.keymap_imgs['alt'] = super(OSK, self).generator(area=area)
-			self.layout = self.keymap_layouts['standard']
-			self.keymap_imgs['standard'] = super(OSK, self).generator(area=area)
-		self.imgData = self.keymap_imgs[self.view]
-		return self.keymap_imgs[self.view]
+    def generator(self, area=None, forceRegenerate=False,
+                  skipNonLayoutEltGeneration=False):
+        """
+        This generator is a bit special : we don't want it to regenerate
+        everything everytime we change view. So we will generate all the views
+        at once the first time. Then, unless asked to, we will only return the
+        appropriate image.
+        """
+        isStDefined = self.keymap_imgs['standard']
+        isCaDefined = self.keymap_imgs['caps']
+        isAlDefined = self.keymap_imgs['alt']
+        areAllDefined = isStDefined and isCaDefined and isAlDefined
+        if forceRegenerate or (not areAllDefined):
+            print("[PSSM OSK] Regenration started")
+            # Let's create all the Images
+            # Standard view is created last, because it is the one which is to
+            # be displayed
+            self.layout = self.keymap_layouts['caps']
+            self.keymap_imgs['caps'] = super(OSK, self).generator(area=area)
+            self.layout = self.keymap_layouts['alt']
+            self.keymap_imgs['alt'] = super(OSK, self).generator(area=area)
+            self.layout = self.keymap_layouts['standard']
+            self.keymap_imgs['standard'] = super(OSK, self).generator(
+                                                            area=area)
+        self.imgData = self.keymap_imgs[self.view]
+        return self.keymap_imgs[self.view]
 
-	def build_layout(self,keymap):
-		oskLayout = []
-		spacing = keymap["spacing"]
-		for row in keymap["rows"]:
-			buttonRow = ["?",(None,spacing)]
-			for key in row:
-				label = self.getKeyLabel(key)
-				color_condition 	= key["keyType"] != KTstandardChar
-				background_color 	= "gray12" if color_condition else "white"
-				outline_color 		= "white" if key["isPadding"] else "black"
-				buttonElt = Button(
-					text				= label,
-					font_size 			= "H*0.02",
-					background_color	= background_color,
-					outline_color		= outline_color,
-					onclickInside		= self.handleKeyPress,
-					user_data 			= key,
-					wrap_textOverflow 	= False,
-					invertOnClick		= True
-				)
-				key_width = key["keyWidth"]
-				buttonRow.append((buttonElt,key_width))
-				buttonRow.append((None,spacing))
-			oskLayout.append(buttonRow)
-			oskLayout.append([spacing])
-		return oskLayout
+    def build_layout(self, keymap):
+        oskLayout = []
+        spacing = keymap["spacing"]
+        for row in keymap["rows"]:
+            buttonRow = ["?", (None, spacing)]
+            for key in row:
+                label = self.getKeyLabel(key)
+                color_condition = key["keyType"] != KTstandardChar
+                background_color = "gray12" if color_condition else "white"
+                outline_color = "white" if key["isPadding"] else "black"
+                willChangeLayout = key["keyType"] in [KTcapsLock, KTalt]
+                invertOnClick = False if willChangeLayout else True
+                buttonElt = Button(
+                    text=label,
+                    font_size="H*0.02",
+                    background_color=background_color,
+                    outline_color=outline_color,
+                    onclickInside=self.handleKeyPress,
+                    user_data=key,
+                    wrap_textOverflow=False,
+                    invertOnClick=invertOnClick
+                )
+                key_width = key["keyWidth"]
+                buttonRow.append((buttonElt, key_width))
+                buttonRow.append((None, spacing))
+            oskLayout.append(buttonRow)
+            oskLayout.append([spacing])
+        return oskLayout
 
-	def handleKeyPress(self,elt,coords):
-		keyType = elt.user_data["keyType"]
-		keyChar = elt.user_data["char"]
-		if keyType == KTcapsLock:
-			## In this particular case, we can assume the keyboard will always be on top
-			## Therefore, no need to print everything, let's just print the keyboard
-			self.view = 'caps' if self.view != 'caps' else 'standard'
-			self.layout = self.keymap_layouts[self.view]
-			self.createAreaMatrix()
-			self.update(
-			    newAttributes={},
-			    skipGeneration = True
-			)
-			self.parentPSSMScreen.simplePrintElt(self)
-		elif keyType == KTalt:
-			## In this particular case, we can assume the keyboard will always be on top
-			## Therefore, no need to print everything, let's just print the keyboard
-			self.view = 'alt' if self.view != 'alt' else 'standard'
-			self.layout = self.keymap_layouts[self.view]
-			self.createAreaMatrix()
-			self.update(
-			    newAttributes={},
-			    skipGeneration = True
-			)
-			self.parentPSSMScreen.simplePrintElt(self)
-		if self.onKeyPress:
-			self.onKeyPress(keyType,keyChar)
+    def handleKeyPress(self, elt, coords):
+        keyType = elt.user_data["keyType"]
+        keyChar = elt.user_data["char"]
+        if keyType == KTcapsLock:
+            # In this particular case, we can assume the keyboard will always
+            # be on top.
+            # Therefore, no need to print everything
+            self.view = 'caps' if self.view != 'caps' else 'standard'
+            self.layout = self.keymap_layouts[self.view]
+            self.createAreaMatrix()
+            self.update(
+                newAttributes={},
+                skipGeneration=True
+            )
+            self.parentPSSMScreen.simplePrintElt(self)
+        elif keyType == KTalt:
+            # In this particular case, we can assume the keyboard will always
+            # be on top
+            # Therefore, no need to print everything
+            self.view = 'alt' if self.view != 'alt' else 'standard'
+            self.layout = self.keymap_layouts[self.view]
+            self.createAreaMatrix()
+            self.update(
+                newAttributes={},
+                skipGeneration=True
+            )
+            self.parentPSSMScreen.simplePrintElt(self)
+        if self.onKeyPress:
+            self.onKeyPress(keyType, keyChar)
 
-	def getKeyLabel(self,key):
-		kt = key["keyType"]
-		if kt == KTstandardChar:
-			return key["char"]
-		elif kt == KTalt:
-			return "ALT"
-		elif kt == KTbackspace:
-			return "BACK"
-		elif kt == KTcapsLock:
-			return "CAPS"
-		elif kt == KTcarriageReturn:
-			return "RET"
-		elif kt == KTcontrol:
-			return "CTRL"
-		elif kt == KTdelete:
-			return "DEL"
-		return ""
+    def getKeyLabel(self, key):
+        kt = key["keyType"]
+        if kt == KTstandardChar:
+            return key["char"]
+        elif kt == KTalt:
+            return "ALT"
+        elif kt == KTbackspace:
+            return "BACK"
+        elif kt == KTcapsLock:
+            return "CAPS"
+        elif kt == KTcarriageReturn:
+            return "RET"
+        elif kt == KTcontrol:
+            return "CTRL"
+        elif kt == KTdelete:
+            return "DEL"
+        return ""
 
-############################# - Simple Elements	- ##############################
+
+# ########################## - Simple Elements - ##############################
 class Rectangle(Element):
-	"""
-	A rectangle
-	Args:
-		background_color (str): The background color
-		outline_color (str): The border color
-	"""
-	def __init__(self,background_color="white",outline_color="gray3",parentPSSMScreen=None):
-		super().__init__()
-		self.background_color = background_color
-		self.outline_color = outline_color
-		self.parentPSSMScreen = parentPSSMScreen
+    """
+    A rectangle
+    Args:
+        background_color (str): The background color
+        outline_color (str): The border color
+    """
+    def __init__(self, background_color="white", outline_color="gray3",
+                 parentPSSMScreen=None):
+        super().__init__()
+        self.background_color = background_color
+        self.outline_color = outline_color
+        self.parentPSSMScreen = parentPSSMScreen
 
-	def generator(self,area):
-		[(x,y),(w,h)] = area
-		self.area = area
-		img = Image.new(
-			self.parentPSSMScreen.colorType,
-			(w+1,h+1),
-			color=get_Color("white",self.parentPSSMScreen.colorType)
-		)
-		rect = ImageDraw.Draw(img, self.parentPSSMScreen.colorType)
-		rect.rectangle(
-			[(0,0),(w,h)],
-			fill=get_Color(self.background_color,self.parentPSSMScreen.colorType),
-			outline=get_Color(self.outline_color,self.parentPSSMScreen.colorType)
-		)
-		self.imgData = img
-		return self.imgData
+    def generator(self, area):
+        [(x, y), (w, h)] = area
+        self.area = area
+        colorType = self.parentPSSMScreen.colorType
+        img = Image.new(
+            colorType,
+            (w+1, h+1),
+            color=get_Color("white", colorType)
+        )
+        rect = ImageDraw.Draw(img, colorType)
+        fill_color = get_Color(self.background_color, colorType)
+        outline_color = get_Color(self.outline_color, colorType)
+        rect.rectangle(
+            [(0, 0), (w, h)],
+            fill=fill_color,
+            outline=outline_color
+        )
+        self.imgData = img
+        return self.imgData
+
 
 class RectangleRounded(Element):
-	"""
-	A rectangle, but with rounded corners
-	"""
-	def __init__(
-			self,
-			radius=20,
-			background_color="white",
-			outline_color="gray3",
-			parentPSSMScreen=None
-		):
-		super().__init__()
-		self.radius = radius
-		self.background_color = background_color
-		self.outline_color = outline_color
-		self.parentPSSMScreen = parentPSSMScreen
+    """
+    A rectangle, but with rounded corners
+    """
+    def __init__(self, radius=20, background_color="white",
+                 outline_color="gray3", parentPSSMScreen=None):
+        super().__init__()
+        self.radius = radius
+        self.background_color = background_color
+        self.outline_color = outline_color
+        self.parentPSSMScreen = parentPSSMScreen
 
-	def generator(self,area):
-		[(x,y),(w,h)] = area
-		self.area = area
-		rectangle = Image.new(
-			self.parentPSSMScreen.colorType,
-			(w,h),
-			color=get_Color("white",self.parentPSSMScreen.colorType)
-		)
-		draw = ImageDraw.Draw(rectangle)
-		draw.rectangle(
-			[(0,0),(w,h)],
-			fill=get_Color(self.background_color,self.parentPSSMScreen.colorType),
-			outline=get_Color(self.outline_color,self.parentPSSMScreen.colorType)
-		)
-		draw.line(
-			[(self.radius,h-1),(w-self.radius,h-1)],
-			fill  = get_Color(self.outline_color, self.parentPSSMScreen.colorType),
-			width = 1
-		)
-		draw.line(
-			[(w-1,self.radius),(w-1,h-self.radius)],
-			fill  = get_Color(self.outline_color, self.parentPSSMScreen.colorType),
-			width = 1
-		)
-		corner = roundedCorner(
-			self.radius,
-			self.background_color,
-			self.outline_color,
-			self.parentPSSMScreen.colorType
-		)
-		rectangle.paste(corner, (0, 0))
-		rectangle.paste(corner.rotate(90), (0, h - self.radius)) # Rotate the corner and paste it
-		rectangle.paste(corner.rotate(180), (w - self.radius, h - self.radius))
-		rectangle.paste(corner.rotate(270), (w - self.radius, 0))
-		self.imgData = rectangle
-		return self.imgData
+    def generator(self, area):
+        [(x, y), (w, h)] = area
+        self.area = area
+        colorType = self.parentPSSMScreen.colorType
+        rectangle = Image.new(
+            colorType,
+            (w, h),
+            color=get_Color("white", colorType)
+        )
+        draw = ImageDraw.Draw(rectangle)
+        draw.rectangle(
+            [(0, 0), (w, h)],
+            fill=get_Color(self.background_color, colorType),
+            outline=get_Color(self.outline_color, colorType)
+        )
+        draw.line(
+            [(self.radius, h-1), (w-self.radius, h-1)],
+            fill=get_Color(self.outline_color, colorType),
+            width=1
+        )
+        draw.line(
+            [(w-1, self.radius), (w-1, h-self.radius)],
+            fill=get_Color(self.outline_color, colorType),
+            width=1
+        )
+        corner = roundedCorner(
+            self.radius,
+            self.background_color,
+            self.outline_color,
+            self.parentPSSMScreen.colorType
+        )
+        rectangle.paste(corner, (0, 0))
+        # Rotate the corner and paste it
+        rectangle.paste(corner.rotate(90), (0, h - self.radius))
+        rectangle.paste(corner.rotate(180), (w - self.radius, h - self.radius))
+        rectangle.paste(corner.rotate(270), (w - self.radius, 0))
+        self.imgData = rectangle
+        return self.imgData
+
 
 class Button(Element):
-	"""
-	Basically a rectangle (or rounded rectangle) with text printed on it
-	Args:
-		font (str): Path to a font file (ttf file), or one of PSSM built-in fonts (e.g. "Merriweather-Bold", "default", "Merriweather-Regular",...) (see the font folder for the complete list)
-		font_size (int): The font size
-		font_color (str): The color of the font : "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
-		wrap_textOverflow (bool): (True by default) Wrap text in order to avoid it overflowing. The cuts are made between words.
-		text_xPosition (str or int): can be left, center, right, or an integer value, or a pssm string dimension
-		text_yPosition (str or int): can be left, center, right, or an integer value, or a pssm string dimension
-		background_color (str): The background color
-		outline_color (str): The border color
-		radius (int): If not 0, then add rounded corners of this radius
-	"""
-	def __init__(
-			self,
-			text="",
-			font=DEFAULT_FONT,
-			font_size=STANDARD_FONT_SIZE,
-			background_color="white",
-			outline_color="black",
-			radius=0,
-			font_color="black",
-			text_xPosition="center",
-			text_yPosition="center",
-			wrap_textOverflow = True,
-			**kwargs
-		):
-		super().__init__()
-		self.background_color   = background_color
-		self.outline_color    	= outline_color
-		self.text       		= text
-		self.font       		= tools_parseKnownFonts(font)
-		self.font_size  		= font_size
-		self.radius     		= radius
-		self.font_color 		= font_color
-		self.text_xPosition 	= text_xPosition
-		self.text_yPosition 	= text_yPosition
-		self.wrap_textOverflow 	= wrap_textOverflow
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
-		self.loaded_font = None
-		self.convertedText = None
-		self.imgDraw = None
+    """
+    Basically a rectangle (or rounded rectangle) with text printed on it
+    Args:
+        font (str): Path to a font file (ttf file), or one of PSSM built-in
+            fonts (e.g. "Merriweather-Bold", "default", "Merriweather-Regular",
+            ...) (see the font folder for the complete list)
+        font_size (int): The font size
+        font_color (str): The color of the font : "white", "black", "gray0" to
+            "gray15" or a (red, green, blue, transparency) tuple
+        wrap_textOverflow (bool): (True by default) Wrap text in order to avoid
+         it overflowing. The cuts are made between words.
+        text_xPosition (str or int): can be left, center, right, or an integer
+            value, or a pssm string dimension
+        text_yPosition (str or int): can be left, center, right, or an integer
+            value, or a pssm string dimension
+        background_color (str): The background color
+        outline_color (str): The border color
+        radius (int): If not 0, then add rounded corners of this radius
+    """
+    def __init__(self, text="", font=DEFAULT_FONT, font_size=DEFAULT_FONT_SIZE,
+                 background_color="white", outline_color="black", radius=0,
+                 font_color="black", text_xPosition="center",
+                 text_yPosition="center", wrap_textOverflow=True, **kwargs):
+        super().__init__()
+        self.background_color = background_color
+        self.outline_color = outline_color
+        self.text = text
+        self.font = tools_parseKnownFonts(font)
+        self.font_size = font_size
+        self.radius = radius
+        self.font_color = font_color
+        self.text_xPosition = text_xPosition
+        self.text_yPosition = text_yPosition
+        self.wrap_textOverflow = wrap_textOverflow
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
+        self.loaded_font = None
+        self.convertedText = None
+        self.imgDraw = None
 
-	def generator(self,area=None):
-		if area==None:
-			area = self.area
-		[(x,y),(w,h)] = area
-		self.area = area
-		if not isinstance(self.font_size,int):
-			self.font_size = self.convertDimension(self.font_size)
-			if not isinstance(self.font_size,int):
-				# That's a question mark dimension, or an invalid dimension. Rollback to default font size
-				self.font_size = self.convertDimension(STANDARD_FONT_SIZE)
-		loaded_font = ImageFont.truetype(self.font, self.font_size)
-		self.loaded_font = loaded_font
-		if self.radius>0:
-			rect = RectangleRounded(
-				radius=self.radius,
-				background_color 	= self.background_color,
-				outline_color 		= self.outline_color,
-				parentPSSMScreen 	= self.parentPSSMScreen
-			)
-		else:
-			rect = Rectangle(
-				background_color	= self.background_color,
-				outline_color		= self.outline_color,
-				parentPSSMScreen 	= self.parentPSSMScreen
-			)
-		rect_img = rect.generator(self.area)
-		imgDraw  = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
-		self.imgDraw = imgDraw
-		myText 	 = self.wrapText(self.text,loaded_font,imgDraw) if self.wrap_textOverflow else self.text
-		self.convertedText = myText
-		text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
-		x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
-		y = tools_convertYArgsToPX(self.text_yPosition,h ,text_h , myElt = self)
-		imgDraw.text(
-			(x,y),
-			myText,
-			font=loaded_font,
-			fill=get_Color(self.font_color, self.parentPSSMScreen.colorType)
-		)
-		self.imgData = rect_img
-		return self.imgData
+    def generator(self, area=None):
+        if area is None:
+            area = self.area
+        [(x, y), (w, h)] = area
+        self.area = area
+        if not isinstance(self.font_size, int):
+            self.font_size = self.convertDimension(self.font_size)
+            if not isinstance(self.font_size, int):
+                # That's a question mark dimension, or an invalid dimension.
+                # Rollback to default font size
+                self.font_size = self.convertDimension(DEFAULT_FONT_SIZE)
+        loaded_font = ImageFont.truetype(self.font, self.font_size)
+        self.loaded_font = loaded_font
+        if self.radius > 0:
+            rect = RectangleRounded(
+                radius=self.radius,
+                background_color=self.background_color,
+                outline_color=self.outline_color,
+                parentPSSMScreen=self.parentPSSMScreen
+            )
+        else:
+            rect = Rectangle(
+                background_color=self.background_color,
+                outline_color=self.outline_color,
+                parentPSSMScreen=self.parentPSSMScreen
+            )
+        rect_img = rect.generator(self.area)
+        imgDraw = ImageDraw.Draw(rect_img, self.parentPSSMScreen.colorType)
+        self.imgDraw = imgDraw
+        if self.wrap_textOverflow:
+            myText = self.wrapText(self.text, loaded_font, imgDraw)
+        else:
+            myText = self.text
+        self.convertedText = myText
+        text_w, text_h = imgDraw.textsize(myText, font=loaded_font)
+        x = tools_convertXArgsToPX(self.text_xPosition, w, text_w, myElt=self)
+        y = tools_convertYArgsToPX(self.text_yPosition, h, text_h, myElt=self)
+        imgDraw.text(
+            (x, y),
+            myText,
+            font=loaded_font,
+            fill=get_Color(self.font_color, self.parentPSSMScreen.colorType)
+        )
+        self.imgData = rect_img
+        return self.imgData
 
-	def wrapText(self,text,loaded_font,imgDraw):
-		def get_text_width(text):
-			return imgDraw.textsize(text=text,font=loaded_font)[0]
+    def wrapText(self, text, loaded_font, imgDraw):
+        def get_text_width(text):
+            return imgDraw.textsize(text=text, font=loaded_font)[0]
 
-		[(x,y),(max_width,h)] = self.area
-		text_lines = [
-			' '.join([w.strip() for w in l.split(' ') if w])
-			for l in text.split('\n')
-			if l
-		]
-		space_width = get_text_width(" ")
-		wrapped_lines = []
-		buf = []
-		buf_width = 0
+        [(x, y), (max_width, h)] = self.area
+        text_lines = [
+            ' '.join([w.strip() for w in line.split(' ') if w])
+            for line in text.split('\n')
+            if line
+        ]
+        space_width = get_text_width(" ")
+        wrapped_lines = []
+        buf = []
+        buf_width = 0
 
-		for line in text_lines:
-			for word in line.split(' '):
-				word_width = get_text_width(word)
+        for line in text_lines:
+            for word in line.split(' '):
+                word_width = get_text_width(word)
 
-				expected_width = word_width if not buf else \
-					buf_width + space_width + word_width
+                expected_width = word_width if not buf else \
+                    buf_width + space_width + word_width
 
-				if expected_width <= max_width:
-					# word fits in line
-					buf_width = expected_width
-					buf.append(word)
-				else:
-					# word doesn't fit in line
-					wrapped_lines.append(' '.join(buf))
-					buf = [word]
-					buf_width = word_width
-			if buf:
-				wrapped_lines.append(' '.join(buf))
-				buf = []
-				buf_width = 0
-		return '\n'.join(wrapped_lines)
+                if expected_width <= max_width:
+                    # word fits in line
+                    buf_width = expected_width
+                    buf.append(word)
+                else:
+                    # word doesn't fit in line
+                    wrapped_lines.append(' '.join(buf))
+                    buf = [word]
+                    buf_width = word_width
+            if buf:
+                wrapped_lines.append(' '.join(buf))
+                buf = []
+                buf_width = 0
+        return '\n'.join(wrapped_lines)
+
 
 class Icon(Element):
-	"""
-	An icon, built from an image
-	Args:
-		file (str): Path to a file, or one of the integrated image (see the icon folder for the name of each image). 'reboot' for instance points to the integrated reboot image.
-		centered (bool): Center the icon?
-	"""
-	def __init__(self,file,centered=True,**kwargs):
-		super().__init__()
-		self.file = file
-		self.centered = centered
-		self.path_to_file = tools_parseKnownImageFile(self.file)
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
+    """
+    An icon, built from an image
+    Args:
+        file (str): Path to a file, or one of the integrated image (see the
+            icon folder for the name of each image). 'reboot' for instance
+            points to the integrated reboot image.
+        centered (bool): Center the icon?
+    """
+    def __init__(self, file, centered=True, **kwargs):
+        super().__init__()
+        self.file = file
+        self.centered = centered
+        self.path_to_file = tools_parseKnownImageFile(self.file)
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
 
-	def generator(self,area):
-		self.area = area
-		[(x,y),(w,h)] = area
-		icon_size = min(area[1][0],area[1][1])
-		iconImg = Image.open(self.path_to_file).convert(self.parentPSSMScreen.colorType).resize((icon_size,icon_size))
-		if not self.centered:
-			self.imgData = iconImg
-			return iconImg
-		else:
-			img = Image.new(
-				self.parentPSSMScreen.colorType,
-				(w+1,h+1),
-				color=get_Color("white",self.parentPSSMScreen.colorType)
-			)
-			img.paste(iconImg, (int(0.5*w-0.5*icon_size), int(0.5*h-0.5*icon_size)))
-			self.imgData = img
-			return img
+    def generator(self, area):
+        self.area = area
+        [(x, y), (w, h)] = area
+        colorType = self.parentPSSMScreen.colorType
+        icon_size = min(area[1][0], area[1][1])
+        loadedImg = Image.open(self.path_to_file)
+        convImg = loadedImg.convert(colorType)
+        iconImg = convImg.resize((icon_size, icon_size))
+        if not self.centered:
+            self.imgData = iconImg
+            return iconImg
+        else:
+            img = Image.new(
+                colorType,
+                (w+1, h+1),
+                color=get_Color("white", colorType)
+            )
+            x = int(0.5*w-0.5*icon_size)
+            y = int(0.5*h-0.5*icon_size)
+            img.paste(iconImg, (x, y))
+            self.imgData = img
+            return img
+
 
 class Static(Element):
-	"""
-	A very simple element which only displays a pillow image
-	Args:
-		pil_image (str or pil image): path to an image or a pillow image
-		centered (bool): Center the image ?
-		resize (bool): Make it fit the area ? (proportions are respected)
-		rotation (int): an integer rotation angle
-		background_color (str): "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
-	"""
-	def __init__(self,pil_image,centered=True,resize=True,background_color="white",rotation=0,**kwargs):
-		super().__init__()
-		if isinstance(pil_image,str):
-			self.pil_image = Image.open(pil_image)
-		else:
-			self.pil_image = pil_image
-		self.background_color = background_color
-		self.centered = centered
-		self.resize   = resize
-		self.rotation = rotation
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
+    """
+    A very simple element which only displays a pillow image
+    Args:
+        pil_image (str or pil image): path to an image or a pillow image
+        centered (bool): Center the image ?
+        resize (bool): Make it fit the area ? (proportions are respected)
+        rotation (int): an integer rotation angle
+        background_color (str): "white", "black", "gray0" to "gray15" or a
+            (red, green, blue, transparency) tuple
+    """
+    def __init__(self, pil_image, centered=True, resize=True,
+                 background_color="white", rotation=0, **kwargs):
+        super().__init__()
+        if isinstance(pil_image, str):
+            self.pil_image = Image.open(pil_image)
+        else:
+            self.pil_image = pil_image
+        self.background_color = background_color
+        self.centered = centered
+        self.resize = resize
+        self.rotation = rotation
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
 
-	def generator(self,area=None):
-		# TODO : crop or resize the image to make it fit the area
-		(x,y),(w,h) = area
-		pil_image = self.pil_image.convert(self.parentPSSMScreen.colorType)
-		if self.resize:
-			r = min(w/pil_image.width, h/pil_image.height)
-			size = (int(pil_image.width*r), int(pil_image.height*r))
-			pil_image = self.pil_image.resize(size)
-		if self.rotation != 0:
-			pil_image = pil_image.rotate(self.rotation,fillcolor=self.background_color)
-		if not self.centered:
-			return pil_image
-		else:
-			img = Image.new(
-				self.parentPSSMScreen.colorType,
-				(w+1,h+1),
-				color=get_Color(self.background_color,self.parentPSSMScreen.colorType)
-			)
-			img.paste(pil_image, (int(0.5*w-0.5*pil_image.width), int(0.5*h-0.5*pil_image.height)))
-			self.imgData = img
-			return img
+    def generator(self, area=None):
+        # TODO : crop or resize the image to make it fit the area
+        (x, y), (w, h) = area
+        colorType = self.parentPSSMScreen.colorType
+        pil_image = self.pil_image.convert(colorType)
+        if self.resize:
+            r = min(w/pil_image.width, h/pil_image.height)
+            size = (int(pil_image.width*r), int(pil_image.height*r))
+            pil_image = self.pil_image.resize(size)
+        if self.rotation != 0:
+            pil_image = pil_image.rotate(self.rotation,
+                                         fillcolor=self.background_color)
+        if not self.centered:
+            return pil_image
+        else:
+            img = Image.new(
+                colorType,
+                (w+1, h+1),
+                color=get_Color(self.background_color, colorType)
+            )
+            x = int(0.5*w-0.5*pil_image.width)
+            y = int(0.5*h-0.5*pil_image.height)
+            img.paste(pil_image, (x, y))
+            self.imgData = img
+            return img
+
 
 class Line(Element):
-	"""
+    """
     Draws a simple line
     Args:
-        color (str or tuple): "white", "black", "gray0" to "gray15" or a (red, green, blue, transparency) tuple
+        color (str or tuple): "white", "black", "gray0" to "gray15" or a
+            (red, green, blue, transparency) tuple
         width (int): The width of the line
-        type (str): can be "horizontal", "vertical", "diagonal1" (top-left to bottom right) or "diagonal2" (top-right to bottom-left)
+        type (str): can be "horizontal", "vertical", "diagonal1" (top-left to
+            bottom right) or "diagonal2" (top-right to bottom-left)
     """
-	def __init__(self,color="black",width=1,type="horizontal"):
-		super().__init__()
-		self.color = color
-		self.width = width
-		self.type  = type
+    def __init__(self, color="black", width=1, type="horizontal"):
+        super().__init__()
+        self.color = color
+        self.width = width
+        self.type = type
 
-	def generator(self,area):
-		(x,y),(w,h) = area
-		self.area = area
-		if self.type == "horizontal":
-			coo = [(0,0),(w,0)]
-		elif self.type == "vertical":
-			coo = [(0,0),(0,h)]
-		elif self.type == "diagonal1":
-			coo = [(0,0),(w,h)]
-		else: # Assuming diagonal2
-			coo = [(w,0),(0,h)]
-		rectangle = Image.new(
-			self.parentPSSMScreen.colorType,
-			(w,h),
-			color=get_Color("white",self.parentPSSMScreen.colorType)
-		)
-		draw = ImageDraw.Draw(rectangle)
-		draw.line(
-			coo,
-			fill  = get_Color(self.color, self.parentPSSMScreen.colorType),
-			width = self.width
-		)
-		self.imgData = rectangle
-		return self.imgData
+    def generator(self, area):
+        (x, y), (w, h) = area
+        self.area = area
+        colorType = self.parentPSSMScreen.colorType
+        if self.type == "horizontal":
+            coo = [(0, 0), (w, 0)]
+        elif self.type == "vertical":
+            coo = [(0, 0), (0, h)]
+        elif self.type == "diagonal1":
+            coo = [(0, 0), (w, h)]
+        else:               # Assuming diagonal2
+            coo = [(w, 0), (0, h)]
+        rectangle = Image.new(
+            colorType,
+            (w, h),
+            color=get_Color("white", colorType)
+        )
+        draw = ImageDraw.Draw(rectangle)
+        draw.line(
+            coo,
+            fill=get_Color(self.color, colorType),
+            width=self.width
+        )
+        self.imgData = rectangle
+        return self.imgData
+
 
 class Input(Button):
-	"""
-	Basically a button, except when you click on it, it displays the keyboard.
-	It handles typing things for you. so when you click on this element, the keyboard shows up, and you can start typing.
-	The main thing it does is that it is able to detect between which characters the user typed to be able to insert a character between two others
-	(and that was no easy task)
-	It has a method to retrieve what was typed :
-	Input.getInput()
-	"""
-	def __init__(self,**kwargs):
-		super().__init__()
-		self.hideCursorWhenLast = True
-		for param in kwargs:
-			setattr(self, param, kwargs[param])
-		self.cursorPosition = len(self.text)
-		self.typedText = self.text[:]
-		self.text = self.typedText
+    """
+    Basically a button, except when you click on it, it displays the keyboard.
+    It handles typing things for you. so when you click on this element, the
+    keyboard shows up, and you can start typing.
+    The main thing it does is that it is able to detect between which
+    characters the user typed to be able to insert a character between two
+    others (and that was no easy task)
+    It has a method to retrieve what was typed :
+    Input.getInput()
+    """
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.hideCursorWhenLast = True
+        for param in kwargs:
+            setattr(self, param, kwargs[param])
+        self.cursorPosition = len(self.text)
+        self.typedText = self.text[:]
+        self.text = self.typedText
 
-	def getInput(self):
-		"""
-		Returns the text currently written on the Input box.
-		"""
-		return self.typedText
+    def getInput(self):
+        """
+        Returns the text currently written on the Input box.
+        """
+        return self.typedText
 
-	def pssmOnClickInside(self,coords):
-		if not self.parentPSSMScreen.osk:
-			print("[PSSM] Keyboard not initialized, Input element cannot be properly handled")
-			return None
-		self.parentPSSMScreen.osk.onKeyPress = self.onKeyPress		# Set the callback function to our own
-		if not self.parentPSSMScreen.isOSKShown:
-			# Let's print the on screen keyboard as it is not already here
-			self.parentPSSMScreen.OSKShow()
-		else:
-			cx,cy = coords
-			[(sx,sy),(w,h)] = self.area
-			loaded_font = self.loaded_font
-			myText 	 = self.convertedText
-			imgDraw  = self.imgDraw
-			text_w,text_h = imgDraw.textsize(myText, font=loaded_font)
-			x = tools_convertXArgsToPX(self.text_xPosition, w,text_w , myElt = self)
-			y = tools_convertYArgsToPX(self.text_yPosition, h,text_h , myElt = self)
-			# Then let's linear search
-			wasFound = False
-			olines = myText[:].split("\n")
-			lines  = [olines[i] if i==0 else "\n" + olines[i] for i in range(len(olines))]
-			linesBefore = ""
-			for i in range(len(lines)):
-				tw1,th1 = imgDraw.textsize(linesBefore, font=loaded_font)
-				linesBefore += lines[i]
-				tw2,th2 = imgDraw.textsize(linesBefore, font=loaded_font)
-				b_correct_y = cy > sy + x + th1 and cy <= sy + y + th2
-				if b_correct_y:
-					for j in range(len(linesBefore)):
-						tw1,th1 = imgDraw.textsize(linesBefore[:j], font=loaded_font)
-						tw2,th2 = imgDraw.textsize(linesBefore[:j+1], font=loaded_font)
-						b_correct_x = cx > sx + x + tw1 and cx <= sx + x + tw2
-						if b_correct_x:
-							pos = j
-							for line in lines[:i]:
-								pos += len(line)
-							self.setCursorPosition(pos+1)
-							wasFound = True
-					if not wasFound:	# Let's put it at the end of the row
-						pos = 0
-						for line in lines[:i+1]:
-							pos += len(line)
-						self.setCursorPosition(pos)
-						wasFound = True
-			if not wasFound:
-				self.setCursorPosition(None)
-			# TODO : find between which characters the user typed
-			# And set self.cursorPosition
-			pass
+    def pssmOnClickInside(self, coords):
+        if not self.parentPSSMScreen.osk:
+            print(
+                "[PSSM] Keyboard not initialized, Input element cannot be " +
+                "properly handled"
+            )
+            return None
+        # Set the callback function to our own
+        self.parentPSSMScreen.osk.onKeyPress = self.onKeyPress
+        if not self.parentPSSMScreen.isOSKShown:
+            # Let's print the on screen keyboard as it is not already here
+            self.parentPSSMScreen.OSKShow()
+        else:
+            cx, cy = coords
+            [(sx, sy), (w, h)] = self.area
+            loaded_font = self.loaded_font
+            myText = self.convertedText
+            imgDraw = self.imgDraw
+            text_w, text_h = imgDraw.textsize(myText, font=loaded_font)
+            x = tools_convertXArgsToPX(self.text_xPosition, w, text_w,
+                                       myElt=self)
+            y = tools_convertYArgsToPX(self.text_yPosition, h, text_h,
+                                       myElt=self)
+            # Then let's linear search
+            wasFound = False
+            olines = myText[:].split("\n")
+            if len(olines) > 0:
+                lines = [olines[0]]
+            else:
+                lines = []
+            for i in range(len(olines)):
+                lines.append("\n")
+            linesBefore = ""
+            for i in range(len(lines)):
+                tw1, th1 = imgDraw.textsize(linesBefore, font=loaded_font)
+                linesBefore += lines[i]
+                tw2, th2 = imgDraw.textsize(linesBefore, font=loaded_font)
+                b_correct_y = cy > sy + x + th1 and cy <= sy + y + th2
+                if b_correct_y:
+                    for j in range(len(linesBefore)):
+                        tw1, th1 = imgDraw.textsize(linesBefore[:j],
+                                                    font=loaded_font)
+                        tw2, th2 = imgDraw.textsize(linesBefore[:j+1],
+                                                    font=loaded_font)
+                        b_correct_x = cx > sx + x + tw1 and cx <= sx + x + tw2
+                        if b_correct_x:
+                            pos = j
+                            for line in lines[:i]:
+                                pos += len(line)
+                            self.setCursorPosition(pos+1)
+                            wasFound = True
+                    if not wasFound:    # Let's put it at the end of the row
+                        pos = 0
+                        for line in lines[:i+1]:
+                            pos += len(line)
+                        self.setCursorPosition(pos)
+                        wasFound = True
+            if not wasFound:
+                self.setCursorPosition(None)
+            # TODO : find between which characters the user typed
+            # And set self.cursorPosition
+            pass
 
-	def onKeyPress(self,keyType,keyChar):
-		"""
-		Handles each key press.
-		"""
-		c = self.cursorPosition
-		if keyType == KTstandardChar:
-			self.typedText = insertStr(self.typedText,keyChar,c)
-			self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
-		elif keyType == KTcarriageReturn:
-			self.typedText = insertStr(self.typedText,"\n",c)
-			self.setCursorPosition(self.cursorPosition+1,skipPrint=True)
-		elif keyType == KTbackspace:
-			self.typedText = self.typedText[:c-1] + self.typedText[c:]
-			self.setCursorPosition(self.cursorPosition-1,skipPrint=True)
-		if self.cursorPosition == len(self.typedText) and self.hideCursorWhenLast:
-			# Don't display the cursor when it is at the last position
-			self.text = self.typedText[:]
-		else:
-			self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
-		#self.update(skipPrint = True)
-		#self.parentPSSMScreen.simplePrintElt(self,skipGeneration=True)
-		self.update()
+    def onKeyPress(self, keyType, keyChar):
+        """
+        Handles each key press.
+        """
+        c = self.cursorPosition
+        if keyType == KTstandardChar:
+            self.typedText = insertStr(self.typedText, keyChar, c)
+            self.setCursorPosition(self.cursorPosition+1, skipPrint=True)
+        elif keyType == KTcarriageReturn:
+            self.typedText = insertStr(self.typedText, "\n", c)
+            self.setCursorPosition(self.cursorPosition+1, skipPrint=True)
+        elif keyType == KTbackspace:
+            self.typedText = self.typedText[:c-1] + self.typedText[c:]
+            self.setCursorPosition(self.cursorPosition-1, skipPrint=True)
+        if self.hideCursorWhenLast:
+            if self.cursorPosition >= len(self.typedText):
+                # Don't display the cursor when it is at the last position
+                self.text = self.typedText[:]
+        else:
+            self.text = insertStr(self.typedText, CURSOR_CHAR,
+                                  self.cursorPosition)
+        # self.update(skipPrint = True)
+        # self.parentPSSMScreen.simplePrintElt(self, skipGeneration=True)
+        self.update()
 
-	def setCursorPosition(self,pos,skipPrint=False):
-		if pos == None:
-			pos = len(self.typedText)
-		self.cursorPosition = pos
-		self.text = insertStr(self.typedText,CURSOR_CHAR,self.cursorPosition)
-		if not skipPrint:
-			self.update()
+    def setCursorPosition(self, pos, skipPrint=False):
+        if pos is None:
+            pos = len(self.typedText)
+        self.cursorPosition = pos
+        self.text = insertStr(self.typedText, CURSOR_CHAR, self.cursorPosition)
+        if not skipPrint:
+            self.update()
 
 
-
-############################# - 	Tools 		- ##############################
-def coordsInArea(click_x,click_y,area):
+# ########################## -     Tools       - ##############################
+def coordsInArea(click_x, click_y, area):
     """
     Returns a boolean indicating if the click was in the given area
     Args:
         click_x (str): The x coordinate of the click
         click_y (str): The y coordinate of the click
-        area (list): The area (of shape : [(x,y),(w,h)])
+        area (list): The area (of shape : [(x, y), (w, h)])
     """
-    [(x,y),(w,h)] = area
-    if click_x>=x and click_x<x+w and click_y>=y and click_y<y+h:
+    [(x, y), (w, h)] = area
+    if click_x >= x and click_x < x+w and click_y >= y and click_y < y+h:
         return True
     else:
         return False
 
-def insertStr(string,char,pos):
-	""" Returns a string with the characther insterted at said position	"""
-	return string[:pos] +  char + string[pos:]
 
-def getRectanglesIntersection(area1,area2):
-	(x1,y1),(w1,h1) = area1
-	(x2,y2),(w2,h2) = area2
-	x0a = max(x1,x2)
-	x0b = min(x1+w1,x2+w2)
-	y0a = max(y1,y2)
-	y0b = min(y1+h1,y2+h2)
-	w0 = x0b-x0a
-	h0 = y0b-y0a
-	if  w0 > 0 and h0 > 0:
-		return [(x0a,y0a),(w0,h0)]
-	else:
-		return None
+def insertStr(string, char, pos):
+    """ Returns a string with the characther insterted at said position """
+    return string[:pos] + char + string[pos:]
 
-def roundedCorner(radius, fill="white",outline_color="gray3",colorType='L'):
-	"""
-	Draw a round corner
-	"""
-	corner = Image.new(colorType, (radius, radius), "white")
-	draw = ImageDraw.Draw(corner)
-	draw.pieslice(
-		(0, 0, radius * 2, radius * 2),
-		180,
-		270,
-		fill=get_Color(fill,colorType),
-		outline=get_Color(outline_color,colorType)
-	)
-	return corner
 
-def tools_convertXArgsToPX(xPosition,objw,textw,myElt=None):
-	"""
-	Converts xPosition string arguments to numerical values
-	"""
-	xPosition = xPosition.lower()
-	if xPosition == "left":
-		x = 0
-	elif xPosition == "center":
-		x = int(0.5*objw-0.5*textw)
-	elif xPosition == "right":
-		x = int(objw-textw)
-	else:
-		try:
-			converted = myElt.convertDimension(xPosition)
-			x = int(converted)
-		except:
-			print("[PSSM] Invalid input for xPosition")
-			return False
-	return x
+def getRectanglesIntersection(area1, area2):
+    (x1, y1), (w1, h1) = area1
+    (x2, y2), (w2, h2) = area2
+    x0a = max(x1, x2)
+    x0b = min(x1+w1, x2+w2)
+    y0a = max(y1, y2)
+    y0b = min(y1+h1, y2+h2)
+    w0 = x0b-x0a
+    h0 = y0b-y0a
+    if w0 > 0 and h0 > 0:
+        return [(x0a, y0a), (w0, h0)]
+    else:
+        return None
 
-def tools_convertYArgsToPX(yPosition,objh,texth,myElt=None):
-	"""
-	Converts yPosition string arguments to numerical values
-	"""
-	yPosition = yPosition.lower()
-	if yPosition == "top":
-		y = 0
-	elif yPosition == "center":
-		y = int(0.5*objh-0.5*texth)
-	elif yPosition == "bottom":
-		y = int(objh-texth)
-	else:
-		try:
-			converted = myElt.convertDimension(xPosition)
-			y = int(converted)
-		except:
-			print("[PSSM] Invalid input for yPosition")
-			return False
-	return y
+
+def roundedCorner(radius, fill="white", outline_color="gray3", colorType='L'):
+    """
+    Draw a round corner
+    """
+    corner = Image.new(colorType, (radius, radius), "white")
+    draw = ImageDraw.Draw(corner)
+    draw.pieslice(
+        (0, 0, radius * 2, radius * 2),
+        180,
+        270,
+        fill=get_Color(fill, colorType),
+        outline=get_Color(outline_color, colorType)
+    )
+    return corner
+
+
+def tools_convertXArgsToPX(xPosition, objw, textw, myElt=None):
+    """
+    Converts xPosition string arguments to numerical values
+    """
+    xPosition = xPosition.lower()
+    if xPosition == "left":
+        x = 0
+    elif xPosition == "center":
+        x = int(0.5*objw-0.5*textw)
+    elif xPosition == "right":
+        x = int(objw-textw)
+    else:
+        converted = myElt.convertDimension(xPosition)
+        x = int(converted)
+    return x
+
+
+def tools_convertYArgsToPX(yPosition, objh, texth, myElt=None):
+    """
+    Converts yPosition string arguments to numerical values
+    """
+    yPosition = yPosition.lower()
+    if yPosition == "top":
+        y = 0
+    elif yPosition == "center":
+        y = int(0.5*objh-0.5*texth)
+    elif yPosition == "bottom":
+        y = int(objh-texth)
+    else:
+        converted = myElt.convertDimension(yPosition)
+        y = int(converted)
+    return y
+
 
 def tools_parseKnownImageFile(file):
-	"""
-	Finds the path to a image file if its argument is one of pssm images.
-	"""
-	files={
-		'back' 		: PATH_TO_PSSM + "/icons/back.png",
-		'delete' 	: PATH_TO_PSSM + "/icons/delete.jpg",
-		"frontlight-down"	: PATH_TO_PSSM + "/icons/frontlight-down.jpg",
-		"frontlight-up"		: PATH_TO_PSSM + "/icons/frontlight-up.jpg",
-		"invert"	: PATH_TO_PSSM + "/icons/invert.jpg",
-		"reboot"	: PATH_TO_PSSM + "/icons/reboot.jpg",
-		"save"		: PATH_TO_PSSM + "/icons/save.png",
-		"touch-off"	: PATH_TO_PSSM + "/icons/touch-off.png",
-		"touch-on"	: PATH_TO_PSSM + "/icons/touch-on.png",
-		"wifi-lock"	: PATH_TO_PSSM + "/icons/wifi-lock.jpg",
-		"wifi-on"	: PATH_TO_PSSM + "/icons/wifi-on.jpg",
-		"wifi-off"	: PATH_TO_PSSM + "/icons/wifi-off.jpg"
-	}
-	if file in files:
-		return files[file]
-	else:
-		return file
+    """
+    Finds the path to a image file if its argument is one of pssm images.
+    """
+    files = {
+        'back': PATH_TO_PSSM + "/icons/back.png",
+        'delete': PATH_TO_PSSM + "/icons/delete.jpg",
+        "frontlight-down": PATH_TO_PSSM + "/icons/frontlight-down.jpg",
+        "frontlight-up": PATH_TO_PSSM + "/icons/frontlight-up.jpg",
+        "invert": PATH_TO_PSSM + "/icons/invert.jpg",
+        "reboot": PATH_TO_PSSM + "/icons/reboot.jpg",
+        "save": PATH_TO_PSSM + "/icons/save.png",
+        "touch-off": PATH_TO_PSSM + "/icons/touch-off.png",
+        "touch-on": PATH_TO_PSSM + "/icons/touch-on.png",
+        "wifi-lock": PATH_TO_PSSM + "/icons/wifi-lock.jpg",
+        "wifi-on": PATH_TO_PSSM + "/icons/wifi-on.jpg",
+        "wifi-off": PATH_TO_PSSM + "/icons/wifi-off.jpg"
+    }
+    if file in files:
+        return files[file]
+    else:
+        return file
+
 
 def tools_parseKnownFonts(font):
-	"""
-	Finds the path to a image file if its argument is one of pssm images.
-	"""
-	fonts={
-		'default'					: PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
-		'default-Regular'			: PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
-		'default-Bold'				: PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf",
-		'Merriweather-Regular' 		: PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
-		'Merriweather-Bold'			: PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf"
-	}
-	if font in fonts:
-		return fonts[font]
-	else:
-		return font
+    """
+    Finds the path to a image file if its argument is one of pssm images.
+    """
+    fonts = {
+        'default': PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
+        'default-Regular': PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
+        'default-Bold': PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf",
+        'Merriweather-Regular': PATH_TO_PSSM
+                                + "/fonts/Merriweather-Regular.ttf",
+        'Merriweather-Bold': PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf"
+    }
+    if font in fonts:
+        return fonts[font]
+    else:
+        return font
 
-colorsL = {'black':0,'white':255}
-colorsRGBA = {'black':(0,0,0,0),'white':(255,255,255,1)}
+
+colorsL = {'black': 0, 'white': 255}
+colorsRGBA = {'black': (0, 0, 0, 0), 'white': (255, 255, 255, 1)}
 for i in range(16):
-	s = int(i*255/15)
-	colorsL['gray' + str(i)] 	= s
-	colorsRGBA['gray' + str(i)] = (s,s,s,1)
-
-def get_Color(color,deviceColorType):
-	if isinstance(color,str):
-		if deviceColorType == "L":
-			try:
-				return colorsL[color]
-			except:
-				print("Invalid color, ",color)
-				return color
-		elif deviceColorType == "RGBA":
-			try:
-				return colorsRGBA[color]
-			except:
-				print("Invalid color, ",color)
-				return color
-	elif isinstance(color,list) or isinstance(color,tuple):
-		if deviceColorType == "RGBA":
-			if len(color) == 4:
-				return color
-			else:
-				#That's probably RGB
-				try:
-					return color + [1]
-				except:
-					return color + (1)
-		else:
-			r, g, b = color[0], color[1], color[2]
-			gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-			return gray
+    s = int(i*255/15)
+    colorsL['gray' + str(i)] = s
+    colorsRGBA['gray' + str(i)] = (s, s, s, 1)
 
 
-################################ - DOCUMENTATION - #############################
-__pdoc__ = {} 			# For the documentation
-ignoreList  =[
-	'returnFalse',
-	'coordsInArea',
-	'getRectanglesIntersection',
-	'roundedCorner',
-	'tools_convertXArgsToPX',
-	'tools_convertYArgsToPX',
-	'tools_parseKnownImageFile',
-	'get_Color',
-	'PSSMScreen.getPartialEltImg',
-	'PSSMScreen.convertDimension',
-	'Layout.generator',
-	'Layout.createImgMatrix',
-	'Layout.createAreaMatrix',
-	'Layout.calculate_remainingHeight',
-	'Layout.calculate_remainingWidth',
-	'Layout.extract_rowsHeight',
-	'Layout.extract_colsWidth',
-	'Layout.dispatchClick',
-	'Layout.dispatchClick_LINEAR',
-	'Layout.dispatchClick_DICHOTOMY_colsOnly',
-	'Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed'
+def get_Color(color, deviceColorType):
+    if isinstance(color, str):
+        if deviceColorType == "L":
+            if color in colorsL:
+                return colorsL[color]
+            else:
+                print("Invalid color, ", color)
+                return color
+        elif deviceColorType == "RGBA":
+            if color in colorsRGBA:
+                return colorsRGBA[color]
+            else:
+                print("Invalid color, ", color)
+                return color
+    elif isinstance(color, list) or isinstance(color, tuple):
+        if deviceColorType == "RGBA":
+            if len(color) == 4:
+                return color
+            else:
+                # That's probably RGB
+                if isinstance(color, list):
+                    return color + [1]
+                else:
+                    return color + (1)
+        else:
+            r, g, b = color[0], color[1], color[2]
+            gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+            return gray
+
+
+# ############################# - DOCUMENTATION - #############################
+__pdoc__ = {}           # For the documentation
+ignoreList = [
+    'returnFalse',
+    'coordsInArea',
+    'getRectanglesIntersection',
+    'roundedCorner',
+    'tools_convertXArgsToPX',
+    'tools_convertYArgsToPX',
+    'tools_parseKnownImageFile',
+    'get_Color',
+    'PSSMScreen.getPartialEltImg',
+    'PSSMScreen.convertDimension',
+    'Layout.generator',
+    'Layout.createImgMatrix',
+    'Layout.createAreaMatrix',
+    'Layout.calculate_remainingHeight',
+    'Layout.calculate_remainingWidth',
+    'Layout.extract_rowsHeight',
+    'Layout.extract_colsWidth',
+    'Layout.dispatchClick',
+    'Layout.dispatchClick_LINEAR',
+    'Layout.dispatchClick_DICHOTOMY_colsOnly',
+    'Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed'
 ]
 for f in ignoreList:
-	__pdoc__[f] = False
+    __pdoc__[f] = False

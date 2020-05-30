@@ -4,7 +4,7 @@ import os
 import threading
 from time import sleep
 # Load Pillow
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import numpy as np
 import cv2
 
@@ -19,6 +19,7 @@ emulator_windows_scale = 0.8		# Scale the emulator window
 isEmulator= True
 isRGB 	  = True
 colorType = "L"
+is_nightmode=False
 cv2.namedWindow("PSSM_Emulator")
 
 last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=255)
@@ -54,37 +55,58 @@ def closePrintHandler():
 	#TODO : is there anything to do?
 	print("Closed")
 
+def print_openCV(img):
+	# Convert to np array
+	opencvImage = np.array(img)
+	# Convert RGB to BGR
+	opencvImage = opencvImage[:, :, ::-1].copy()
+	# Rescale
+	rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+	opencvImage_Re = cv2.resize(opencvImage, rescale_dim)
+	# Print
+	cv2.imshow('PSSM_Emulator',opencvImage_Re)
+	cv2.waitKey(1)
+
 def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 	sleep(delay_emulateEInk_Sluggishness)
 	#TODO : honor is inverted
 	global last_printed_PIL
-	raw_data = imgData.tobytes("raw")
-	length = len(raw_data)
-	pil_image = Image.frombytes(colorType,(w,h),raw_data).convert("RGB")
+	pil_image = imgData.convert("RGB")
 	last_printed_PIL.paste(pil_image,(x,y))
-	opencvImage = np.array(last_printed_PIL)
-	# Convert RGB to BGR
-	opencvImage = opencvImage[:, :, ::-1].copy()
-	rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
-	opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
-	cv2.imshow('PSSM_Emulator',opencvImage_Re)
-	cv2.waitKey(1)
+	print_openCV(last_printed_PIL)
 
-def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
+def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True,area=None):
+	"""
+	Does the screen refresh.
+	Args:
+		isInverted (bool): ...
+		isFlashing (bool): ...
+		isInvertionPermanent (bool): ...
+		area (list): ...
+	"""
 	#TODO: Honor inversion
-	#print("Screen refresh and Inversion (partial and full) are not yet supported on the emulator")
-	pass
+	global last_printed_PIL
+	global is_nightmode
+	if isInverted:
+		is_nightmode = not is_nightmode
+	if area:
+		if is_nightmode or not isInvertionPermanent:
+			(x,y),(w,h) = area
+			last_printed_PIL_crop = last_printed_PIL.crop(box=(x,y,x+w,y+h))
+			last_printed_PIL_crop_invert = ImageOps.invert(last_printed_PIL_crop)
+			last_printed_PIL.paste(last_printed_PIL_crop_invert,box=(x,y))
+			print_openCV(last_printed_PIL)
+	else:
+		if is_nightmode or not isInvertionPermanent:
+			last_printed_PIL = ImageOps.invert(last_printed_PIL)
+			print_openCV(last_printed_PIL)
+	if not isInvertionPermanent and isInverted:
+		is_nightmode = not is_nightmode
 
 def do_screen_clear():
 	pil_image = Image.new('L', (screen_width,screen_height), color=255).convert("RGB")
 	last_printed_PIL = pil_image
-	opencvImage = np.array(pil_image)
-	# Convert RGB to BGR
-	opencvImage = opencvImage[:, :, ::-1].copy()
-	rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
-	opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
-	cv2.imshow('PSSM_Emulator',opencvImage_Re)
-	cv2.waitKey(1)
+	print_openCV(last_printed_PIL)
 
 
 ################################# - Click - ####################################

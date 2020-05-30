@@ -8,7 +8,6 @@
 - [Emulator] Rewrite it using a proper librairy and not openCV (will be more flexible to handle touch events and keypress)
 - [Emulator] Handle partial screen inversion
 
-- [Enhancement] Add a tools_parseKnownFonts and add Free fonts + update pssm.Button class accordingly
 - [Enhancement] Handle rotation, on initialization at least:  
                 screen = pssm.PSSMScreen(device, 'Main', rotation=90)  
                 screen.rotate(180)  

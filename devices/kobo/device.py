@@ -115,7 +115,7 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 		fbink_cfg.is_nightmode = mode
 
 
-def do_screen_refresh(isInverted=False, isFlashing=True, isPermanent=True,area=[(0,0),(0,0)],w_offset=0,h_offset=0):
+def do_screen_refresh(isInverted=False, isFlashing=True, isInvertionPermanent=True, area=[(0,0),(0,0)]):
 	initial_is_flashing = bool(fbink_cfg.is_flashing)
 	initial_is_nigthmode = bool(fbink_cfg.is_nightmode)
 	if isFlashing:
@@ -132,7 +132,7 @@ def do_screen_refresh(isInverted=False, isFlashing=True, isPermanent=True,area=[
 		fbink_cfg
 	)
 	fbink_cfg.is_flashing = initial_is_flashing
-	if not isPermanent and isInverted:
+	if not isInvertionPermanent and isInverted:
 		fbink_cfg.is_nightmode = initial_is_nigthmode
 
 def do_screenDump():
