@@ -22,6 +22,7 @@ colorType = "L"
 is_nightmode=False
 cv2.namedWindow("PSSM_Emulator")
 
+isRunning = True
 last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=(255,255,255))
 
 def setFrontlightLevel(level):
@@ -47,12 +48,13 @@ def wait(time_seconds):
 	cv2.waitKey(int(time_seconds*1000))
 
 def startMainLoop():
-    # Somehow necessary for it not to be killed in the emulator
-    while True:
-        wait(0)	# We tell openCV to keep the window open until a key is pressed
+	global isRunning
+	# Somehow necessary for it not to be killed in the emulator
+	while isRunning:
+		wait(0)	# We tell openCV to keep the window open until a key is pressed
 
 def closePrintHandler():
-	#TODO : is there anything to do?
+	cv2.destroyWindow("PSSM_Emulator")
 	print("Closed")
 
 def print_openCV(img):
@@ -125,7 +127,8 @@ def eventBindings(callbackFct, isThread=False,grabInput=False):
 	cv2.setMouseCallback("PSSM_Emulator", cv2Link)
 
 def closeInteractionHandler():
-	#TODO
+	global isRunning
+	isRunning = False
 	print("Closed interactionHandler")
 
 def cv2Link(event, x, y, flags, param):
