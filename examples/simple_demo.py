@@ -75,7 +75,7 @@ def demo3():
     """
     ![Demo3](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo3.jpg)
     """
-    reactFctn   = lambda elt,coords : print(coords," - ",elt.text)
+    reactFctn = lambda elt,coords : print(coords," - ",elt.text)
     buttons     = [{'text':'This is button number : ' + str(n), 'onclickInside':reactFctn} for n in range(8)]
     buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
     button_welcome  = pssm.Button(text="Welcome !",radius=20, font=pssm.DEFAULT_FONTBOLD, font_size = "h*0.5", background_color="gray10")
@@ -109,6 +109,14 @@ def demo4():
     myLayout = pssm.Layout(layout_demo,screen.area)
     screen.addElt(myLayout)
 
-demo3()
+def demo5(n=100):
+    """This demo is only a mean to stres the printStack function performance"""
+    reactFctn = lambda elt,coords : screen.printStack(area=elt.area)
+    for i in range(n):
+        area = [(0, int((i-1)*screen.height/n)), (screen.width, int(screen.height/n))]
+        mbtn   = pssm.Button(str(i), area=area, onclickInside=reactFctn)
+        screen.addElt(mbtn)
+
+demo5()
 if __name__ == "__main__":
     screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code
