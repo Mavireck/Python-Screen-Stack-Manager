@@ -5,10 +5,16 @@ import threading
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from copy import deepcopy
+# Load some useful functions
+from tools import returnFalse, coordsInArea, insertStr, getPartialEltImg, \
+    getRectanglesIntersection, tools_convertXArgsToPX, tools_convertYArgsToPX,\
+    tools_parseKnownImageFile, tools_parseKnownFonts, get_Color, debug, timer
+
 
 # ########################## - VARIABLES - ####################################
 lastUsedId = 0
 
+# GENERAL
 PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT = "default"
 DEFAULT_FONTBOLD = "default-Bold"
@@ -16,11 +22,8 @@ DEFAULT_FONT_SIZE = "H*0.036"
 CURSOR_CHAR = "|"
 DEFAULT_INVERT_DURATION = 0.15
 
-DEFAULT_POPUP_BUTTONS = [
-    {'text': 'OK'}
-]
 
-# Constants for the on-screen-keyboard:
+# OSK CONSTANTS
 DEFAULT_KEYMAP_PATH_STANDARD = os.path.join(PATH_TO_PSSM,
                                             "config",
                                             "default-keymap-en_us.json")
@@ -43,10 +46,6 @@ KTdelete = 3
 KTcapsLock = 4
 KTcontrol = 5
 KTalt = 6
-
-
-# ########################## - One liners - ###################################
-def returnFalse(*args): return False
 
 
 # ########################## - StackManager    - ##############################
@@ -104,6 +103,7 @@ class PSSMScreen:
 
     def findEltWithId(self, myElementId, stack=None):
         """
+        (Deprecated)
         Returns the element which has such an ID.
         Avoid using this function as much as possible:
         it has terrible performance.
@@ -128,9 +128,32 @@ class PSSMScreen:
         If a area is set, then, we only display
         the part of the stack which is in this area
         """
-        # TODO : Must be retought to work with the new nested structure
-        # TODO : Must honor the 'area' argument
-        # for now it will just reegenerate the whole stack and crop the area
+        white = get_Color("white", self.colorType)
+        if area:
+            [(x, y), (w, h)] = area
+        else:
+            [(x, y), (w, h)] = self.area
+        img = Image.new(self.colorType, (w, h), color=white)
+        for elt in self.stack:
+            # [(x, y), (w, h)] = elt.area
+            intersect = getRectanglesIntersection(area, elt.area)
+            if intersect:
+                (xi, yi), (wi, hi) = intersect
+                (xo, yo), (wo, ho) = elt.area
+                img_c = deepcopy(elt.imgData)
+                if elt.isInverted:
+                    img_f =  ImageOps.invert(img_c)
+                else:
+                    img_f =  img_c
+                img.paste(img_f, (xo-xi, yo-yi))
+        self.device.print_pil(img, x, y, w, h, isInverted=self.isInverted)
+
+    def printStack_OLD(self, area=None):
+        """
+        Prints the stack Elements in the stack order
+        If a area is set, then, we only display
+        the part of the stack which is in this area
+        """
         white = get_Color("white", self.colorType)
         dim = (self.width, self.height)
         img = Image.new(self.colorType, dim, color=white)
@@ -149,27 +172,6 @@ class PSSMScreen:
         else:
             [(x, y), (w, h)] = self.area
             self.device.print_pil(img, x, y, w, h, isInverted=self.isInverted)
-
-    def getPartialEltImg(self, elt, rectIntersection):
-        """
-        (Deprecated)
-        Returns a PIL image of the the interesection of the Element image and
-        the rectangle coordinated given as parameter.
-        Args:
-            elt (Element): a PSSM Element
-            rectIntersection (list): a [(x1, y1), (w, h)] array
-        """
-        # TODO :TO BE removed
-        [(x, y), (w, h)] = elt.area
-        [(x1, y1), (w, h)] = rectIntersection
-        img = deepcopy(elt.imgData)
-        # Then, lets crop it:
-        img = img.crop((x1-x, y1-y, w, h))
-        if elt.isInverted:
-            inverted_img = ImageOps.invert(img)
-            return inverted_img
-        else:
-            return img
 
     def simplePrintElt(self, myElement, skipGeneration=False):
         """
@@ -287,7 +289,7 @@ class PSSMScreen:
         elt.setInverted(not Element_initial_state)
         if not skipPrint:
             if useFastPrint:
-                self.invertArea_helper(elt.area, invertDuration, True)
+                self._invertArea_helper(elt.area, invertDuration, True)
             else:
                 elt.update()
         # Then, if an invertDuration is given, we setup a timer
@@ -295,25 +297,25 @@ class PSSMScreen:
             # Then, we start a timer to set it back to its intial state
             threading.Timer(invertDuration, self.invertElt, [elt, -1]).start()
 
-    def invertArea_helper(self, area, invertDuration, isInverted=False):
+    def _invertArea_helper(self, area, invertDuration, isInverted=False):
         """
         Helper function to properly setup the timer.
         """
         # TODO: To be tested
         initial_mode = isInverted
-        isTemporaryInversion = invertDuration > 0
+        isTemporaryinvertion = invertDuration > 0
         self.device.do_screen_refresh(
             isInverted=not isInverted,
             area=area,
             isInvertionPermanent=False,
             isFlashing=False
         )
-        if isTemporaryInversion:
+        if isTemporaryinvertion:
             # Now we call this funcion, without starting a timer
             # And the screen is now in an opposite state as the initial one
             myTimer = threading.Timer(
                 invertDuration,
-                self.invertArea_helper,
+                self._invertArea_helper,
                 [area, -1, not initial_mode]
             )
             myTimer.start()
@@ -376,14 +378,14 @@ class PSSMScreen:
         self.isInputThreadStarted = True
         self.device.isInputThreadStarted = True
         print("[PSSM - Touch handler] : Input thread started")
-        args = [self.clickHandler, True, grabInput]
+        args = [self._clickHandler, True, grabInput]
         inputThread = threading.Thread(
             target=self.device.eventBindings,
             args=args
         )
         inputThread.start()
 
-    def clickHandler(self, x, y):
+    def _clickHandler(self, x, y):
         n = len(self.stack)
         for i in range(n):
             j = n-1-i   # We go through the stack in descending order
@@ -397,15 +399,15 @@ class PSSMScreen:
                     self.lastX = x
                     self.lastY = y
                     if elt is not None:
-                        self.dispatchClickToElt((x, y), elt)
+                        self._dispatchClickToElt((x, y), elt)
                 break
 
-    def dispatchClickToElt(self, coords, elt):
+    def _dispatchClickToElt(self, coords, elt):
         """
         Once given an object on which the user clicked, this function calls the
         appropriate function on the object
         (ie elt.onclickInside or elt.dispatchClick)
-        It also handles inversion.
+        It also handles invertion.
         """
         if elt.isLayout:
             if elt.onclickInside is not None:
@@ -826,7 +828,7 @@ class Layout(Element):
                         # Click was on that element
                         elt, _ = self.layout[i][j+1]
                         if elt is not None and elt.onclickInside is not None:
-                            self.parentPSSMScreen.dispatchClickToElt(
+                            self.parentPSSMScreen._dispatchClickToElt(
                                 coords, elt
                             )
                         return True
@@ -877,7 +879,7 @@ class Layout(Element):
         # Element is at indexes row_A, col_A
         elt, _ = self.layout[row_A][col_A+1]
         if elt is not None and elt.onclickInside is not None:
-            self.parentPSSMScreen.dispatchClickToElt(coords, elt)
+            self.parentPSSMScreen._dispatchClickToElt(coords, elt)
         return True
 
     def dispatchClick_DICHOTOMY_Full_ToBeFixed(self, coords):
@@ -938,7 +940,7 @@ class Layout(Element):
         # Element is at indexes row_A, col_A
         elt, _ = self.layout[row_A-2][col_A+1]
         if elt is not None and elt.onclickInside is not None:
-            self.parentPSSMScreen.dispatchClickToElt(coords, elt)
+            self.parentPSSMScreen._dispatchClickToElt(coords, elt)
         return True
 
 
@@ -1701,6 +1703,7 @@ class Input(Button):
         self.hideCursorWhenLast = True
         self.isMultiline = isMultiline
         self.onReturn = onReturn
+        self.allowSetCursorPos = False
         for param in kwargs:
             setattr(self, param, kwargs[param])
         if 'font' in kwargs:
@@ -1727,7 +1730,7 @@ class Input(Button):
         if not self.parentPSSMScreen.isOSKShown:
             # Let's print the on screen keyboard as it is not already here
             self.parentPSSMScreen.OSKShow()
-        else:
+        elif self.allowSetCursorPos:
             cx, cy = coords
             [(sx, sy), (w, h)] = self.area
             loaded_font = self.loaded_font
@@ -1814,41 +1817,6 @@ class Input(Button):
 
 
 # ########################## -     Tools       - ##############################
-def coordsInArea(click_x, click_y, area):
-    """
-    Returns a boolean indicating if the click was in the given area
-    Args:
-        click_x (str): The x coordinate of the click
-        click_y (str): The y coordinate of the click
-        area (list): The area (of shape : [(x, y), (w, h)])
-    """
-    [(x, y), (w, h)] = area
-    if click_x >= x and click_x < x+w and click_y >= y and click_y < y+h:
-        return True
-    else:
-        return False
-
-
-def insertStr(string, char, pos):
-    """ Returns a string with the characther insterted at said position """
-    return string[:pos] + char + string[pos:]
-
-
-def getRectanglesIntersection(area1, area2):
-    (x1, y1), (w1, h1) = area1
-    (x2, y2), (w2, h2) = area2
-    x0a = max(x1, x2)
-    x0b = min(x1+w1, x2+w2)
-    y0a = max(y1, y2)
-    y0b = min(y1+h1, y2+h2)
-    w0 = x0b-x0a
-    h0 = y0b-y0a
-    if w0 > 0 and h0 > 0:
-        return [(x0a, y0a), (w0, h0)]
-    else:
-        return None
-
-
 def roundedCorner(radius, fill="white", outline_color="gray3", colorType='L'):
     """
     Draw a round corner
@@ -1865,120 +1833,6 @@ def roundedCorner(radius, fill="white", outline_color="gray3", colorType='L'):
     return corner
 
 
-def tools_convertXArgsToPX(xPosition, objw, textw, myElt=None):
-    """
-    Converts xPosition string arguments to numerical values
-    """
-    xPosition = xPosition.lower()
-    if xPosition == "left":
-        x = 0
-    elif xPosition == "center":
-        x = int(0.5*objw-0.5*textw)
-    elif xPosition == "right":
-        x = int(objw-textw)
-    else:
-        converted = myElt.convertDimension(xPosition)
-        x = int(converted)
-    return x
-
-
-def tools_convertYArgsToPX(yPosition, objh, texth, myElt=None):
-    """
-    Converts yPosition string arguments to numerical values
-    """
-    yPosition = yPosition.lower()
-    if yPosition == "top":
-        y = 0
-    elif yPosition == "center":
-        y = int(0.5*objh-0.5*texth)
-    elif yPosition == "bottom":
-        y = int(objh-texth)
-    else:
-        converted = myElt.convertDimension(yPosition)
-        y = int(converted)
-    return y
-
-
-def tools_parseKnownImageFile(file):
-    """
-    Finds the path to a image file if its argument is one of pssm images.
-    """
-    files = {
-        'back': PATH_TO_PSSM + "/icons/back.png",
-        'delete': PATH_TO_PSSM + "/icons/delete.jpg",
-        "frontlight-down": PATH_TO_PSSM + "/icons/frontlight-down.jpg",
-        "frontlight-up": PATH_TO_PSSM + "/icons/frontlight-up.jpg",
-        "invert": PATH_TO_PSSM + "/icons/invert.jpg",
-        "reboot": PATH_TO_PSSM + "/icons/reboot.jpg",
-        "save": PATH_TO_PSSM + "/icons/save.png",
-        "touch-off": PATH_TO_PSSM + "/icons/touch-off.png",
-        "touch-on": PATH_TO_PSSM + "/icons/touch-on.png",
-        "wifi-lock": PATH_TO_PSSM + "/icons/wifi-lock.jpg",
-        "wifi-on": PATH_TO_PSSM + "/icons/wifi-on.jpg",
-        "wifi-off": PATH_TO_PSSM + "/icons/wifi-off.jpg"
-    }
-    if file in files:
-        return files[file]
-    else:
-        return file
-
-
-def tools_parseKnownFonts(font):
-    """
-    Finds the path to a image file if its argument is one of pssm images.
-    """
-    fonts = {
-        'default': PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
-        'default-Regular': PATH_TO_PSSM + "/fonts/Merriweather-Regular.ttf",
-        'default-Bold': PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf",
-        'Merriweather-Regular': PATH_TO_PSSM
-                                + "/fonts/Merriweather-Regular.ttf",
-        'Merriweather-Bold': PATH_TO_PSSM + "/fonts/Merriweather-Bold.ttf"
-    }
-    if font in fonts:
-        return fonts[font]
-    else:
-        return font
-
-
-colorsL = {'black': 0, 'white': 255}
-colorsRGBA = {'black': (0, 0, 0, 0), 'white': (255, 255, 255, 1)}
-for i in range(16):
-    s = int(i*255/15)
-    colorsL['gray' + str(i)] = s
-    colorsRGBA['gray' + str(i)] = (s, s, s, 1)
-
-
-def get_Color(color, deviceColorType):
-    if isinstance(color, str):
-        if deviceColorType == "L":
-            if color in colorsL:
-                return colorsL[color]
-            else:
-                print("Invalid color, ", color)
-                return color
-        elif deviceColorType == "RGBA":
-            if color in colorsRGBA:
-                return colorsRGBA[color]
-            else:
-                print("Invalid color, ", color)
-                return color
-    elif isinstance(color, list) or isinstance(color, tuple):
-        if deviceColorType == "RGBA":
-            if len(color) == 4:
-                return color
-            else:
-                # That's probably RGB
-                if isinstance(color, list):
-                    return color + [1]
-                else:
-                    return color + (1)
-        else:
-            r, g, b = color[0], color[1], color[2]
-            gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-            return gray
-
-
 # ############################# - DOCUMENTATION - #############################
 __pdoc__ = {}           # For the documentation
 ignoreList = [
@@ -1990,7 +1844,6 @@ ignoreList = [
     'tools_convertYArgsToPX',
     'tools_parseKnownImageFile',
     'get_Color',
-    'PSSMScreen.getPartialEltImg',
     'PSSMScreen.convertDimension',
     'Layout.generator',
     'Layout.createImgMatrix',
