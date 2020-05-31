@@ -1080,11 +1080,7 @@ class OSK(Layout):
             # Therefore, no need to print everything
             self.view = 'caps' if self.view != 'caps' else 'standard'
             self.layout = self.keymap_layouts[self.view]
-            self.createAreaMatrix()
-            self.update(
-                newAttributes={},
-                skipGeneration=True
-            )
+            self.imgData = self.keymap_imgs[self.view]
             self.parentPSSMScreen.simplePrintElt(self)
         elif keyType == KTalt:
             # In this particular case, we can assume the keyboard will always
@@ -1092,11 +1088,7 @@ class OSK(Layout):
             # Therefore, no need to print everything
             self.view = 'alt' if self.view != 'alt' else 'standard'
             self.layout = self.keymap_layouts[self.view]
-            self.createAreaMatrix()
-            self.update(
-                newAttributes={},
-                skipGeneration=True
-            )
+            self.imgData = self.keymap_imgs[self.view]
             self.parentPSSMScreen.simplePrintElt(self)
         if self.onKeyPress:
             self.onKeyPress(keyType, keyChar)
