@@ -100,6 +100,7 @@ class PSSMScreen:
         self.osk = None
         self.numberEltOnTop = 0
         self.isOSKShown = False
+        self.isBatch = False
 
     def findEltWithId(self, myElementId, stack=None):
         """
@@ -122,20 +123,26 @@ class PSSMScreen:
                     return search
         return None
 
-    def printStack(self, area=None):
+    def printStack_NEW(self, area=None, forceLayoutRegeneration=False):
         """
         Prints the stack Elements in the stack order
         If a area is set, then, we only display
         the part of the stack which is in this area
         """
+        # TODO : fix problem with demo5 (probably an issue with paste)
+        # perhaprs pillow can't paste to negative (x,y) coordinates.
+        if self.isBatch:
+            # Do not do anything during batch mode
+            return None
         white = get_Color("white", self.colorType)
-        if area:
-            [(x, y), (w, h)] = area
-        else:
-            [(x, y), (w, h)] = self.area
+        if not area:
+            area = self.area
+        [(x, y), (w, h)] = area
         img = Image.new(self.colorType, (w, h), color=white)
         for elt in self.stack:
             # [(x, y), (w, h)] = elt.area
+            if elt.isLayout and forceLayoutRegeneration:
+                elt.generator(skipNonLayoutEltGeneration=True)
             intersect = getRectanglesIntersection(area, elt.area)
             if intersect:
                 (xi, yi), (wi, hi) = intersect
@@ -148,17 +155,22 @@ class PSSMScreen:
                 img.paste(img_f, (xo-xi, yo-yi))
         self.device.print_pil(img, x, y, w, h, isInverted=self.isInverted)
 
-    def printStack_OLD(self, area=None):
+    def printStack(self, area=None, forceLayoutRegeneration=False):
         """
         Prints the stack Elements in the stack order
         If a area is set, then, we only display
         the part of the stack which is in this area
         """
+        if self.isBatch:
+            # Do not do anything during batch mode
+            return None
         white = get_Color("white", self.colorType)
         dim = (self.width, self.height)
         img = Image.new(self.colorType, dim, color=white)
         for elt in self.stack:
             [(x, y), (w, h)] = elt.area
+            if elt.isLayout and forceLayoutRegeneration:
+                elt.generator(area=elt.area, skipNonLayoutEltGeneration=True)
             if elt.isInverted:
                 pil_image = ImageOps.invert(elt.imgData)
             else:
@@ -176,6 +188,7 @@ class PSSMScreen:
     def simplePrintElt(self, myElement, skipGeneration=False):
         """
         Prints the Element without adding it to the stack.
+        Does not honor isBatch (you can simplePrint even during batch mode)
         Args:
             myElement (PSSM Element): The element you want to display
             skipGeneration (bool): Do you want to regenerate the image?
@@ -195,6 +208,20 @@ class PSSMScreen:
             x, y, w, h,
             isInverted=myElement.isInverted
         )
+
+    def startBatchWriting(self):
+        """
+        Toggle batch writing: nothing will be displayed on the screen until
+        you use screen.stopBatchWriting()
+        """
+        self.isBatch = True
+
+    def stopBatchWriting(self):
+        """
+        Updates the screen after batch writing
+        """
+        self.isBatch = False
+        self.printStack(area=self.area, forceLayoutRegeneration=True)
 
     def addElt(self, myElement, skipPrint=False, skipRegistration=False):
         """
@@ -225,7 +252,7 @@ class PSSMScreen:
                     self.stack.insert(pos, myElement)
                 else:
                     self.stack.append(myElement)
-                if not skipPrint:
+                if not skipPrint :
                     if self.numberEltOnTop > 0 and not self.forcePrintOnTop:
                         # TODO : make it faster, we only need to display the
                         # image behind the keyboard, not reprint everything
@@ -233,7 +260,12 @@ class PSSMScreen:
                         self.printStack(area=myElement.area)
                     else:
                         # No keyboard on the horizon, let's do it
-                        self.simplePrintElt(myElement)
+                        if self.isBatch:
+                            # Then we only generate
+                            myElement.generator()
+                        else:
+                            myElement.generator()
+                            self.simplePrintElt(myElement, skipGeneration=True)
 
     def removeElt(self, elt=None, eltid=None, skipPrint=False):
         """
@@ -308,7 +340,8 @@ class PSSMScreen:
             isInverted=not isInverted,
             area=area,
             isInvertionPermanent=False,
-            isFlashing=False
+            isFlashing=False,
+            useFastInvertion=True
         )
         if isTemporaryinvertion:
             # Now we call this funcion, without starting a timer
@@ -406,7 +439,7 @@ class PSSMScreen:
         """
         Once given an object on which the user clicked, this function calls the
         appropriate function on the object
-        (ie elt.onclickInside or elt.dispatchClick)
+        (ie elt.onclickInside or elt._dispatchClick)
         It also handles invertion.
         """
         if elt.isLayout:
@@ -414,7 +447,7 @@ class PSSMScreen:
                 elt.onclickInside(elt, coords)
             if elt.invertOnClick:
                 self.invertElt(elt, elt.invertDuration)
-            elt.dispatchClick(coords)
+            elt._dispatchClick(coords)
         else:
             if elt.invertOnClick:
                 self.invertElt(elt, elt.invertDuration)
@@ -477,7 +510,8 @@ class Element:
         return NotImplemented
 
     def update(self, newAttributes={}, skipGeneration=False,
-               skipThisEltGeneration=False, skipPrint=False):
+               skipThisEltGeneration=False, skipPrint=False,
+               skipParentGeneration=False, updateWholeScreen=False):
         """
         Pass a dict as argument, and it will update the Element's attributes
         accordingly
@@ -496,14 +530,20 @@ class Element:
             # Then we recreate the pillow image of this particular object
             if not skipThisEltGeneration:
                 self.generator()
-            if len(self.parentLayouts) > 0:
+            hasParent = len(self.parentLayouts) > 0
+            # We don't want unncesseray generation when printing batch
+            isBatch = self.parentPSSMScreen.isBatch
+            if hasParent and not skipParentGeneration and not isBatch:
                 # We recreate the pillow image of the oldest parent
                 # And it is not needed to regenerate standard objects, since
                 oldest_parent = self.parentLayouts[0]
                 oldest_parent.generator(skipNonLayoutEltGeneration=True)
             # Then, let's reprint the stack
-            if not skipPrint:
-                self.parentPSSMScreen.printStack(area=self.area)
+            if not skipPrint and not skipParentGeneration and not isBatch:
+                if updateWholeScreen:
+                    self.parentPSSMScreen.printStack()
+                else:
+                    self.parentPSSMScreen.printStack(area=self.area)
         return True
 
     def generator(self):
@@ -798,13 +838,13 @@ class Layout(Element):
                 cols.append(col[1])
         return cols
 
-    def dispatchClick(self, coords):
+    def _dispatchClick(self, coords):
         """
         Finds the element on which the user clicked
         """
-        self.dispatchClick_LINEAR(coords)
+        self._dispatchClick_LINEAR(coords)
 
-    def dispatchClick_LINEAR(self, coords):
+    def _dispatchClick_LINEAR(self, coords):
         """
         Linear search throuh both the rows and the columns
         """
@@ -834,7 +874,7 @@ class Layout(Element):
                         return True
         return False
 
-    def dispatchClick_DICHOTOMY_colsOnly(self, coords):
+    def _dispatchClick_DICHOTOMY_colsOnly(self, coords):
         """
         Linear search through the rows, dichotomy for the columns
         (Because of the empty rows, a dichotomy for the rows doesn't work)
@@ -882,7 +922,7 @@ class Layout(Element):
             self.parentPSSMScreen._dispatchClickToElt(coords, elt)
         return True
 
-    def dispatchClick_DICHOTOMY_Full_ToBeFixed(self, coords):
+    def _dispatchClick_DICHOTOMY_Full_ToBeFixed(self, coords):
         """
         Finds the element on which the user clicked
         Implemented with dichotomy search (with the hope of making things
@@ -1852,10 +1892,10 @@ ignoreList = [
     'Layout.calculate_remainingWidth',
     'Layout.extract_rowsHeight',
     'Layout.extract_colsWidth',
-    'Layout.dispatchClick',
-    'Layout.dispatchClick_LINEAR',
-    'Layout.dispatchClick_DICHOTOMY_colsOnly',
-    'Layout.dispatchClick_DICHOTOMY_Full_ToBeFixed'
+    'Layout._dispatchClick',
+    'Layout._dispatchClick_LINEAR',
+    'Layout._dispatchClick_DICHOTOMY_colsOnly',
+    'Layout._dispatchClick_DICHOTOMY_Full_ToBeFixed'
 ]
 for f in ignoreList:
     __pdoc__[f] = False
