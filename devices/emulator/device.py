@@ -77,6 +77,9 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 	last_printed_PIL.paste(pil_image,(x,y))
 	print_openCV(last_printed_PIL)
 
+def set_waveform(mode):
+	return True
+
 def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True,area=None):
 	"""
 	Does the screen refresh.

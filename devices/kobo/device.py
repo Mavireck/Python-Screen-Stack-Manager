@@ -114,14 +114,28 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 		FBInk.fbink_refresh(fbfd, y+h_offset,x+w_offset,w,h, FBInk.HWD_PASSTHROUGH, fbink_cfg)
 		fbink_cfg.is_nightmode = mode
 
+def set_waveform(mode=None):
+	if mode == "AUTO":
+		fbink_cfg.wfm_mode = FBInk.WFM_AUTO
+	elif mode == "A2":
+		fbink_cfg.wfm_mode = FBInk.WFM_A2
+	elif mode == "DU":
+		fbink_cfg.wfm_mode = FBInk.WFM_DU
+	elif mode == "DU4":
+		fbink_cfg.wfm_mode = FBInk.WFM_DU4
+	else:
+		fbink_cfg.wfm_mode = mode
 
-def do_screen_refresh(isInverted=False, isFlashing=True, isInvertionPermanent=True, area=[(0,0),(screen_width,screen_height)]):
+def do_screen_refresh(isInverted=False, isFlashing=True, isInvertionPermanent=True, area=[(0,0),(view_width,view_height)], useFastInvertion=False):
 	initial_is_flashing = bool(fbink_cfg.is_flashing)
 	initial_is_nigthmode = bool(fbink_cfg.is_nightmode)
+	initial_waveform = fbink_cfg.wfm_mode
 	if isFlashing:
 		fbink_cfg.is_flashing = True
 	if isInverted:
 		fbink_cfg.is_nightmode = not initial_is_nigthmode
+	if useFastInvertion:
+		set_waveform("A2")
 	[(x,y),(w,h)] = area
 	# Note : FBInk expects coordinates in a weird order : top(y), left(x), width, height
 	# If given an empty area, it will perform a full screen refresh
@@ -134,6 +148,8 @@ def do_screen_refresh(isInverted=False, isFlashing=True, isInvertionPermanent=Tr
 	fbink_cfg.is_flashing = initial_is_flashing
 	if not isInvertionPermanent and isInverted:
 		fbink_cfg.is_nightmode = initial_is_nigthmode
+	if useFastInvertion:
+		set_waveform(mode=initial_waveform)
 
 def do_screenDump():
 	d = FBInk.fbink_dump(fbfd,fbink_dumpcfg)
