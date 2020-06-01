@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 sys.path.append("../")
+import os
 import pssm
 import platform
 import random
@@ -18,10 +19,9 @@ screen.refresh()
 # Now to initialize the keybaord
 screen.OSKInit(area=None)
 
-
 # Variables:
-MARGIN = "P*5"
-BIG_MARGIN = "P*20"
+MARGIN = "H*0.0063"
+BIG_MARGIN = "H*0.015"
 ERROR_INVERT_DURATION = 1
 cursor_position = None
 elt_grid = [[None for j in range(9)] for i in range(9)]
@@ -116,23 +116,25 @@ def getDigitList():
         elt = pssm.Button(
             text=str(i+1),
             user_data=i+1,
-            onclickInside=setValue
+            onclickInside=setValue,
+            background_color='gray12'
         )
         digits.append((elt,"?"))
         digits.append((None,BIG_MARGIN))
     return digits
 
-
+@pssm.timer
 def setCursorPosition(elt,coords=None):
     global cursor_position
     global elt_grid
+    screen.startBatchWriting()
     if cursor_position:
         (i, j) = cursor_position
         # Reset previous selected item:
         elt_grid[i][j].update(newAttributes={
             'background_color':'white'
         })
-    # Set the new selected item (unless you only want to deselect
+    # Set the new selected item (unless you only want to deselect)
     if cursor_position == elt.user_data:
         cursor_position = None
     else:
@@ -140,6 +142,7 @@ def setCursorPosition(elt,coords=None):
         elt.update(newAttributes={
             'background_color':'gray12'
         })
+    screen.stopBatchWriting()
 
 
 def setValue(elt,coords=None):
@@ -156,6 +159,7 @@ def setValue(elt,coords=None):
         if contradiction:
             i2, j2 = contradiction
             # Show indicator
+            screen.startBatchWriting()
             elt_grid[i][j].update(newAttributes={
                 'text':user_input,
                 'font_color':"gray4"
@@ -163,18 +167,22 @@ def setValue(elt,coords=None):
             elt_grid[i2][j2].update(newAttributes={
                 'background_color':"gray10"
             })
+            screen.stopBatchWriting()
             # Then reset
             screen.device.wait(ERROR_INVERT_DURATION)
+            screen.startBatchWriting()
+            grid[i][j] = ""
             elt_grid[i][j].update(newAttributes={
                 'text':""
             })
             elt_grid[i2][j2].update(newAttributes={
                 'background_color':"white"
             })
+            screen.stopBatchWriting()
         else:
             elt_grid[i][j].update(newAttributes={
                 'text':user_input,
-                'font_color':"gray4"
+                'font_color':"gray6"
             })
 
 
@@ -182,7 +190,7 @@ def main(numberOfCells=10):
     global grid
     global base_grid
     base_grid = generateSudokuGrid(numberOfCells=numberOfCells)
-    grid = base_grid
+    grid = base_grid[:]
     board_layout = getBoardLayout(grid)
     digits = getDigitList()
 
@@ -204,11 +212,12 @@ def quit(elt,coords=None):
     screen.device.closePrintHandler()
     #Closing touch file
     screen.device.closeInteractionHandler()
+    os.system("killall python3")
 
 
 if __name__ == "__main__":
     # Start Touch listener, as a separate thread
-    screen.startListenerThread()
+    screen.startListenerThread(grabInput=True)
     n = None
     while n is None:
         myPopup = pssm.PoputInput(

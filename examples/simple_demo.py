@@ -109,14 +109,18 @@ def demo4():
     myLayout = pssm.Layout(layout_demo,screen.area)
     screen.addElt(myLayout)
 
-def demo5(n=100):
+@pssm.timer
+def demo5(n=50):
     """This demo is only a mean to stres the printStack function performance"""
     reactFctn = lambda elt,coords : screen.printStack(area=elt.area)
+    screen.startBatchWriting()
     for i in range(n):
         area = [(0, int((i-1)*screen.height/n)), (screen.width, int(screen.height/n))]
-        mbtn   = pssm.Button(str(i), area=area, onclickInside=reactFctn)
+        mbtn   = pssm.Button(str(i), area=area, onclickInside=reactFctn, font_size=15)
         screen.addElt(mbtn)
+    screen.stopBatchWriting()
 
-demo5()
+
 if __name__ == "__main__":
+    demo5()
     screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code
