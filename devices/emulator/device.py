@@ -80,7 +80,7 @@ def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
 def set_waveform(mode):
 	return True
 
-def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True,area=None):
+def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True,area=None, useFastInvertion=False):
 	"""
 	Does the screen refresh.
 	Args:
