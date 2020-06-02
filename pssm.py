@@ -20,7 +20,7 @@ DEFAULT_FONT = "default"
 DEFAULT_FONTBOLD = "default-Bold"
 DEFAULT_FONT_SIZE = "H*0.036"
 CURSOR_CHAR = "|"
-DEFAULT_INVERT_DURATION = 0.15
+DEFAULT_INVERT_DURATION = 0.2
 
 
 # OSK CONSTANTS
@@ -324,10 +324,6 @@ class PSSMScreen:
                 self._invertArea_helper(elt.area, invertDuration, True)
             else:
                 elt.update()
-        # Then, if an invertDuration is given, we setup a timer
-        if invertDuration and invertDuration > 0:
-            # Then, we start a timer to set it back to its intial state
-            threading.Timer(invertDuration, self.invertElt, [elt, -1]).start()
 
     def _invertArea_helper(self, area, invertDuration, isInverted=False):
         """
@@ -335,7 +331,7 @@ class PSSMScreen:
         """
         # TODO: To be tested
         initial_mode = isInverted
-        isTemporaryinvertion = invertDuration > 0
+        isTemporaryinvertion = bool(invertDuration > 0)
         self.device.do_screen_refresh(
             isInverted=not isInverted,
             area=area,
