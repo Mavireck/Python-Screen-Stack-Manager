@@ -321,7 +321,13 @@ class PSSMScreen:
         elt.setInverted(not Element_initial_state)
         if not skipPrint:
             if useFastPrint:
-                self._invertArea_helper(elt.area, invertDuration, True)
+                # Run as thread to make things a bit faster
+                invertThread = threading.Thread(
+                    target=self._invertArea_helper,
+                    args=[elt.area, invertDuration, True]
+                )
+                invertThread.start()
+                # self._invertArea_helper(elt.area, invertDuration, True)
             else:
                 elt.update()
 
