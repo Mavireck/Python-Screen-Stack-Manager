@@ -123,26 +123,46 @@ def getDigitList():
         digits.append((None,BIG_MARGIN))
     return digits
 
+
 @pssm.timer
 def setCursorPosition(elt,coords=None):
-    global cursor_position
-    global elt_grid
-    screen.startBatchWriting()
-    if cursor_position:
-        (i, j) = cursor_position
-        # Reset previous selected item:
+    """
+    Sets the cursor position (add a gray background to the new cell, removes
+    the gray background from the previous one).
+    Also handles selecting an item for the first time or deselecting an item.
+
+    Note : the most natural way to do it would be to run :
         elt_grid[i][j].update(newAttributes={
             'background_color':'white'
         })
+        for both element.
+        Yet that is *very* slow. It's much faster to run:
+        elt_grid[i][j].update(
+            newAttributes={'background_color':'white'},
+            skipGen=True
+        )
+        screen.simplePrintElt(elt_grid[i][j])
+    """
+    global cursor_position
+    global elt_grid
+    if cursor_position:
+        (i, j) = cursor_position
+        # Reset previous selected item:
+        elt_grid[i][j].update(
+            newAttributes={'background_color':'white'},
+            skipGen=True
+        )
+        screen.simplePrintElt(elt_grid[i][j])
     # Set the new selected item (unless you only want to deselect)
     if cursor_position == elt.user_data:
         cursor_position = None
     else:
         cursor_position = elt.user_data
-        elt.update(newAttributes={
-            'background_color':'gray12'
-        })
-    screen.stopBatchWriting()
+        elt.update(
+            newAttributes={'background_color':'gray12'},
+            skipGen=True
+        )
+        screen.simplePrintElt(elt)
 
 
 def setValue(elt,coords=None):
@@ -159,31 +179,36 @@ def setValue(elt,coords=None):
         if contradiction:
             i2, j2 = contradiction
             # Show indicator
-            screen.startBatchWriting()
-            elt_grid[i][j].update(newAttributes={
-                'text':user_input,
-                'font_color':"gray4"
-            })
-            elt_grid[i2][j2].update(newAttributes={
-                'background_color':"gray10"
-            })
-            screen.stopBatchWriting()
+            elt_grid[i][j].update(
+                newAttributes={'text': user_input, 'font_color': "gray4"},
+                skipGen=True
+            )
+            screen.simplePrintElt(elt_grid[i][j])
+            elt_grid[i2][j2].update(
+                newAttributes={'background_color': "gray10"},
+                skipGen=True
+            )
+            screen.simplePrintElt(elt_grid[i2][j2])
             # Then reset
             screen.device.wait(ERROR_INVERT_DURATION)
             screen.startBatchWriting()
             grid[i][j] = ""
-            elt_grid[i][j].update(newAttributes={
-                'text':""
-            })
-            elt_grid[i2][j2].update(newAttributes={
-                'background_color':"white"
-            })
-            screen.stopBatchWriting()
+            elt_grid[i][j].update(
+                newAttributes={'text':""},
+                skipGen=True
+            )
+            screen.simplePrintElt(elt_grid[i][j])
+            elt_grid[i2][j2].update(
+                newAttributes={'background_color':"white"},
+                skipGen=True
+            )
+            screen.simplePrintElt(elt_grid[i2][j2])
         else:
-            elt_grid[i][j].update(newAttributes={
-                'text':user_input,
-                'font_color':"gray6"
-            })
+            elt_grid[i][j].update(
+                newAttributes={'text':user_input, 'font_color':"gray4"},
+                skipGen=True
+            )
+            screen.simplePrintElt(elt_grid[i][j])
 
 
 def main(numberOfCells=10):
@@ -206,6 +231,7 @@ def main(numberOfCells=10):
     ]
     mainLayout = pssm.Layout(main_layout,screen.area)
     screen.addElt(mainLayout)
+
 
 def quit(elt,coords=None):
     #Closing this FBInk session
