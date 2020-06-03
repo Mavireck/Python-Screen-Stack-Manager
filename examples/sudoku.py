@@ -139,9 +139,8 @@ def setCursorPosition(elt,coords=None):
         Yet that is *very* slow. It's much faster to run:
         elt_grid[i][j].update(
             newAttributes={'background_color':'white'},
-            skipGen=True
+            reprintOnTop=True
         )
-        screen.simplePrintElt(elt_grid[i][j])
     """
     global cursor_position
     global elt_grid
@@ -150,9 +149,8 @@ def setCursorPosition(elt,coords=None):
         # Reset previous selected item:
         elt_grid[i][j].update(
             newAttributes={'background_color':'white'},
-            skipGen=True
+            reprintOnTop=True
         )
-        screen.simplePrintElt(elt_grid[i][j])
     # Set the new selected item (unless you only want to deselect)
     if cursor_position == elt.user_data:
         cursor_position = None
@@ -160,9 +158,8 @@ def setCursorPosition(elt,coords=None):
         cursor_position = elt.user_data
         elt.update(
             newAttributes={'background_color':'gray12'},
-            skipGen=True
+            reprintOnTop=True
         )
-        screen.simplePrintElt(elt)
 
 
 def setValue(elt,coords=None):
@@ -181,34 +178,29 @@ def setValue(elt,coords=None):
             # Show indicator
             elt_grid[i][j].update(
                 newAttributes={'text': user_input, 'font_color': "gray4"},
-                skipGen=True
+                reprintOnTop=True
             )
-            screen.simplePrintElt(elt_grid[i][j])
             elt_grid[i2][j2].update(
                 newAttributes={'background_color': "gray10"},
-                skipGen=True
+                reprintOnTop=True
             )
-            screen.simplePrintElt(elt_grid[i2][j2])
             # Then reset
             screen.device.wait(ERROR_INVERT_DURATION)
             screen.startBatchWriting()
             grid[i][j] = ""
             elt_grid[i][j].update(
                 newAttributes={'text':""},
-                skipGen=True
+                reprintOnTop=True
             )
-            screen.simplePrintElt(elt_grid[i][j])
             elt_grid[i2][j2].update(
                 newAttributes={'background_color':"white"},
-                skipGen=True
+                reprintOnTop=True
             )
-            screen.simplePrintElt(elt_grid[i2][j2])
         else:
             elt_grid[i][j].update(
                 newAttributes={'text':user_input, 'font_color':"gray4"},
-                skipGen=True
+                reprintOnTop=True
             )
-            screen.simplePrintElt(elt_grid[i][j])
 
 
 def main(numberOfCells=10):
