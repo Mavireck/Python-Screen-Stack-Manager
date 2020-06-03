@@ -123,53 +123,32 @@ class PSSMScreen:
                     return search
         return None
 
-    def printStack_NEW(self, area=None, forceLayoutRegeneration=False):
+    def printStack(self, area=None, forceLayoutGen=False):
         """
         Prints the stack Elements in the stack order
         If a area is set, then, we only display
         the part of the stack which is in this area
         """
-        # TODO : fix problem with demo5 (probably an issue with paste)
-        # perhaprs pillow can't paste to negative (x,y) coordinates.
         if self.isBatch:
             # Do not do anything during batch mode
             return None
-        white = get_Color("white", self.colorType)
-        if not area:
-            area = self.area
-        [(x, y), (w, h)] = area
-        img = Image.new(self.colorType, (w, h), color=white)
-        for elt in self.stack:
-            # [(x, y), (w, h)] = elt.area
-            if elt.isLayout and forceLayoutRegeneration:
-                elt.generator(skipNonLayoutEltGeneration=True)
-            intersect = getRectanglesIntersection(area, elt.area)
-            if intersect:
-                (xi, yi), (wi, hi) = intersect
-                (xo, yo), (wo, ho) = elt.area
-                img_c = deepcopy(elt.imgData)
-                if elt.isInverted:
-                    img_f =  ImageOps.invert(img_c)
-                else:
-                    img_f =  img_c
-                img.paste(img_f, (xo-xi, yo-yi))
-        self.device.print_pil(img, x, y, w, h, isInverted=self.isInverted)
+        pil_image = self.capture(area=area, forceLayoutGen=forceLayoutGen)
+        if area:
+            [(x, y), (w, h)] = area
+        else:
+            [(x, y), (w, h)] = self.area
+        self.device.print_pil(pil_image, x, y, isInverted=self.isInverted)
 
-    def printStack(self, area=None, forceLayoutRegeneration=False):
+    def capture(self,area=None, forceLayoutGen=False):
         """
-        Prints the stack Elements in the stack order
-        If a area is set, then, we only display
-        the part of the stack which is in this area
+        Returns a screen capture of the current stack state.
         """
-        if self.isBatch:
-            # Do not do anything during batch mode
-            return None
         white = get_Color("white", self.colorType)
         dim = (self.width, self.height)
         img = Image.new(self.colorType, dim, color=white)
         for elt in self.stack:
             [(x, y), (w, h)] = elt.area
-            if elt.isLayout and forceLayoutRegeneration:
+            if elt.isLayout and forceLayoutGen:
                 elt.generator(area=elt.area, skipNonLayoutEltGeneration=True)
             if elt.isInverted:
                 pil_image = ImageOps.invert(elt.imgData)
@@ -179,11 +158,9 @@ class PSSMScreen:
         if area:
             [(x, y), (w, h)] = area
             box = (x, y, x+w, y+h)
-            crop = img.crop(box=box)
-            self.device.print_pil(crop, x, y, w, h, isInverted=self.isInverted)
+            return img.crop(box=box)
         else:
-            [(x, y), (w, h)] = self.area
-            self.device.print_pil(img, x, y, w, h, isInverted=self.isInverted)
+            return img
 
     def simplePrintElt(self, myElement, skipGeneration=False):
         """
@@ -205,7 +182,7 @@ class PSSMScreen:
             h += 1
         self.device.print_pil(
             myElement.imgData,
-            x, y, w, h,
+            x, y,
             isInverted=myElement.isInverted
         )
 
@@ -221,7 +198,7 @@ class PSSMScreen:
         Updates the screen after batch writing
         """
         self.isBatch = False
-        self.printStack(area=self.area, forceLayoutRegeneration=True)
+        self.printStack(area=self.area, forceLayoutGen=True)
 
     def addElt(self, myElement, skipPrint=False, skipRegistration=False):
         """
