@@ -149,7 +149,7 @@ class PSSMScreen:
         for elt in self.stack:
             [(x, y), (w, h)] = elt.area
             if elt.isLayout and forceLayoutGen:
-                elt.generator(area=elt.area, skipNonLayoutEltGeneration=True)
+                elt.generator(area=elt.area, skipNonLayoutGen=True)
             if elt.isInverted:
                 pil_image = ImageOps.invert(elt.imgData)
             else:
@@ -533,7 +533,7 @@ class Element:
                 # We recreate the pillow image of the oldest parent
                 # And it is not needed to regenerate standard objects, since
                 oldest_parent = self.parentLayouts[0]
-                oldest_parent.generator(skipNonLayoutEltGeneration=True)
+                oldest_parent.generator(skipNonLayoutGen=True)
             # Then, let's reprint the stack
             if not skipPrint and not skipParentGen and not isBatch:
                 if updateWholeScreen:
@@ -688,16 +688,14 @@ class Layout(Element):
                     )
         return True
 
-    def generator(self, area=None, skipNonLayoutEltGeneration=False):
+    def generator(self, area=None, skipNonLayoutGen=False):
         """
         Builds one img out of all the Elements it is being given
         """
         if area is not None:
             self.area = area
         self.createAreaMatrix()
-        self.createImgMatrix(
-            skipNonLayoutEltGeneration=skipNonLayoutEltGeneration
-        )
+        self.createImgMatrix(skipNonLayoutGen=skipNonLayoutGen)
         [(x, y), (w, h)] = self.area
         colorType = self.parentPSSMScreen.colorType
         color = get_Color(self.background_color, colorType)
@@ -714,7 +712,7 @@ class Layout(Element):
         self.imgData = placeholder
         return self.imgData
 
-    def createImgMatrix(self, skipNonLayoutEltGeneration=False):
+    def createImgMatrix(self, skipNonLayoutGen=False):
         matrix = []
         if not self.areaMatrix:
             print("[PSSM Layout] Error, areaMatrix has to be defined first")
@@ -728,7 +726,7 @@ class Layout(Element):
                     elt_img = None
                 else:
                     elt_area = self.areaMatrix[i][j-1]
-                    if not elt.isLayout and skipNonLayoutEltGeneration:
+                    if not elt.isLayout and skipNonLayoutGen:
                         elt_img = elt.imgData
                     else:
                         elt_img = elt.generator(area=elt_area)
@@ -1048,7 +1046,7 @@ class OSK(Layout):
         self.area = area
 
     def generator(self, area=None, forceRegenerate=False,
-                  skipNonLayoutEltGeneration=False):
+                  skipNonLayoutGen=False):
         """
         This generator is a bit special : we don't want it to regenerate
         everything everytime we change view. So we will generate all the views
@@ -1064,13 +1062,12 @@ class OSK(Layout):
             # Let's create all the Images
             # Standard view is created last, because it is the one which is to
             # be displayed
-            self.layout = self.keymap_layouts['caps']
-            self.keymap_imgs['caps'] = super(OSK, self).generator(area=area)
-            self.layout = self.keymap_layouts['alt']
-            self.keymap_imgs['alt'] = super(OSK, self).generator(area=area)
-            self.layout = self.keymap_layouts['standard']
-            self.keymap_imgs['standard'] = super(OSK, self).generator(
-                                                            area=area)
+            def generateLayout(name):
+                self.layout = self.keymap_layouts[name]
+                self.keymap_imgs[name] = super(OSK, self).generator(area=area)
+            generateLayout("caps")
+            generateLayout("alt")
+            generateLayout("standard")
         self.imgData = self.keymap_imgs[self.view]
         return self.keymap_imgs[self.view]
 
