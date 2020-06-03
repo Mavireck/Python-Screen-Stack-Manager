@@ -25,6 +25,8 @@ cv2.namedWindow("PSSM_Emulator")
 isRunning = True
 last_printed_PIL = Image.new('RGB', (screen_width,screen_height), color=(255,255,255))
 
+
+# ####################### - TOOLS - ##########################################
 def setFrontlightLevel(level):
 	print("setFrontlightLevel -  Not supported on the emulator")
 
@@ -53,10 +55,8 @@ def startMainLoop():
 	while isRunning:
 		wait(0)	# We tell openCV to keep the window open until a key is pressed
 
-def closePrintHandler():
-	cv2.destroyWindow("PSSM_Emulator")
-	print("Closed")
 
+# ##################### - PRINT STUFF - #####################################
 def print_openCV(img):
 	# Convert to np array
 	opencvImage = np.array(img)
@@ -69,7 +69,7 @@ def print_openCV(img):
 	cv2.imshow('PSSM_Emulator',opencvImage_Re)
 	cv2.waitKey(1)
 
-def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
+def print_pil(imgData,x,y,isInverted=False):
 	sleep(delay_emulateEInk_Sluggishness)
 	#TODO : honor is inverted
 	global last_printed_PIL
@@ -112,6 +112,10 @@ def do_screen_clear():
 	pil_image = Image.new('RGB', (screen_width,screen_height), color=(255,255,255))
 	last_printed_PIL = pil_image
 	print_openCV(last_printed_PIL)
+
+def closePrintHandler():
+	cv2.destroyWindow("PSSM_Emulator")
+	print("Closed")
 
 
 ################################# - Click - ####################################

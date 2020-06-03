@@ -36,6 +36,8 @@ view_height=state.view_height
 h_offset = screen_height - view_height
 w_offset = screen_width - view_width
 
+
+# #################### - TOOLS - #############################################
 def setFrontlightLevel(level):
 	"""
 	:level (int) : A frontlight level between 0 (off) and 100 (maximum)
@@ -91,18 +93,20 @@ def wifiUp():
 	except:
 		print(str(sys.exc_info()[0]),str(sys.exc_info()[1]))
 
-
 def wait(time_seconds):
 	sleep(time_seconds)
 
 def startMainLoop():
 	return True
 
+# ############################## - PRINT STUFF - #############################
 def closePrintHandler():
 	FBInk.fbink_close(fbfd)
 
-def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
-	raw_data = imgData.tobytes("raw")
+def print_pil(pil_image,x,y,isInverted=False):
+	w = pil_image.width
+	h = pil_image.height
+	raw_data = pil_image.tobytes("raw")
 	length = len(raw_data)
 	# FBInk.fbink_print_image(fbfd, str(path).encode('ascii'), x, y, fbink_cfg)
 	FBInk.fbink_print_raw_data(fbfd, raw_data, w, h, length, x, y, fbink_cfg)
