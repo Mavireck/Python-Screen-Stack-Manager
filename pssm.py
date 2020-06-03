@@ -494,19 +494,17 @@ class Element:
             return self.id == other.id
         return NotImplemented
 
-    def update(self, newAttributes={}, skipGen=False,
-               skipThisEltGen=False, skipPrint=False,
-               skipParentGen=False, updateWholeScreen=False):
+    def update(self, newAttributes={}, skipGen=False, skipPrint=False,
+               reprintOnTop=False):
         """
         Pass a dict as argument, and it will update the Element's attributes
-        accordingly (both its attribute and the what is displayed on the screen).
+        accordingly (both its attribute and then the screen).
         Note:
             Updating an element can be very slow ! It depends on every specific
             cases, but know there are a few ways to make it faster:
             - Use `screen.startBatchWriting()` and `screen.stopBatchWriting()`
             - If you know this specific element is on top of the screen, use:
-                `elt.update(newAttributes=myDict, skipGen=True)`
-                `screen.simplePrintElt(elt)`
+                `elt.update(newAttributes=myDict, reprintOnTop=True)`
                 Which will do the same, except it won't rebuild the whole stack
                 image, it will just print this object on top. (On my tests, I
                 could spare up to 0.5s !)
@@ -515,31 +513,30 @@ class Element:
             newAttributes (dict): The element's new attributes
             skipGen (bool): Just update the element's attribute, but do
                 not do any generation or printing
-            skipThisEltGen (bool): Do not regenerate this element but do
-                update the parent layouts
+            reprintOnTop (bool): Do not reprint the whole stack, but do print
+                this element on top of the screen. (much faster when possible)
             skipPrint (bool): Do not update the screen, but do regenerate.
         """
         # First, we set the attributes
         for param in newAttributes:
             setattr(self, param, newAttributes[param])
         if not skipGen:
-            # Then we recreate the pillow image of this particular object
-            if not skipThisEltGen:
-                self.generator()
-            hasParent = len(self.parentLayouts) > 0
-            # We don't want unncesseray generation when printing batch
+            # we recreate the pillow image of this particular object
+            self.generator()
+        if (not skipPrint) and (not skipGen):  # No need to update if no regen
             isBatch = self.parentPSSMScreen.isBatch
-            if hasParent and not skipParentGen and not isBatch:
-                # We recreate the pillow image of the oldest parent
-                # And it is not needed to regenerate standard objects, since
-                oldest_parent = self.parentLayouts[0]
-                oldest_parent.generator(skipNonLayoutGen=True)
-            # Then, let's reprint the stack
-            if not skipPrint and not skipParentGen and not isBatch:
-                if updateWholeScreen:
-                    self.parentPSSMScreen.printStack()
-                else:
-                    self.parentPSSMScreen.printStack(area=self.area)
+            if reprintOnTop:
+                self.parentPSSMScreen.simplePrintElt(self)
+            elif not isBatch:
+                hasParent = len(self.parentLayouts) > 0
+                # We don't want unncesseray generation when printing batch
+                if hasParent:
+                    # We recreate the pillow image of the oldest parent
+                    # And it is not needed to regenerate standard objects, since
+                    oldest_parent = self.parentLayouts[0]
+                    oldest_parent.generator(skipNonLayoutGen=True)
+                # Then, let's reprint the stack
+                self.parentPSSMScreen.printStack(area=self.area)
         return True
 
     def generator(self):
@@ -1838,8 +1835,7 @@ class Input(Button):
             self.text = insertStr(self.typedText, CURSOR_CHAR,
                                   self.cursorPosition)
         if self.isOnTop:
-            self.update(skipGen=True)
-            self.parentPSSMScreen.simplePrintElt(self)
+            self.update(reprintOnTop=True)
         else:
             self.update()
 
