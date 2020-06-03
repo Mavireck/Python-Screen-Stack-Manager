@@ -295,18 +295,24 @@ class PSSMScreen:
             return False
         # First, let's get the Element's initial inverted state
         Element_initial_state = bool(elt.isInverted)
-        elt.setInverted(not Element_initial_state)
+        elt.isInverted = not Element_initial_state
         if not skipPrint:
             if useFastPrint:
                 # Run as thread to make things a bit faster
+                args = [
+                    elt.area,
+                    invertDuration,
+                    not Element_initial_state
+                ]
                 invertThread = threading.Thread(
                     target=self._invertArea_helper,
-                    args=[elt.area, invertDuration, True]
+                    args=args
                 )
                 invertThread.start()
                 # self._invertArea_helper(elt.area, invertDuration, True)
             else:
                 elt.update()
+        elt.isInverted = Element_initial_state
 
     def _invertArea_helper(self, area, invertDuration, isInverted=False):
         """
@@ -316,7 +322,7 @@ class PSSMScreen:
         initial_mode = isInverted
         isTemporaryinvertion = bool(invertDuration > 0)
         self.device.do_screen_refresh(
-            isInverted=not isInverted,
+            isInverted=isInverted,
             area=area,
             isInvertionPermanent=False,
             isFlashing=False,
@@ -326,9 +332,9 @@ class PSSMScreen:
             # Now we call this funcion, without starting a timer
             # And the screen is now in an opposite state as the initial one
             myTimer = threading.Timer(
-                invertDuration,
-                self._invertArea_helper,
-                [area, -1, not initial_mode]
+                interval=invertDuration,
+                function=self._invertArea_helper,
+                args=[area, -1, not initial_mode]
             )
             myTimer.start()
         return True
@@ -542,10 +548,6 @@ class Element:
         wants to build an image. It therefore returns a pillow image.
         """
         return NotImplemented
-
-    def setInverted(self, mode):
-        # TODO : actually invert it ? or delete this function
-        self.isInverted = mode
 
     def convertDimension(self, dimension):
         """
@@ -1154,7 +1156,7 @@ class Popup(Layout):
         xPos (float): Relative position on the x axis of the center point
         yPos (float): Relative position on the y axis of the center point
     """
-    def __init__(self, layout=[], width="W*0.7", height="H*0.5",
+    def __init__(self, layout=[], width="W*0.8", height="H*0.5",
                  xPos=0.5, yPos=0.3, **kwargs):
         super().__init__(layout=layout)
         self.width = width
