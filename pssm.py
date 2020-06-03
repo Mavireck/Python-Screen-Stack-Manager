@@ -162,15 +162,15 @@ class PSSMScreen:
         else:
             return img
 
-    def simplePrintElt(self, myElement, skipGeneration=False):
+    def simplePrintElt(self, myElement, skipGen=False):
         """
         Prints the Element without adding it to the stack.
         Does not honor isBatch (you can simplePrint even during batch mode)
         Args:
             myElement (PSSM Element): The element you want to display
-            skipGeneration (bool): Do you want to regenerate the image?
+            skipGen (bool): Do you want to regenerate the image?
         """
-        if not skipGeneration:
+        if not skipGen:
             # First, the element must be generated
             myElement.generator()
         # Then, we print it
@@ -242,7 +242,7 @@ class PSSMScreen:
                             myElement.generator()
                         else:
                             myElement.generator()
-                            self.simplePrintElt(myElement, skipGeneration=True)
+                            self.simplePrintElt(myElement, skipGen=True)
 
     def removeElt(self, elt=None, eltid=None, skipPrint=False):
         """
@@ -488,37 +488,48 @@ class Element:
             return self.id == other.id
         return NotImplemented
 
-    def update(self, newAttributes={}, skipGeneration=False,
-               skipThisEltGeneration=False, skipPrint=False,
-               skipParentGeneration=False, updateWholeScreen=False):
+    def update(self, newAttributes={}, skipGen=False,
+               skipThisEltGen=False, skipPrint=False,
+               skipParentGen=False, updateWholeScreen=False):
         """
         Pass a dict as argument, and it will update the Element's attributes
-        accordingly
+        accordingly (both its attribute and the what is displayed on the screen).
+        Note:
+            Updating an element can be very slow ! It depends on every specific
+            cases, but know there are a few ways to make it faster:
+            - Use `screen.startBatchWriting()` and `screen.stopBatchWriting()`
+            - If you know this specific element is on top of the screen, use:
+                `elt.update(newAttributes=myDict, skipGen=True)`
+                `screen.simplePrintElt(elt)`
+                Which will do the same, except it won't rebuild the whole stack
+                image, it will just print this object on top. (On my tests, I
+                could spare up to 0.5s !)
+
         Args :
             newAttributes (dict): The element's new attributes
-            skipGeneration (bool): Just update the element's attribute, but do
+            skipGen (bool): Just update the element's attribute, but do
                 not do any generation or printing
-            skipThisEltGeneration (bool): Do not regenerate this element but do
+            skipThisEltGen (bool): Do not regenerate this element but do
                 update the parent layouts
             skipPrint (bool): Do not update the screen, but do regenerate.
         """
         # First, we set the attributes
         for param in newAttributes:
             setattr(self, param, newAttributes[param])
-        if not skipGeneration:
+        if not skipGen:
             # Then we recreate the pillow image of this particular object
-            if not skipThisEltGeneration:
+            if not skipThisEltGen:
                 self.generator()
             hasParent = len(self.parentLayouts) > 0
             # We don't want unncesseray generation when printing batch
             isBatch = self.parentPSSMScreen.isBatch
-            if hasParent and not skipParentGeneration and not isBatch:
+            if hasParent and not skipParentGen and not isBatch:
                 # We recreate the pillow image of the oldest parent
                 # And it is not needed to regenerate standard objects, since
                 oldest_parent = self.parentLayouts[0]
                 oldest_parent.generator(skipNonLayoutEltGeneration=True)
             # Then, let's reprint the stack
-            if not skipPrint and not skipParentGeneration and not isBatch:
+            if not skipPrint and not skipParentGen and not isBatch:
                 if updateWholeScreen:
                     self.parentPSSMScreen.printStack()
                 else:
@@ -1823,7 +1834,7 @@ class Input(Button):
             self.text = insertStr(self.typedText, CURSOR_CHAR,
                                   self.cursorPosition)
         # self.update(skipPrint = True)
-        # self.parentPSSMScreen.simplePrintElt(self, skipGeneration=True)
+        # self.parentPSSMScreen.simplePrintElt(self, skipGen=True)
         self.update()
 
     def setCursorPosition(self, pos, skipPrint=False):
