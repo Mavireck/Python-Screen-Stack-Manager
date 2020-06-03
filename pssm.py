@@ -1734,6 +1734,7 @@ class Input(Button):
         self.isMultiline = isMultiline
         self.onReturn = onReturn
         self.allowSetCursorPos = False
+        self.isOnTop = True  # Let's assume an input elt is always on top
         for param in kwargs:
             setattr(self, param, kwargs[param])
         if 'font' in kwargs:
@@ -1812,6 +1813,10 @@ class Input(Button):
     def onKeyPress(self, keyType, keyChar):
         """
         Handles each key press.
+        By default, it will re-display the input element on each keypress ON
+        TOP OF THE SCREEN (not honoring stack position). This allow for a 30%
+        speed increase on my basic test. You can change this behaviour by
+        setting `InputElt.isOnTop = False`
         """
         c = self.cursorPosition
         if keyType == KTstandardChar:
@@ -1833,9 +1838,11 @@ class Input(Button):
         else:
             self.text = insertStr(self.typedText, CURSOR_CHAR,
                                   self.cursorPosition)
-        # self.update(skipPrint = True)
-        # self.parentPSSMScreen.simplePrintElt(self, skipGen=True)
-        self.update()
+        if self.isOnTop:
+            self.update(skipGen=True)
+            self.parentPSSMScreen.simplePrintElt(self)
+        else:
+            self.update()
 
     def setCursorPosition(self, pos, skipPrint=False):
         if pos is None:
