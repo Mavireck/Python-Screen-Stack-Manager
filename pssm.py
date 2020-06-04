@@ -176,10 +176,6 @@ class PSSMScreen:
         # Then, we print it
         [(x, y), (w, h)] = myElement.area
         # What follows is a Workaround :
-        # TODO : this Workaround must be investigated
-        if not myElement.isLayout:
-            w += 1
-            h += 1
         self.device.print_pil(
             myElement.imgData,
             x, y,
@@ -1381,14 +1377,14 @@ class Rectangle(Element):
         colorType = self.parentPSSMScreen.colorType
         img = Image.new(
             colorType,
-            (w+1, h+1),
+            (w, h),
             color=get_Color("white", colorType)
         )
         rect = ImageDraw.Draw(img, colorType)
         fill_color = get_Color(self.background_color, colorType)
         outline_color = get_Color(self.outline_color, colorType)
         rect.rectangle(
-            [(0, 0), (w, h)],
+            [(0, 0), (w-1, h-1)],
             fill=fill_color,
             outline=outline_color
         )
