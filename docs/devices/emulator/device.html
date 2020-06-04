@@ -27,10 +27,11 @@
 <pre><code class="python">#!/usr/bin/env python
 import sys
 import os
+import socket
 import threading
 from time import sleep
 # Load Pillow
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import numpy as np
 import cv2
 
@@ -45,21 +46,37 @@ emulator_windows_scale = 0.8            # Scale the emulator window
 isEmulator= True
 isRGB     = True
 colorType = &#34;L&#34;
+is_nightmode=False
 cv2.namedWindow(&#34;PSSM_Emulator&#34;)
 
-last_printed_PIL = Image.new(&#39;RGB&#39;, (screen_width,screen_height), color=255)
+isRunning = True
+last_printed_PIL = Image.new(&#39;RGB&#39;, (screen_width,screen_height), color=(255,255,255))
 
+
+# ####################### - TOOLS - ##########################################
 def setFrontlightLevel(level):
         print(&#34;setFrontlightLevel -  Not supported on the emulator&#34;)
 
 def readBatteryPercentage():
         print(&#34; readBatteryPercentage - Not supported on the emulator&#34;)
+        return 100
 
 def readBatteryState():
         print(&#34;readBatteryState - Not supported on the emulator&#34;)
+        return &#34;Discharging&#34;
 
 def get_ip():
-        print(&#34;get_ip - Not supported on the emulator&#34;)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+                # isWifiOn = True
+                # doesn&#39;t even have to be reachable
+                s.connect((&#39;10.255.255.255&#39;, 1))
+                IP = s.getsockname()[0]
+        except:
+                print(&#34;Error gettin IP&#34;)
+        finally:
+                s.close()
+        return IP
 
 def wifiDown():
         print(&#34;wifiDown - Not supported on the emulator&#34;)
@@ -72,45 +89,72 @@ def wait(time_seconds):
         cv2.waitKey(int(time_seconds*1000))
 
 def startMainLoop():
-    # Somehow necessary for it not to be killed in the emulator
-    while True:
-        wait(0) # We tell openCV to keep the window open until a key is pressed
+        global isRunning
+        # Somehow necessary for it not to be killed in the emulator
+        while isRunning:
+                wait(0) # We tell openCV to keep the window open until a key is pressed
 
-def closePrintHandler():
-        #TODO : is there anything to do?
-        print(&#34;Closed&#34;)
 
-def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
+# ##################### - PRINT STUFF - #####################################
+def print_openCV(img):
+        # Convert to np array
+        opencvImage = np.array(img)
+        # Convert RGB to BGR
+        opencvImage = opencvImage[:, :, ::-1].copy()
+        # Rescale
+        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)
+        # Print
+        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
+        cv2.waitKey(1)
+
+def print_pil(imgData,x,y,isInverted=False):
         sleep(delay_emulateEInk_Sluggishness)
         #TODO : honor is inverted
         global last_printed_PIL
-        raw_data = imgData.tobytes(&#34;raw&#34;)
-        length = len(raw_data)
-        pil_image = Image.frombytes(colorType,(w,h),raw_data).convert(&#34;RGB&#34;)
+        pil_image = imgData.convert(&#34;RGB&#34;)
         last_printed_PIL.paste(pil_image,(x,y))
-        opencvImage = np.array(last_printed_PIL)
-        # Convert RGB to BGR
-        opencvImage = opencvImage[:, :, ::-1].copy()
-        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
-        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
-        cv2.waitKey(1)
+        print_openCV(last_printed_PIL)
 
-def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
+def set_waveform(mode):
+        return True
+
+def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True,area=None, useFastInvertion=False):
+        &#34;&#34;&#34;
+        Does the screen refresh.
+        Args:
+                isInverted (bool): ...
+                isFlashing (bool): ...
+                isInvertionPermanent (bool): ...
+                area (list): ...
+        &#34;&#34;&#34;
         #TODO: Honor inversion
-        #print(&#34;Screen refresh and Inversion (partial and full) are not yet supported on the emulator&#34;)
-        pass
+        global last_printed_PIL
+        global is_nightmode
+        if isInverted:
+                is_nightmode = not is_nightmode
+        if area:
+                if is_nightmode or not isInvertionPermanent:
+                        (x,y),(w,h) = area
+                        last_printed_PIL_crop = last_printed_PIL.crop(box=(x,y,x+w,y+h))
+                        last_printed_PIL_crop_invert = ImageOps.invert(last_printed_PIL_crop)
+                        last_printed_PIL.paste(last_printed_PIL_crop_invert,box=(x,y))
+                        print_openCV(last_printed_PIL)
+        else:
+                if is_nightmode or not isInvertionPermanent:
+                        last_printed_PIL = ImageOps.invert(last_printed_PIL)
+                        print_openCV(last_printed_PIL)
+        if not isInvertionPermanent and isInverted:
+                is_nightmode = not is_nightmode
 
 def do_screen_clear():
-        pil_image = Image.new(&#39;L&#39;, (screen_width,screen_height), color=255).convert(&#34;RGB&#34;)
+        pil_image = Image.new(&#39;RGB&#39;, (screen_width,screen_height), color=(255,255,255))
         last_printed_PIL = pil_image
-        opencvImage = np.array(pil_image)
-        # Convert RGB to BGR
-        opencvImage = opencvImage[:, :, ::-1].copy()
-        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
-        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
-        cv2.waitKey(1)
+        print_openCV(last_printed_PIL)
+
+def closePrintHandler():
+        cv2.destroyWindow(&#34;PSSM_Emulator&#34;)
+        print(&#34;Closed&#34;)
 
 
 ################################# - Click - ####################################
@@ -129,7 +173,8 @@ def eventBindings(callbackFct, isThread=False,grabInput=False):
         cv2.setMouseCallback(&#34;PSSM_Emulator&#34;, cv2Link)
 
 def closeInteractionHandler():
-        #TODO
+        global isRunning
+        isRunning = False
         print(&#34;Closed interactionHandler&#34;)
 
 def cv2Link(event, x, y, flags, param):
@@ -157,7 +202,8 @@ def cv2Link(event, x, y, flags, param):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def closeInteractionHandler():
-        #TODO
+        global isRunning
+        isRunning = False
         print(&#34;Closed interactionHandler&#34;)</code></pre>
 </details>
 </dd>
@@ -171,7 +217,7 @@ def cv2Link(event, x, y, flags, param):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def closePrintHandler():
-        #TODO : is there anything to do?
+        cv2.destroyWindow(&#34;PSSM_Emulator&#34;)
         print(&#34;Closed&#34;)</code></pre>
 </details>
 </dd>
@@ -202,30 +248,58 @@ def cv2Link(event, x, y, flags, param):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def do_screen_clear():
-        pil_image = Image.new(&#39;L&#39;, (screen_width,screen_height), color=255).convert(&#34;RGB&#34;)
+        pil_image = Image.new(&#39;RGB&#39;, (screen_width,screen_height), color=(255,255,255))
         last_printed_PIL = pil_image
-        opencvImage = np.array(pil_image)
-        # Convert RGB to BGR
-        opencvImage = opencvImage[:, :, ::-1].copy()
-        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
-        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
-        cv2.waitKey(1)</code></pre>
+        print_openCV(last_printed_PIL)</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.do_screen_refresh"><code class="name flex">
-<span>def <span class="ident">do_screen_refresh</span></span>(<span>isInverted=False, isFlashing=True, isPermanent=True, area=[[0, 0], [0, 0]], w_offset=0, h_offset=0)</span>
+<span>def <span class="ident">do_screen_refresh</span></span>(<span>isInverted=False, isFlashing=True, isInvertionPermanent=True, area=None, useFastInvertion=False)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Does the screen refresh.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>isInverted</code></strong> :&ensp;<code>bool</code></dt>
+<dd>&hellip;</dd>
+<dt><strong><code>isFlashing</code></strong> :&ensp;<code>bool</code></dt>
+<dd>&hellip;</dd>
+<dt><strong><code>isInvertionPermanent</code></strong> :&ensp;<code>bool</code></dt>
+<dd>&hellip;</dd>
+<dt><strong><code>area</code></strong> :&ensp;<code>list</code></dt>
+<dd>&hellip;</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def do_screen_refresh(isInverted=False,isFlashing=True,isPermanent=True,area=[[0,0],[0,0]],w_offset=0,h_offset=0):
+<pre><code class="python">def do_screen_refresh(isInverted=False,isFlashing=True,isInvertionPermanent=True,area=None, useFastInvertion=False):
+        &#34;&#34;&#34;
+        Does the screen refresh.
+        Args:
+                isInverted (bool): ...
+                isFlashing (bool): ...
+                isInvertionPermanent (bool): ...
+                area (list): ...
+        &#34;&#34;&#34;
         #TODO: Honor inversion
-        #print(&#34;Screen refresh and Inversion (partial and full) are not yet supported on the emulator&#34;)
-        pass</code></pre>
+        global last_printed_PIL
+        global is_nightmode
+        if isInverted:
+                is_nightmode = not is_nightmode
+        if area:
+                if is_nightmode or not isInvertionPermanent:
+                        (x,y),(w,h) = area
+                        last_printed_PIL_crop = last_printed_PIL.crop(box=(x,y,x+w,y+h))
+                        last_printed_PIL_crop_invert = ImageOps.invert(last_printed_PIL_crop)
+                        last_printed_PIL.paste(last_printed_PIL_crop_invert,box=(x,y))
+                        print_openCV(last_printed_PIL)
+        else:
+                if is_nightmode or not isInvertionPermanent:
+                        last_printed_PIL = ImageOps.invert(last_printed_PIL)
+                        print_openCV(last_printed_PIL)
+        if not isInvertionPermanent and isInverted:
+                is_nightmode = not is_nightmode</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.eventBindings"><code class="name flex">
@@ -261,11 +335,21 @@ When a click or touch event is recorded</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_ip():
-        print(&#34;get_ip - Not supported on the emulator&#34;)</code></pre>
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+                # isWifiOn = True
+                # doesn&#39;t even have to be reachable
+                s.connect((&#39;10.255.255.255&#39;, 1))
+                IP = s.getsockname()[0]
+        except:
+                print(&#34;Error gettin IP&#34;)
+        finally:
+                s.close()
+        return IP</code></pre>
 </details>
 </dd>
-<dt id="Python-Screen-Stack-Manager.devices.emulator.device.print_pil"><code class="name flex">
-<span>def <span class="ident">print_pil</span></span>(<span>imgData, x, y, w, h, length=None, isInverted=False)</span>
+<dt id="Python-Screen-Stack-Manager.devices.emulator.device.print_openCV"><code class="name flex">
+<span>def <span class="ident">print_openCV</span></span>(<span>img)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -273,21 +357,35 @@ When a click or touch event is recorded</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def print_pil(imgData,x,y,w,h,length=None,isInverted=False):
+<pre><code class="python">def print_openCV(img):
+        # Convert to np array
+        opencvImage = np.array(img)
+        # Convert RGB to BGR
+        opencvImage = opencvImage[:, :, ::-1].copy()
+        # Rescale
+        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
+        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)
+        # Print
+        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
+        cv2.waitKey(1)</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.devices.emulator.device.print_pil"><code class="name flex">
+<span>def <span class="ident">print_pil</span></span>(<span>imgData, x, y, isInverted=False)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def print_pil(imgData,x,y,isInverted=False):
         sleep(delay_emulateEInk_Sluggishness)
         #TODO : honor is inverted
         global last_printed_PIL
-        raw_data = imgData.tobytes(&#34;raw&#34;)
-        length = len(raw_data)
-        pil_image = Image.frombytes(colorType,(w,h),raw_data).convert(&#34;RGB&#34;)
+        pil_image = imgData.convert(&#34;RGB&#34;)
         last_printed_PIL.paste(pil_image,(x,y))
-        opencvImage = np.array(last_printed_PIL)
-        # Convert RGB to BGR
-        opencvImage = opencvImage[:, :, ::-1].copy()
-        rescale_dim = (int(screen_width*emulator_windows_scale), int(screen_height*emulator_windows_scale))
-        opencvImage_Re = cv2.resize(opencvImage, rescale_dim)  # Works to resize, but I still need to scale x and y input accordinggly
-        cv2.imshow(&#39;PSSM_Emulator&#39;,opencvImage_Re)
-        cv2.waitKey(1)</code></pre>
+        print_openCV(last_printed_PIL)</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.readBatteryPercentage"><code class="name flex">
@@ -300,7 +398,8 @@ When a click or touch event is recorded</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def readBatteryPercentage():
-        print(&#34; readBatteryPercentage - Not supported on the emulator&#34;)</code></pre>
+        print(&#34; readBatteryPercentage - Not supported on the emulator&#34;)
+        return 100</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.readBatteryState"><code class="name flex">
@@ -313,7 +412,8 @@ When a click or touch event is recorded</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def readBatteryState():
-        print(&#34;readBatteryState - Not supported on the emulator&#34;)</code></pre>
+        print(&#34;readBatteryState - Not supported on the emulator&#34;)
+        return &#34;Discharging&#34;</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.setFrontlightLevel"><code class="name flex">
@@ -329,6 +429,19 @@ When a click or touch event is recorded</p></div>
         print(&#34;setFrontlightLevel -  Not supported on the emulator&#34;)</code></pre>
 </details>
 </dd>
+<dt id="Python-Screen-Stack-Manager.devices.emulator.device.set_waveform"><code class="name flex">
+<span>def <span class="ident">set_waveform</span></span>(<span>mode)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_waveform(mode):
+        return True</code></pre>
+</details>
+</dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.startMainLoop"><code class="name flex">
 <span>def <span class="ident">startMainLoop</span></span>(<span>)</span>
 </code></dt>
@@ -339,9 +452,10 @@ When a click or touch event is recorded</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def startMainLoop():
-    # Somehow necessary for it not to be killed in the emulator
-    while True:
-        wait(0) # We tell openCV to keep the window open until a key is pressed</code></pre>
+        global isRunning
+        # Somehow necessary for it not to be killed in the emulator
+        while isRunning:
+                wait(0) # We tell openCV to keep the window open until a key is pressed</code></pre>
 </details>
 </dd>
 <dt id="Python-Screen-Stack-Manager.devices.emulator.device.wait"><code class="name flex">
@@ -409,10 +523,12 @@ When a click or touch event is recorded</p></div>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.do_screen_refresh" href="#Python-Screen-Stack-Manager.devices.emulator.device.do_screen_refresh">do_screen_refresh</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.eventBindings" href="#Python-Screen-Stack-Manager.devices.emulator.device.eventBindings">eventBindings</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.get_ip" href="#Python-Screen-Stack-Manager.devices.emulator.device.get_ip">get_ip</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.print_openCV" href="#Python-Screen-Stack-Manager.devices.emulator.device.print_openCV">print_openCV</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.print_pil" href="#Python-Screen-Stack-Manager.devices.emulator.device.print_pil">print_pil</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.readBatteryPercentage" href="#Python-Screen-Stack-Manager.devices.emulator.device.readBatteryPercentage">readBatteryPercentage</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.readBatteryState" href="#Python-Screen-Stack-Manager.devices.emulator.device.readBatteryState">readBatteryState</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.setFrontlightLevel" href="#Python-Screen-Stack-Manager.devices.emulator.device.setFrontlightLevel">setFrontlightLevel</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.set_waveform" href="#Python-Screen-Stack-Manager.devices.emulator.device.set_waveform">set_waveform</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.startMainLoop" href="#Python-Screen-Stack-Manager.devices.emulator.device.startMainLoop">startMainLoop</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.wait" href="#Python-Screen-Stack-Manager.devices.emulator.device.wait">wait</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.devices.emulator.device.wifiDown" href="#Python-Screen-Stack-Manager.devices.emulator.device.wifiDown">wifiDown</a></code></li>

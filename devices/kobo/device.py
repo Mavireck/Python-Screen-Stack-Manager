@@ -40,7 +40,8 @@ w_offset = screen_width - view_width
 # #################### - TOOLS - #############################################
 def setFrontlightLevel(level):
 	"""
-	:level (int) : A frontlight level between 0 (off) and 100 (maximum)
+	Args:
+		level (int): A frontlight level between 0 (off) and 100 (maximum)
 	"""
 	os.system(path_to_pssm_device + "/frontlight " + str(level))
 

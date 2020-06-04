@@ -6,6 +6,7 @@ import time
 
 PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
 
+# ######################## - DECORATORS - ####################################
 timer_recall = {}
 
 def timer(func):
@@ -40,7 +41,9 @@ def debug(func):
     return wrapper_debug
 
 
+# ########################## - OTHERS - ######################################
 def returnFalse(*args): return False
+
 
 def coordsInArea(click_x, click_y, area):
     """
@@ -107,6 +110,7 @@ def getPartialEltImg(elt, rectIntersection):
 def tools_convertXArgsToPX(xPosition, objw, textw, myElt=None):
     """
     Converts xPosition string arguments to numerical values
+    Accepted inputs: "left", "center", "right", an inteteger value, or "w/2"
     """
     xPosition = xPosition.lower()
     if xPosition == "left":

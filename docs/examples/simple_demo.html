@@ -28,38 +28,34 @@
 import sys
 sys.path.append(&#34;../&#34;)
 import pssm
-
 import platform
-if platform.machine() in [&#34;x86&#34;,&#34;AMD64&#34;,&#34;i686&#34;,&#34;x86_64&#34;]:
+if platform.machine() in [&#34;x86&#34;, &#34;AMD64&#34;, &#34;i686&#34;, &#34;x86_64&#34;]:
     device = &#34;Emulator&#34;
 else:
     device = &#34;Kobo&#34;
 
 
-#Declare the Screen Stack Manager
-screen = pssm.PSSMScreen(device,&#39;Main&#39;)
-#Start Touch listener, as a separate thread
+# Declare the Screen Stack Manager
+screen = pssm.PSSMScreen(device, &#39;Main&#39;)
+# Start Touch listener, as a separate thread
 screen.startListenerThread()
-#Clear and refresh the screen
+# Clear and refresh the screen
 screen.clear()
 screen.refresh()
-
-
-
 
 
 def demo1():
     &#34;&#34;&#34;
     ![Demo1](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo1.jpg)
     &#34;&#34;&#34;
-    def reactFctn(elt,coords):
-        print(coords,&#34; - &#34;,elt.text)
+    def reactFctn(elt, coords):
+        print(coords, &#34; - &#34;, elt.text)
         print(elt.area)
         print(&#34;&#34;)
 
     button1 = pssm.Button(&#34;Hey&#34;, onclickInside=reactFctn)
-    button2 = pssm.Button(&#34;Hey2&#34;,onclickInside=reactFctn)
-    button3 = pssm.Button(&#34;Hey3&#34;,onclickInside=reactFctn)
+    button2 = pssm.Button(&#34;Hey2&#34;, onclickInside=reactFctn)
+    button3 = pssm.Button(&#34;Hey3&#34;, onclickInside=reactFctn)
     layout_demo = [
         [30                                                                             ],
         [100, (None,&#34;?/2&#34;), (button1,300), (None,&#34;?/2&#34;)                                 ],
@@ -105,7 +101,7 @@ def demo3():
     &#34;&#34;&#34;
     ![Demo3](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo3.jpg)
     &#34;&#34;&#34;
-    reactFctn   = lambda elt,coords : print(coords,&#34; - &#34;,elt.text)
+    reactFctn = lambda elt,coords : print(coords,&#34; - &#34;,elt.text)
     buttons     = [{&#39;text&#39;:&#39;This is button number : &#39; + str(n), &#39;onclickInside&#39;:reactFctn} for n in range(8)]
     buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
     button_welcome  = pssm.Button(text=&#34;Welcome !&#34;,radius=20, font=pssm.DEFAULT_FONTBOLD, font_size = &#34;h*0.5&#34;, background_color=&#34;gray10&#34;)
@@ -139,8 +135,20 @@ def demo4():
     myLayout = pssm.Layout(layout_demo,screen.area)
     screen.addElt(myLayout)
 
-demo3()
+@pssm.timer
+def demo5(n=50):
+    &#34;&#34;&#34;This demo is only a mean to stres the printStack function performance&#34;&#34;&#34;
+    reactFctn = lambda elt,coords : screen.printStack(area=elt.area)
+    screen.startBatchWriting()
+    for i in range(n):
+        area = [(0, int((i-1)*screen.height/n)), (screen.width, int(screen.height/n))]
+        mbtn   = pssm.Button(str(i), area=area, onclickInside=reactFctn, font_size=15)
+        screen.addElt(mbtn)
+    screen.stopBatchWriting()
+
+
 if __name__ == &#34;__main__&#34;:
+    demo5()
     screen.device.startMainLoop()   # only necessary for the emulator, and must be the very last function of your code</code></pre>
 </details>
 </section>
@@ -164,14 +172,14 @@ if __name__ == &#34;__main__&#34;:
     &#34;&#34;&#34;
     ![Demo1](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo1.jpg)
     &#34;&#34;&#34;
-    def reactFctn(elt,coords):
-        print(coords,&#34; - &#34;,elt.text)
+    def reactFctn(elt, coords):
+        print(coords, &#34; - &#34;, elt.text)
         print(elt.area)
         print(&#34;&#34;)
 
     button1 = pssm.Button(&#34;Hey&#34;, onclickInside=reactFctn)
-    button2 = pssm.Button(&#34;Hey2&#34;,onclickInside=reactFctn)
-    button3 = pssm.Button(&#34;Hey3&#34;,onclickInside=reactFctn)
+    button2 = pssm.Button(&#34;Hey2&#34;, onclickInside=reactFctn)
+    button3 = pssm.Button(&#34;Hey3&#34;, onclickInside=reactFctn)
     layout_demo = [
         [30                                                                             ],
         [100, (None,&#34;?/2&#34;), (button1,300), (None,&#34;?/2&#34;)                                 ],
@@ -233,7 +241,7 @@ if __name__ == &#34;__main__&#34;:
     &#34;&#34;&#34;
     ![Demo3](https://raw.githubusercontent.com/Mavireck/Python-Screen-Stack-Manager/master/examples/screenshot-demo3.jpg)
     &#34;&#34;&#34;
-    reactFctn   = lambda elt,coords : print(coords,&#34; - &#34;,elt.text)
+    reactFctn = lambda elt,coords : print(coords,&#34; - &#34;,elt.text)
     buttons     = [{&#39;text&#39;:&#39;This is button number : &#39; + str(n), &#39;onclickInside&#39;:reactFctn} for n in range(8)]
     buttonList  = pssm.ButtonList(buttons=buttons, margins=[30,30,100,100], spacing=10)
     button_welcome  = pssm.Button(text=&#34;Welcome !&#34;,radius=20, font=pssm.DEFAULT_FONTBOLD, font_size = &#34;h*0.5&#34;, background_color=&#34;gray10&#34;)
@@ -278,6 +286,27 @@ if __name__ == &#34;__main__&#34;:
     screen.addElt(myLayout)</code></pre>
 </details>
 </dd>
+<dt id="Python-Screen-Stack-Manager.examples.simple_demo.demo5"><code class="name flex">
+<span>def <span class="ident">demo5</span></span>(<span>n=50)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>This demo is only a mean to stres the printStack function performance</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@pssm.timer
+def demo5(n=50):
+    &#34;&#34;&#34;This demo is only a mean to stres the printStack function performance&#34;&#34;&#34;
+    reactFctn = lambda elt,coords : screen.printStack(area=elt.area)
+    screen.startBatchWriting()
+    for i in range(n):
+        area = [(0, int((i-1)*screen.height/n)), (screen.width, int(screen.height/n))]
+        mbtn   = pssm.Button(str(i), area=area, onclickInside=reactFctn, font_size=15)
+        screen.addElt(mbtn)
+    screen.stopBatchWriting()</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -300,6 +329,7 @@ if __name__ == &#34;__main__&#34;:
 <li><code><a title="Python-Screen-Stack-Manager.examples.simple_demo.demo2" href="#Python-Screen-Stack-Manager.examples.simple_demo.demo2">demo2</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.examples.simple_demo.demo3" href="#Python-Screen-Stack-Manager.examples.simple_demo.demo3">demo3</a></code></li>
 <li><code><a title="Python-Screen-Stack-Manager.examples.simple_demo.demo4" href="#Python-Screen-Stack-Manager.examples.simple_demo.demo4">demo4</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.simple_demo.demo5" href="#Python-Screen-Stack-Manager.examples.simple_demo.demo5">demo5</a></code></li>
 </ul>
 </li>
 </ul>

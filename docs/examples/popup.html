@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.8.1" />
-<title>Python-Screen-Stack-Manager.examples.osk API documentation</title>
+<title>Python-Screen-Stack-Manager.examples.popup API documentation</title>
 <meta name="description" content="" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
@@ -17,7 +17,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>Python-Screen-Stack-Manager.examples.osk</code></h1>
+<h1 class="title">Module <code>Python-Screen-Stack-Manager.examples.popup</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -34,94 +34,63 @@ if platform.machine() in [&#34;x86&#34;, &#34;AMD64&#34;, &#34;i686&#34;, &#34;x
 else:
     device = &#34;Kobo&#34;
 
-
 lorem = &#34;Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras &#34;\
         &#34;placerat diam at leo blandit vulputate. Donec rutrum feugiat sapien,&#34;\
         &#34; sed volutpat quam facilisis eu. Vestibulum ante ipsum primis in &#34;\
         &#34;faucibus orci luctus et ultrices posuere cubilia curae; &#34;\
         &#34;Cras vel augue vitae dolor placerat tincidunt ac ut turpis.&#34;
 
-# Declare the Screen Stack Manager
-screen = pssm.PSSMScreen(device, &#39;Main&#39;)
-
 
 # ########################### - Main logic - ##################################
-def main():
-    # Clear and refresh the screen
-    screen.clear()
-    screen.refresh()
-    # Now to initialize the keybaord
-    screen.OSKInit(area=None)
-    # Set faster waveform for test purposes
-    screen.device.set_waveform(&#34;DU4&#34;)
-    # Start Touch listener, as a separate thread
-    screen.startListenerThread(grabInput=True)
-
-    inputText = pssm.Input(
-        text=&#34;&#34;,
-        outline_color=&#34;black&#34;,
-        text_xPosition=&#34;left&#34;,
-        text_yPosition=&#34;top&#34;,
-        wrap_textOverflow=False
-    )
-    mainLayout_array = [
-        [&#34;p*20&#34;],
-        [&#34;H*0.62&#34;, (None, &#34;p*5&#34;), (inputText, &#34;?&#34;), (None, &#34;p*5&#34;)]
-    ]
-    mainLayout = pssm.Layout(mainLayout_array, screen.area)
-    screen.addElt(mainLayout)
+# Declare the Screen Stack Manager
+screen = pssm.PSSMScreen(device, &#39;Main&#39;)
+# Clear and refresh the screen
+screen.clear()
+screen.refresh()
+# Now to initialize the keybaord
+screen.OSKInit(area=None)
 
 
 if __name__ == &#34;__main__&#34;:
-    main()
-    if device == &#34;Emulator&#34;:
-        # only necessary for the emulator, and must be at the very end
-        screen.device.startMainLoop()</code></pre>
-</details>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="Python-Screen-Stack-Manager.examples.osk.main"><code class="name flex">
-<span>def <span class="ident">main</span></span>(<span>)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def main():
-    # Clear and refresh the screen
-    screen.clear()
-    screen.refresh()
-    # Now to initialize the keybaord
-    screen.OSKInit(area=None)
-    # Set faster waveform for test purposes
-    screen.device.set_waveform(&#34;DU4&#34;)
     # Start Touch listener, as a separate thread
     screen.startListenerThread(grabInput=True)
 
-    inputText = pssm.Input(
-        text=&#34;&#34;,
-        outline_color=&#34;black&#34;,
-        text_xPosition=&#34;left&#34;,
-        text_yPosition=&#34;top&#34;,
-        wrap_textOverflow=False
+    # Display prompt popup
+    myPopup = pssm.PoputInput(
+        titleText=&#34;Title&#34;,
+        titleFont=pssm.DEFAULT_FONTBOLD,
+        titleFontSize=&#34;H*0.04&#34;,
+        mainText=lorem,
+        mainFontSize=&#34;H*0.02&#34;,
+        inputFontSize=&#34;H*0.025&#34;
     )
-    mainLayout_array = [
-        [&#34;p*20&#34;],
-        [&#34;H*0.62&#34;, (None, &#34;p*5&#34;), (inputText, &#34;?&#34;), (None, &#34;p*5&#34;)]
-    ]
-    mainLayout = pssm.Layout(mainLayout_array, screen.area)
-    screen.addElt(mainLayout)</code></pre>
+    screen.addElt(myPopup)
+    user_input = myPopup.waitForResponse()  # This will wait for user response
+
+    # Confirm popup
+    confirmPopup = pssm.PopupConfirm(
+        titleText=&#34;Title&#34;,
+        titleFont=pssm.DEFAULT_FONTBOLD,
+        titleFontSize=&#34;H*0.04&#34;,
+        mainText=lorem,
+        mainFontSize=&#34;H*0.02&#34;
+    )
+    screen.addElt(confirmPopup)
+    user_confirm = confirmPopup.waitForResponse()
+
+    # Print result
+    text = &#34;User typed : \n \n &#34; + str(user_input) + &#34;\n \n \n&#34; + str(user_confirm)
+    myButton  = pssm.Button(text=text,area=screen.area)
+    screen.addElt(myButton)
+
+    screen.device.startMainLoop()</code></pre>
 </details>
-</dd>
-</dl>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
 </section>
 <section>
 </section>
@@ -135,11 +104,6 @@ if __name__ == &#34;__main__&#34;:
 <li><h3>Super-module</h3>
 <ul>
 <li><code><a title="Python-Screen-Stack-Manager.examples" href="index.html">Python-Screen-Stack-Manager.examples</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="Python-Screen-Stack-Manager.examples.osk.main" href="#Python-Screen-Stack-Manager.examples.osk.main">main</a></code></li>
 </ul>
 </li>
 </ul>

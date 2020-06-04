@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.1" />
+<title>Python-Screen-Stack-Manager.examples.sudoku API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>Python-Screen-Stack-Manager.examples.sudoku</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">#!/usr/bin/env python
+import sys
+sys.path.append(&#34;../&#34;)
+import os
+import pssm
+import platform
+import random
+if platform.machine() in [&#34;x86&#34;, &#34;AMD64&#34;, &#34;i686&#34;, &#34;x86_64&#34;]:
+    device = &#34;Emulator&#34;
+else:
+    device = &#34;Kobo&#34;
+
+# ###################### - INIT - ###########################################
+# Declare the Screen Stack Manager
+screen = pssm.PSSMScreen(device, &#39;Main&#39;)
+# Clear and refresh the screen
+screen.clear()
+screen.refresh()
+# Now to initialize the keybaord
+screen.OSKInit(area=None)
+
+# Variables:
+MARGIN = &#34;H*0.0063&#34;
+BIG_MARGIN = &#34;H*0.015&#34;
+ERROR_INVERT_DURATION = 1
+cursor_position = None
+elt_grid = [[None for j in range(9)] for i in range(9)]
+
+# ###################### - SUDOKU LOGIC - ####################################
+def isWrong(grid, pos, userInput):
+    &#34;&#34;&#34;
+    Returns False if grid is valid, else (i, j) where (i, j) indicate the coords
+    of the cell which the addition contradicts
+    &#34;&#34;&#34;
+    (i0, j0) = pos
+    current = grid[i0][j0]
+    # In the same col?
+    for i in range(9):
+        if grid[i][j0] == current and i!=i0:
+            return (i, j0)
+    # In the same line?
+    for j in range(9):
+        if grid[i0][j] == current and j != j0:
+            return (i0, j)
+    # In the same square?
+    for i in range(i0 - i0%3, i0 - i0%3 + 3):
+        for j in range(j0 - j0%3, j0 - j0%3 + 3):
+            if grid[i][j] == current and i != i0 and j != j0:
+                return (i, j)
+    return False
+
+
+def generateSudokuGrid(numberOfCells):
+    &#34;&#34;&#34;
+    https://stackoverflow.com/questions/45471152/how-to-create-a-sudoku-puzzle-in-python
+    &#34;&#34;&#34;
+    if numberOfCells &gt;= 81 or numberOfCells &lt; 0:
+        # Return empty grid
+        return [[&#34;&#34; for j in range(9)] for i in range(9)]
+    # Create Board
+    base  = 3
+    side  = base*base
+    # pattern for a baseline valid solution
+    def pattern(r,c): return (base*(r%base)+r//base+c)%side
+    # randomize rows, columns and numbers (of valid base pattern)
+    from random import sample
+    def shuffle(s): return sample(s,len(s))
+    rBase = range(base)
+    rows  = [ g*base + r for g in shuffle(rBase) for r in shuffle(rBase) ]
+    cols  = [ g*base + c for g in shuffle(rBase) for c in shuffle(rBase) ]
+    nums  = shuffle(range(1,base*base+1))
+    # produce board using randomized baseline pattern
+    board = [ [str(nums[pattern(r,c)]) for c in cols] for r in rows ]
+
+    # THEN REMOVE &#39;numberOfCells&#39; elements.
+    indexesToKeep = []
+    for i in range(9):
+        for j in range(9):
+            indexesToKeep.append((i,j))
+    for n in range(numberOfCells):
+        indexesToKeep.pop(random.randrange(len(indexesToKeep)))
+    for (i,j) in indexesToKeep:
+        board[i][j] = &#34;&#34;
+    return board
+
+
+# ###################### - GUI LOGIC - #######################################
+def getBoardLayout(grid):
+    global elt_grid
+    board_layout = []
+    for i in range(9):
+        board_row = [&#34;?&#34;, (None, BIG_MARGIN)]
+        for j in range(9):
+            elt = pssm.Button(
+                text=str(grid[i][j]),
+                user_data = (i, j),
+                onclickInside = setCursorPosition
+            )
+            elt_grid[i][j] = elt
+            board_row.append((elt, &#34;?&#34;))
+            if j in [2, 5, 8]:
+                board_row.append((None, BIG_MARGIN))
+            else:
+                board_row.append((None, MARGIN))
+        board_layout.append(board_row)
+        if i in [2, 5, 8]:
+            board_layout.append([BIG_MARGIN])
+        else:
+            board_layout.append([MARGIN])
+    return board_layout
+
+
+def getDigitList():
+    digits = [(None,BIG_MARGIN)]
+    for i in range(9):
+        elt = pssm.Button(
+            text=str(i+1),
+            user_data=i+1,
+            onclickInside=setValue,
+            background_color=&#39;gray12&#39;
+        )
+        digits.append((elt,&#34;?&#34;))
+        digits.append((None,BIG_MARGIN))
+    return digits
+
+
+@pssm.timer
+def setCursorPosition(elt,coords=None):
+    &#34;&#34;&#34;
+    Sets the cursor position (add a gray background to the new cell, removes
+    the gray background from the previous one).
+    Also handles selecting an item for the first time or deselecting an item.
+
+    Note : the most natural way to do it would be to run :
+        elt_grid[i][j].update(newAttributes={
+            &#39;background_color&#39;:&#39;white&#39;
+        })
+        for both element.
+        Yet that is *very* slow. It&#39;s much faster to run:
+        elt_grid[i][j].update(
+            newAttributes={&#39;background_color&#39;:&#39;white&#39;},
+            reprintOnTop=True
+        )
+    &#34;&#34;&#34;
+    global cursor_position
+    global elt_grid
+    if cursor_position:
+        (i, j) = cursor_position
+        # Reset previous selected item:
+        elt_grid[i][j].update(
+            newAttributes={&#39;background_color&#39;:&#39;white&#39;},
+            reprintOnTop=True
+        )
+    # Set the new selected item (unless you only want to deselect)
+    if cursor_position == elt.user_data:
+        cursor_position = None
+    else:
+        cursor_position = elt.user_data
+        elt.update(
+            newAttributes={&#39;background_color&#39;:&#39;gray12&#39;},
+            reprintOnTop=True
+        )
+
+
+def setValue(elt,coords=None):
+    global cursor_position
+    global grid
+    user_input = str(elt.user_data)
+    if cursor_position:
+        (i, j) = cursor_position
+        if base_grid[i][j] != &#34;&#34;:
+            # Can&#39;t change base_grid
+            return None
+        grid[i][j] = user_input
+        contradiction = isWrong(grid, cursor_position, user_input)
+        if contradiction:
+            i2, j2 = contradiction
+            # Show indicator
+            elt_grid[i][j].update(
+                newAttributes={&#39;text&#39;: user_input, &#39;font_color&#39;: &#34;gray4&#34;},
+                reprintOnTop=True
+            )
+            elt_grid[i2][j2].update(
+                newAttributes={&#39;background_color&#39;: &#34;gray10&#34;},
+                reprintOnTop=True
+            )
+            # Then reset
+            screen.device.wait(ERROR_INVERT_DURATION)
+            screen.startBatchWriting()
+            grid[i][j] = &#34;&#34;
+            elt_grid[i][j].update(
+                newAttributes={&#39;text&#39;:&#34;&#34;},
+                reprintOnTop=True
+            )
+            elt_grid[i2][j2].update(
+                newAttributes={&#39;background_color&#39;:&#34;white&#34;},
+                reprintOnTop=True
+            )
+        else:
+            elt_grid[i][j].update(
+                newAttributes={&#39;text&#39;:user_input, &#39;font_color&#39;:&#34;gray4&#34;},
+                reprintOnTop=True
+            )
+
+
+def main(numberOfCells=10):
+    global grid
+    global base_grid
+    base_grid = generateSudokuGrid(numberOfCells=numberOfCells)
+    grid = base_grid[:]
+    board_layout = getBoardLayout(grid)
+    digits = getDigitList()
+
+    boardLayout = pssm.Layout(board_layout)
+    quitBtn = pssm.Button(&#34;Quit&#34;, onclickInside=quit)
+    main_layout  = [
+        [BIG_MARGIN],
+        [&#34;?*6&#34;, (boardLayout, &#34;?&#34;)],
+        [&#34;?*0.5&#34;, *digits],
+        [BIG_MARGIN],
+        [&#34;?*1&#34;, (None, &#34;?&#34;), (quitBtn, &#34;W/4&#34;), (None,BIG_MARGIN)],
+        [BIG_MARGIN]
+    ]
+    mainLayout = pssm.Layout(main_layout,screen.area)
+    screen.addElt(mainLayout)
+
+
+def quit(elt,coords=None):
+    #Closing this FBInk session
+    screen.device.closePrintHandler()
+    #Closing touch file
+    screen.device.closeInteractionHandler()
+    os.system(&#34;killall python3&#34;)
+
+
+if __name__ == &#34;__main__&#34;:
+    # Start Touch listener, as a separate thread
+    screen.startListenerThread(grabInput=True)
+    n = None
+    while n is None:
+        myPopup = pssm.PoputInput(
+            titleText=&#34;Difficulty&#34;,
+            titleFont=pssm.DEFAULT_FONTBOLD,
+            titleFontSize=&#34;H*0.04&#34;,
+            mainText=&#34;How many cells do you want to be given at start?&#34;,
+            mainFontSize=&#34;H*0.02&#34;,
+            inputFontSize=&#34;H*0.025&#34;
+        )
+        screen.addElt(myPopup)
+        user_input = myPopup.waitForResponse()
+        try:
+            n = int(user_input)
+        except:
+            n = None
+    main(numberOfCells=n)
+    if device == &#34;Emulator&#34;:
+        # only necessary for the emulator, and must be at the very end
+        screen.device.startMainLoop()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.generateSudokuGrid"><code class="name flex">
+<span>def <span class="ident">generateSudokuGrid</span></span>(<span>numberOfCells)</span>
+</code></dt>
+<dd>
+<div class="desc"><p><a href="https://stackoverflow.com/questions/45471152/how-to-create-a-sudoku-puzzle-in-python">https://stackoverflow.com/questions/45471152/how-to-create-a-sudoku-puzzle-in-python</a></p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def generateSudokuGrid(numberOfCells):
+    &#34;&#34;&#34;
+    https://stackoverflow.com/questions/45471152/how-to-create-a-sudoku-puzzle-in-python
+    &#34;&#34;&#34;
+    if numberOfCells &gt;= 81 or numberOfCells &lt; 0:
+        # Return empty grid
+        return [[&#34;&#34; for j in range(9)] for i in range(9)]
+    # Create Board
+    base  = 3
+    side  = base*base
+    # pattern for a baseline valid solution
+    def pattern(r,c): return (base*(r%base)+r//base+c)%side
+    # randomize rows, columns and numbers (of valid base pattern)
+    from random import sample
+    def shuffle(s): return sample(s,len(s))
+    rBase = range(base)
+    rows  = [ g*base + r for g in shuffle(rBase) for r in shuffle(rBase) ]
+    cols  = [ g*base + c for g in shuffle(rBase) for c in shuffle(rBase) ]
+    nums  = shuffle(range(1,base*base+1))
+    # produce board using randomized baseline pattern
+    board = [ [str(nums[pattern(r,c)]) for c in cols] for r in rows ]
+
+    # THEN REMOVE &#39;numberOfCells&#39; elements.
+    indexesToKeep = []
+    for i in range(9):
+        for j in range(9):
+            indexesToKeep.append((i,j))
+    for n in range(numberOfCells):
+        indexesToKeep.pop(random.randrange(len(indexesToKeep)))
+    for (i,j) in indexesToKeep:
+        board[i][j] = &#34;&#34;
+    return board</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.getBoardLayout"><code class="name flex">
+<span>def <span class="ident">getBoardLayout</span></span>(<span>grid)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def getBoardLayout(grid):
+    global elt_grid
+    board_layout = []
+    for i in range(9):
+        board_row = [&#34;?&#34;, (None, BIG_MARGIN)]
+        for j in range(9):
+            elt = pssm.Button(
+                text=str(grid[i][j]),
+                user_data = (i, j),
+                onclickInside = setCursorPosition
+            )
+            elt_grid[i][j] = elt
+            board_row.append((elt, &#34;?&#34;))
+            if j in [2, 5, 8]:
+                board_row.append((None, BIG_MARGIN))
+            else:
+                board_row.append((None, MARGIN))
+        board_layout.append(board_row)
+        if i in [2, 5, 8]:
+            board_layout.append([BIG_MARGIN])
+        else:
+            board_layout.append([MARGIN])
+    return board_layout</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.getDigitList"><code class="name flex">
+<span>def <span class="ident">getDigitList</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def getDigitList():
+    digits = [(None,BIG_MARGIN)]
+    for i in range(9):
+        elt = pssm.Button(
+            text=str(i+1),
+            user_data=i+1,
+            onclickInside=setValue,
+            background_color=&#39;gray12&#39;
+        )
+        digits.append((elt,&#34;?&#34;))
+        digits.append((None,BIG_MARGIN))
+    return digits</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.isWrong"><code class="name flex">
+<span>def <span class="ident">isWrong</span></span>(<span>grid, pos, userInput)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns False if grid is valid, else (i, j) where (i, j) indicate the coords
+of the cell which the addition contradicts</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def isWrong(grid, pos, userInput):
+    &#34;&#34;&#34;
+    Returns False if grid is valid, else (i, j) where (i, j) indicate the coords
+    of the cell which the addition contradicts
+    &#34;&#34;&#34;
+    (i0, j0) = pos
+    current = grid[i0][j0]
+    # In the same col?
+    for i in range(9):
+        if grid[i][j0] == current and i!=i0:
+            return (i, j0)
+    # In the same line?
+    for j in range(9):
+        if grid[i0][j] == current and j != j0:
+            return (i0, j)
+    # In the same square?
+    for i in range(i0 - i0%3, i0 - i0%3 + 3):
+        for j in range(j0 - j0%3, j0 - j0%3 + 3):
+            if grid[i][j] == current and i != i0 and j != j0:
+                return (i, j)
+    return False</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.main"><code class="name flex">
+<span>def <span class="ident">main</span></span>(<span>numberOfCells=10)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def main(numberOfCells=10):
+    global grid
+    global base_grid
+    base_grid = generateSudokuGrid(numberOfCells=numberOfCells)
+    grid = base_grid[:]
+    board_layout = getBoardLayout(grid)
+    digits = getDigitList()
+
+    boardLayout = pssm.Layout(board_layout)
+    quitBtn = pssm.Button(&#34;Quit&#34;, onclickInside=quit)
+    main_layout  = [
+        [BIG_MARGIN],
+        [&#34;?*6&#34;, (boardLayout, &#34;?&#34;)],
+        [&#34;?*0.5&#34;, *digits],
+        [BIG_MARGIN],
+        [&#34;?*1&#34;, (None, &#34;?&#34;), (quitBtn, &#34;W/4&#34;), (None,BIG_MARGIN)],
+        [BIG_MARGIN]
+    ]
+    mainLayout = pssm.Layout(main_layout,screen.area)
+    screen.addElt(mainLayout)</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.quit"><code class="name flex">
+<span>def <span class="ident">quit</span></span>(<span>elt, coords=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def quit(elt,coords=None):
+    #Closing this FBInk session
+    screen.device.closePrintHandler()
+    #Closing touch file
+    screen.device.closeInteractionHandler()
+    os.system(&#34;killall python3&#34;)</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.setCursorPosition"><code class="name flex">
+<span>def <span class="ident">setCursorPosition</span></span>(<span>elt, coords=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Sets the cursor position (add a gray background to the new cell, removes
+the gray background from the previous one).
+Also handles selecting an item for the first time or deselecting an item.</p>
+<p>Note : the most natural way to do it would be to run :
+elt_grid[i][j].update(newAttributes={
+'background_color':'white'
+})
+for both element.
+Yet that is <em>very</em> slow. It's much faster to run:
+elt_grid[i][j].update(
+newAttributes={'background_color':'white'},
+reprintOnTop=True
+)</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@pssm.timer
+def setCursorPosition(elt,coords=None):
+    &#34;&#34;&#34;
+    Sets the cursor position (add a gray background to the new cell, removes
+    the gray background from the previous one).
+    Also handles selecting an item for the first time or deselecting an item.
+
+    Note : the most natural way to do it would be to run :
+        elt_grid[i][j].update(newAttributes={
+            &#39;background_color&#39;:&#39;white&#39;
+        })
+        for both element.
+        Yet that is *very* slow. It&#39;s much faster to run:
+        elt_grid[i][j].update(
+            newAttributes={&#39;background_color&#39;:&#39;white&#39;},
+            reprintOnTop=True
+        )
+    &#34;&#34;&#34;
+    global cursor_position
+    global elt_grid
+    if cursor_position:
+        (i, j) = cursor_position
+        # Reset previous selected item:
+        elt_grid[i][j].update(
+            newAttributes={&#39;background_color&#39;:&#39;white&#39;},
+            reprintOnTop=True
+        )
+    # Set the new selected item (unless you only want to deselect)
+    if cursor_position == elt.user_data:
+        cursor_position = None
+    else:
+        cursor_position = elt.user_data
+        elt.update(
+            newAttributes={&#39;background_color&#39;:&#39;gray12&#39;},
+            reprintOnTop=True
+        )</code></pre>
+</details>
+</dd>
+<dt id="Python-Screen-Stack-Manager.examples.sudoku.setValue"><code class="name flex">
+<span>def <span class="ident">setValue</span></span>(<span>elt, coords=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def setValue(elt,coords=None):
+    global cursor_position
+    global grid
+    user_input = str(elt.user_data)
+    if cursor_position:
+        (i, j) = cursor_position
+        if base_grid[i][j] != &#34;&#34;:
+            # Can&#39;t change base_grid
+            return None
+        grid[i][j] = user_input
+        contradiction = isWrong(grid, cursor_position, user_input)
+        if contradiction:
+            i2, j2 = contradiction
+            # Show indicator
+            elt_grid[i][j].update(
+                newAttributes={&#39;text&#39;: user_input, &#39;font_color&#39;: &#34;gray4&#34;},
+                reprintOnTop=True
+            )
+            elt_grid[i2][j2].update(
+                newAttributes={&#39;background_color&#39;: &#34;gray10&#34;},
+                reprintOnTop=True
+            )
+            # Then reset
+            screen.device.wait(ERROR_INVERT_DURATION)
+            screen.startBatchWriting()
+            grid[i][j] = &#34;&#34;
+            elt_grid[i][j].update(
+                newAttributes={&#39;text&#39;:&#34;&#34;},
+                reprintOnTop=True
+            )
+            elt_grid[i2][j2].update(
+                newAttributes={&#39;background_color&#39;:&#34;white&#34;},
+                reprintOnTop=True
+            )
+        else:
+            elt_grid[i][j].update(
+                newAttributes={&#39;text&#39;:user_input, &#39;font_color&#39;:&#34;gray4&#34;},
+                reprintOnTop=True
+            )</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="Python-Screen-Stack-Manager.examples" href="index.html">Python-Screen-Stack-Manager.examples</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="two-column">
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.generateSudokuGrid" href="#Python-Screen-Stack-Manager.examples.sudoku.generateSudokuGrid">generateSudokuGrid</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.getBoardLayout" href="#Python-Screen-Stack-Manager.examples.sudoku.getBoardLayout">getBoardLayout</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.getDigitList" href="#Python-Screen-Stack-Manager.examples.sudoku.getDigitList">getDigitList</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.isWrong" href="#Python-Screen-Stack-Manager.examples.sudoku.isWrong">isWrong</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.main" href="#Python-Screen-Stack-Manager.examples.sudoku.main">main</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.quit" href="#Python-Screen-Stack-Manager.examples.sudoku.quit">quit</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.setCursorPosition" href="#Python-Screen-Stack-Manager.examples.sudoku.setCursorPosition">setCursorPosition</a></code></li>
+<li><code><a title="Python-Screen-Stack-Manager.examples.sudoku.setValue" href="#Python-Screen-Stack-Manager.examples.sudoku.setValue">setValue</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.1</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
