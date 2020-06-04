@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import socket
 import threading
 from time import sleep
 # Load Pillow
@@ -32,12 +33,24 @@ def setFrontlightLevel(level):
 
 def readBatteryPercentage():
 	print(" readBatteryPercentage - Not supported on the emulator")
+	return 100
 
 def readBatteryState():
 	print("readBatteryState - Not supported on the emulator")
+	return "Discharging"
 
 def get_ip():
-	print("get_ip - Not supported on the emulator")
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	try:
+		# isWifiOn = True
+		# doesn't even have to be reachable
+		s.connect(('10.255.255.255', 1))
+		IP = s.getsockname()[0]
+	except:
+		print("Error gettin IP")
+	finally:
+		s.close()
+	return IP
 
 def wifiDown():
 	print("wifiDown - Not supported on the emulator")
