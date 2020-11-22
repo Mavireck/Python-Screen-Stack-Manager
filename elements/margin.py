@@ -2,7 +2,6 @@ from PIL import Image, ImageDraw
 from PSSM.element import Element
 
 
-LOAD_STYLE = "Load style from stack"
 
 class Margin(Element):
     """
@@ -10,6 +9,7 @@ class Margin(Element):
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.type = "Margin"
     
     def generator_img(self):
         return None

@@ -1,4 +1,5 @@
 from PIL import ImageDraw, ImageFont
+from .styles import DEFAULT as DEFAULT_STYLE
 
 last_used_id = 0
 LOAD_STYLE = "Load style from stack"
@@ -9,12 +10,13 @@ class Element():
         self.id = last_used_id
         last_used_id += 1
         self.image = None
-        self.area = [(None,None), (None, None)]        # Shape [(x, y), (w, h)]
+        self.area = [(None,None), ("?", "?")]        # Shape [(x, y), (w, h)]
         self.is_layout = False
         self.is_inverted = None
         self.is_generated = False
-        self.width = "?"
-        self.height = "?"
+        self.type = "Generic"
+        self.width = LOAD_STYLE
+        self.style = {}
         # Events on click
         self.onclick = None
         self.onclick_invert = False
@@ -47,6 +49,7 @@ class Element():
         """
         if area:
             self.area = area
+        self._parse_styles()
         self.generator_img()
         if self.text:
             self.generator_text()
@@ -63,7 +66,6 @@ class Element():
         """
         Add the text (if any) to the image
         """
-        self._parse_text_args()
         x, y = self.text_x, self.text_y
         area_w, area_h = self.area[1]
         # Get font size
@@ -71,7 +73,6 @@ class Element():
         # Load image
         draw = ImageDraw.Draw(self.image)
         # Load font
-        print(self.text_font)
         font = ImageFont.truetype(self.text_font, size)
         text_w, text_h = draw.textsize(self.text, font=font)
         # Find x position
@@ -174,7 +175,7 @@ class Element():
                 'W' : str(W),
                 'H' : str(H),
                 'w' : str(w),
-                'h' : str(h),
+                'h' : str(h)
             }
             # We replace every 'w' or 'h' with their corresponding value
             for key in replace_dict.keys():
@@ -200,21 +201,43 @@ class Element():
         self.text_x     = x
         self.text_y     = y
 
-    def _parse_text_args(self):
+    def _parse_styles(self, list_styles=[]):
         """
-        Parse the text arguments
+        Parse the all the "style" arguments
+
+        Arguments:
+            list_styles list: list of styles to parse (if empty, will 
+                              parse them all)
         """
-        style = self.parent_stack.style['text']
 
-        def getparam(param_name, param):
-            if param and param != LOAD_STYLE:
-                return param
-            else:
-                return style[param_name]
+        def is_defined(arg):
+            return arg is not None and arg != LOAD_STYLE
+        
+        parent_style = self.parent_stack.style
 
-        self.text_font  = getparam('font', self.text_font)
-        self.text_color = getparam('color', self.text_color)
-        self.text_size  = getparam("size", self.text_size)
-        self.text_x     = getparam('x', self.text_x)
-        self.text_y     = getparam('y', self.text_y)
+        # Avoid errors if i forgot to add the default style
+        if not self.type in DEFAULT_STYLE:
+            mes = "[PSSM Internal eror] No default style defined\
+                   for {}".format(self.type)
+            raise NameError(mes)
+
+        if len(list_styles)>0:
+            where_from = list_styles
+        else:
+            where_from = DEFAULT_STYLE[self.type]
+    
+        # then loop through the possible styles and parse them
+        for arg in where_from:
+            set_style = getattr(self, arg)
+            if not is_defined(set_style):
+                if arg in self.style and is_defined(self.style[arg]):
+                    # We set it using self.style if possible
+                    setattr(self, arg, self.style[arg])
+                elif self.type in parent_style and arg in parent_style[self.type]:
+                    # else, we set it with the stack style
+                    elementstyle = parent_style[self.type]
+                    setattr(self, arg, elementstyle[arg])
+                else:
+                    # else, we rollback to the default one from pssm
+                    setattr(self, arg, DEFAULT_STYLE[self.type][arg])
         

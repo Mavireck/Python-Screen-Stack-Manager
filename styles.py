@@ -4,39 +4,47 @@ PATH_TO_PSSM = os.path.dirname(os.path.abspath(__file__))
 PATH_TO_FONTS = os.path.join(PATH_TO_PSSM, "fonts")
 
 
+# This is for what is common between all the elements: 
+common = {
+    'text_font' : os.path.join(PATH_TO_FONTS, "Merriweather-Regular.ttf"), 
+    'text_color' : (0, 0, 0, 255),
+    'text_size' : 18, 
+    'text_x' : 'left', 
+    'text_y' : 'top',
+    'width' : "?"
+}
+
+
 DEFAULT = {
-    'text':{
-        'font' : os.path.join(PATH_TO_FONTS, "Merriweather-Regular.ttf"), 
-        'color' : (0, 0, 0, 255),
-        'size' : 18, 
-        'x' : 'top', 
-        'y' : 'left'
+    'Layout' : {
+        'background_color': (255,255,255,255),
+        **common
     },
     'Rectangle' : {
         'sides' : 'tblr',
         'background_color': (255,255,255,255),
         'sides_color' : (0,0,0,255),
-        'sides_width' : 1
+        'sides_width' : 2,
+        **common
     },
     'Layout' : {
         'background_color': (255,255,255,255),
-    }
+        **common
+    },
+    'Margin' : {**common},
+    'Demo'   : {**common},
+    'Static' : {**common}
 }
 
 
 DEMO = {
-    'text':{
-        'font' : os.path.join(PATH_TO_FONTS, "Merriweather-Regular.ttf"), 
-        'color' : (0, 0, 0, 255),
-        'size' : 16, 
-        'x' : 'center', 
-        'y' : 'center'
-    },
     'Rectangle' : {
         'sides' : 'tb',
         'background_color': (120,120,120,255),
         'sides_color' : (0,0,0,255),
-        'sides_width' : {'t':2, 'b':1}
+        'sides_width' : {'t':3, 'b':1},
+        'text_x' : 'centered',
+        'text_y' : 'centered'
     },
     'Layout' : {
         'background_color': (255,255,255,255),

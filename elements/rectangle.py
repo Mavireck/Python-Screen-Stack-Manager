@@ -16,29 +16,15 @@ class Rectangle(Element):
     def __init__(self, sides=LOAD_STYLE, background_color=LOAD_STYLE, 
                  sides_color=LOAD_STYLE, sides_width=LOAD_STYLE, **kwargs):
         super().__init__(**kwargs)
+        self.type = "Rectangle"
         self.sides = sides
         self.background_color = background_color
         self.sides_color = sides_color
         self.sides_width = sides_width
     
-    def _parse_style(self):
-        """
-        Load the Stack's style if any param is left empty
-        """
-        style = self.parent_stack.style['Rectangle']
-        if self.sides == LOAD_STYLE or not self.sides:
-            self.sides = style['sides']
-        if self.background_color == LOAD_STYLE or not self.background_color:
-            self.background_color = style['background_color']
-        if self.sides_color == LOAD_STYLE or not self.sides_color:
-            self.sides_color = style['sides_color']
-        if self.sides_width == LOAD_STYLE or not self.sides_width:
-            self.sides_width = style['sides_width']
-    
     def generator_img(self):
-        self._parse_style()
         w, h = self.area[1]
-        img = Image.new("RGBA", (w+1, h+1), color=self.background_color)
+        img = Image.new("RGBA", (w, h), color=self.background_color)
         draw = ImageDraw.Draw(img, "RGBA")
         # Get the colors of the sides
         if isinstance(self.sides_color, dict):

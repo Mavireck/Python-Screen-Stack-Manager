@@ -3,8 +3,6 @@ from .element import Element
 from .utils import coords_in_area
 from PSSM.elements import Margin
 
-LOAD_STYLE = "Load style from stack"
-
 class Layout(Element):
     """
     A layout is a quite general kind of Element :
@@ -23,7 +21,7 @@ class Layout(Element):
     Example of usage:
         See [examples](examples/index.html)
     """
-    def __init__(self, layout, area=None, background_color=LOAD_STYLE, **kwargs):
+    def __init__(self, layout, area=None, background_color=None, **kwargs):
         super().__init__(**kwargs)
         self.area = area
         self.layout = layout
@@ -32,6 +30,8 @@ class Layout(Element):
         self.matrix_area = None
         self.matrix_img = None
         self.is_layout = True
+        self.type = "Layout"
+        self.onclick = self._dispatch_click
         for param in kwargs:
             setattr(self, param, kwargs[param])
 
@@ -55,15 +55,11 @@ class Layout(Element):
         """
         if area is not None:
             self.area = area
-        self._parse_margins()
+        self._convert_layout()
         self.make_matrix_area()
         self.make_matrix_img(layout_only=layout_only)
         [(x, y), (w, h)] = self.area
-        if self.background_color == LOAD_STYLE or self.background_color is None:
-            color = self.parent_stack.style["Layout"]["background_color"]
-        else: 
-            color = self.background_color
-        placeholder = Image.new("RGBA", (w, h), color=color)
+        placeholder = Image.new("RGBA", (w, h), color=self.background_color)
         for i in range(len(self.matrix_area)):
             for j in range(len(self.matrix_area[i])):
                 elt_x, elt_y = self.matrix_area[i][j][0]
@@ -76,17 +72,26 @@ class Layout(Element):
         self.image = placeholder
         return self.image
 
-    def _parse_margins(self):
+    def _convert_layout(self):
         """
-        Converts strings and integers element to proper margins
+        - Converts strings and integers element to proper margins
+        - Tells each element what is its parent stack and layout
+        - Parses the width of each individual element
         """
         for i in range(len(self.layout)):
             for j in range(len(self.layout[i][1])):
                 elt = self.layout[i][1][j]
+                # Test if a margin
                 if isinstance(elt, int) or isinstance(elt, str):
                     # That's a margin, let's create a margin
                     self.layout[i][1][j] = Margin(width=elt)
-
+                # Let's add parse a few elt-variables
+                self.layout[i][1][j].parent_layouts += self.parent_layouts
+                self.layout[i][1][j].parent_layouts += [self]
+                self.layout[i][1][j].parent_stack = self.parent_stack
+                # Then parse styles
+                self.layout[i][1][j]._parse_styles(list_styles=['width'])
+                    
     def make_matrix_img(self, layout_only=False):
         matrix = []
         if not self.matrix_area:
@@ -115,14 +120,10 @@ class Layout(Element):
             row_height = self._get_row_height(row[0])
             for j in range(len(row[1])):
                 elt = self.layout[i][1][j]
-                elt = self.layout[i][1][j]
-                # Let's add parse a few elt-variables
-                elt.parent_layouts += self.parent_layouts
-                elt.parent_layouts += [self]
-                elt.parent_stack = self.parent_stack
                 # Then retrieve the width
                 elt_width = self._get_elt_width(elt.width, i)
                 element_area = [(x0, y0), (elt_width, row_height)]
+                self.layout[i][1][j].area = element_area
                 x0 += elt_width
                 row_areas.append(element_area)
             y0 += row_height
@@ -202,12 +203,11 @@ class Layout(Element):
         layout_width = self.area[1][0]
         return int((layout_width - total_width)/total_qm_weight)
 
-    def _dispatchClick(self, coords):
+    def _dispatch_click(self, click_x, click_y):
         """
         Finds the element on which the user clicked
         Linear search throuh both the rows and the columns
         """
-        click_x, click_y = coords
         # Linear search though the rows
         for i in range(len(self.matrix_area)):
             if len(self.matrix_area[i]) == 0:
@@ -219,16 +219,13 @@ class Layout(Element):
             y = first_row_elt[0][1]
             w = last_row_elt[0][0] + last_row_elt[1][0] - first_row_elt[0][0]
             h = last_row_elt[0][1] + last_row_elt[1][1] - first_row_elt[0][1]
-            if coords_in_area(click_x, click_y, [(x, y), (w, h)]):
+            if coords_in_area([(x, y), (w, h)], click_x, click_y):
                 # CLick was in that row
                 for j in range(len(self.matrix_area[i])):
                     # Linear search through the columns
-                    if coords_in_area(click_x, click_y, self.matrix_area[i][j]):
+                    if coords_in_area(self.matrix_area[i][j], click_x, click_y):
                         # Click was on that element
-                        elt, _ = self.layout[i][j+1]
-                        if elt is not None and elt.onclickInside is not None:
-                            self.parent_stack._dispatchClickToElt(
-                                coords, elt
-                            )
+                        elt = self.layout[i][1][j]
+                        self.parent_stack._click_handler_to_elt(elt, click_x, click_y)
                         return True
         return False

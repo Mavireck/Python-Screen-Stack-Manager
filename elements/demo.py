@@ -5,6 +5,7 @@ from PSSM.element import Element
 class Demo(Element):
     def __init__(self):
         super().__init__()
+        self.type = "Demo"
         self.area = [(0,0), (100, 200)]
     
     def generator_img(self):

@@ -68,7 +68,16 @@ class Stack():
 
     def _click_handler(self, click_x, click_y):
         """
-        Handles the click events
+        Handles the click events from the device
+        """
+        for elt in self.stack[::-1]:
+            if elt.area and coords_in_area(elt.area, click_x, click_y):
+                self._click_handler_to_elt(elt, click_x, click_y)
+                break
+
+    def _click_handler_to_elt(self, elt, click_x, click_y):
+        """
+        Actually takes care of dispatching the click to the element
         """
         def invert_back():
             # Let's avoid printing something which may have been removed
@@ -77,14 +86,10 @@ class Stack():
                 inv = elt.is_inverted
                 self.screen.print(elt.image, x, y, inverted=inv)
         
-        # Let's do this
-        for elt in self.stack[::-1]:
-            if elt.area and coords_in_area(elt.area, click_x, click_y):
-                if elt.onclick_invert:
-                    x, y = elt.area[0] 
-                    inv = not elt.is_inverted
-                    self.screen.print(elt.image, x, y, inverted=inv)
-                    self.screen.after(elt.onclick_invert_duration, invert_back)
-                if elt.onclick is not None:
-                    elt.onclick(click_x, click_y)
-                break
+        if elt.onclick_invert:
+            x, y = elt.area[0] 
+            inv = not elt.is_inverted
+            self.screen.print(elt.image, x, y, inverted=inv)
+            self.screen.after(elt.onclick_invert_duration, invert_back)
+        if elt.onclick is not None:
+            elt.onclick(click_x, click_y)

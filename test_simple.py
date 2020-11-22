@@ -4,10 +4,11 @@ from PSSM import Stack
 from PSSM.elements import Demo, Static, Rectangle
 from time import sleep
 from PSSM.styles import DEMO as DEMO_STYLE
+from PSSM.styles import DEFAULT as DEFAULT_STYLE
 
 
 def say_hello(*args):
-    print("USER CLICKED ON THE STATIC IMAGE")
+    print("USER CLICKED ON THE DEMO RECTANGLE")
     #stack.screen.invert()
 
 
@@ -33,7 +34,7 @@ stack.add(rectImg)
 
 
 # Remove the image after 5 seconds
-stack.screen.after(5000, lambda:[
+stack.screen.after(6000, lambda:[
     print("Removing"),
     stack.remove(demoElt)
 ])
