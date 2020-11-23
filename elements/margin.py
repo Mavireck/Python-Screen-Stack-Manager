@@ -9,7 +9,6 @@ class Margin(Element):
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.type = "Margin"
     
     def generator_img(self):
         return None

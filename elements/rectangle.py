@@ -16,7 +16,6 @@ class Rectangle(Element):
     def __init__(self, sides=LOAD_STYLE, background_color=LOAD_STYLE, 
                  sides_color=LOAD_STYLE, sides_width=LOAD_STYLE, **kwargs):
         super().__init__(**kwargs)
-        self.type = "Rectangle"
         self.sides = sides
         self.background_color = background_color
         self.sides_color = sides_color

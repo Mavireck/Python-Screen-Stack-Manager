@@ -16,7 +16,6 @@ class Static(Element):
     def __init__(self, image, centered=False, resize=True, 
                  rotation=0, background_color=(0, 0, 0, 0), **kwargs):
         super().__init__(**kwargs)
-        self.type = "Static"
         self.image_input = image
         self.resize = resize
         self.centered = centered
