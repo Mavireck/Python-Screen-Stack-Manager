@@ -14,8 +14,8 @@ class Element():
         self.is_layout = False
         self.is_inverted = None
         self.is_generated = False
-        self.type = "Generic"
-        self.width = LOAD_STYLE
+        self.width = None
+        self.height = None
         self.style = {}
         # Events on click
         self.onclick = None
@@ -42,14 +42,15 @@ class Element():
         if isinstance(other, self.__class__):
             return self.id == other.id
 
-    def generator(self, area=None):
+    def generator(self, area=None, skip_styles=False):
         """
         The generator is the function which is called when the container layout
         wants to build an image.
         """
         if area:
             self.area = area
-        self._parse_styles()
+        if not skip_styles:
+            self._parse_styles()
         self.generator_img()
         if self.text:
             self.generator_text()
@@ -216,15 +217,17 @@ class Element():
         parent_style = self.parent_stack.style
 
         # Avoid errors if i forgot to add the default style
-        if not self.type in DEFAULT_STYLE:
+        elt_type = self.__class__.__name__
+
+        if not elt_type in DEFAULT_STYLE:
             mes = "[PSSM Internal eror] No default style defined\
-                   for {}".format(self.type)
+                   for {}".format(elt_type)
             raise NameError(mes)
 
         if len(list_styles)>0:
             where_from = list_styles
         else:
-            where_from = DEFAULT_STYLE[self.type]
+            where_from = DEFAULT_STYLE[elt_type]
     
         # then loop through the possible styles and parse them
         for arg in where_from:
@@ -233,11 +236,11 @@ class Element():
                 if arg in self.style and is_defined(self.style[arg]):
                     # We set it using self.style if possible
                     setattr(self, arg, self.style[arg])
-                elif self.type in parent_style and arg in parent_style[self.type]:
+                elif elt_type in parent_style and arg in parent_style[elt_type]:
                     # else, we set it with the stack style
-                    elementstyle = parent_style[self.type]
+                    elementstyle = parent_style[elt_type]
                     setattr(self, arg, elementstyle[arg])
                 else:
                     # else, we rollback to the default one from pssm
-                    setattr(self, arg, DEFAULT_STYLE[self.type][arg])
+                    setattr(self, arg, DEFAULT_STYLE[elt_type][arg])
         
