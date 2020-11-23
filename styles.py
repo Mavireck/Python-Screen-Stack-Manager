@@ -33,8 +33,7 @@ DEFAULT = {
         **common
     },
     'Margin' : {**common},
-    'Demo'   : {**common},
-    'Static' : {**common}
+    'Demo'   : {**common}
 }
 
 
@@ -46,8 +45,5 @@ DEMO = {
         'sides_width' : {'t':3, 'b':1},
         'text_x' : 'centered',
         'text_y' : 'centered'
-    },
-    'Layout' : {
-        'background_color': (255,255,255,255),
     }
 }
