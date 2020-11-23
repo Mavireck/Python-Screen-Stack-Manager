@@ -54,8 +54,8 @@ class Stack():
         Adds an element to the stack and prints it
         """
         elt.parent_stack = self
-        elt.generator()
         self.stack.append(elt)
+        elt.generator()
         self._print_elt(elt)
     
     def remove(self, elt, skip_print=False):

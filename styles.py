@@ -11,12 +11,13 @@ common = {
     'text_size' : 18, 
     'text_x' : 'left', 
     'text_y' : 'top',
-    'width' : "?"
+    'width' : '?',
+    'height' : '?'
 }
 
 
 DEFAULT = {
-    'Layout' : {
+    'Collection' : {
         'background_color': (255,255,255,255),
         **common
     },
@@ -27,7 +28,7 @@ DEFAULT = {
         'sides_width' : 2,
         **common
     },
-    'Layout' : {
+    'Row' : {
         'background_color': (255,255,255,255),
         **common
     },
