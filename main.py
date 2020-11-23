@@ -84,12 +84,12 @@ class Stack():
             # from the stack in the meantime
             if elt in self.stack:
                 inv = elt.is_inverted
-                self.screen.print(elt.image, x, y, inverted=inv)
+                self.screen.print(elt.image, x, y, inverted=inv, fast_invertion=False)
         
         if elt.onclick_invert:
             x, y = elt.area[0] 
             inv = not elt.is_inverted
-            self.screen.print(elt.image, x, y, inverted=inv)
+            self.screen.print(elt.image, x, y, inverted=inv, fast_invertion=True)
             self.screen.after(elt.onclick_invert_duration, invert_back)
         if elt.onclick is not None:
             elt.onclick(click_x, click_y)

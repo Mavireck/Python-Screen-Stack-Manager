@@ -4,6 +4,7 @@ import numpy as np
 import tkinter as tk
 from tkinter import ttk
 from copy import copy
+import socket
 # Load generic device
 import PSSM.devices.generic as generic
 
@@ -36,9 +37,9 @@ def invert(image):
 ################### The actual useful stuff ###################################
 class Screen(generic.Screen):
     def __init__(self, onclick_handler):
-        super().__init__(width=SCREEN_WIDTH,height=SCREEN_HEIGHT)
+        super().__init__(width=SCREEN_WIDTH,height=SCREEN_HEIGHT, grab_input=True)
         self.image = make_blank(self.width, self.height)
-        self._onclick_handler = onclick_handler
+        self.onclick_handler = onclick_handler
         # Create window
         self._tkwindow = tk.Tk()
         # Create image
@@ -52,12 +53,15 @@ class Screen(generic.Screen):
     def _start(self):
         tk.mainloop()
     
+    def _stop(self):
+        self._tkwindow.destroy()
+    
     def _onclick(self, event):
         x = event.x
         y = event.y
-        self._onclick_handler(x, y)
+        self.onclick_handler(x, y)
     
-    def print(self, img, x=0, y=0, inverted=False):
+    def print(self, img, x=0, y=0, inverted=False, fast_invertion=False):
         """
         Takes a PIL image and pastes it on the screen at the correct coords
 
@@ -112,11 +116,15 @@ class Screen(generic.Screen):
         self.isInverted = not self.isInverted
         self.image = invert(self.image)
         self._update_image(self.image)
+
+    def set_waveform(self, mode):
+        print("Waveform set : ", mode)
     
     def capture(self, full=False):
         """
         Takes a screenshot
         """
+        # TODO: implement the "full" argument
         return copy(self.image)
 
     def after(self, milliseconds, callback, args=[]):
@@ -129,8 +137,38 @@ class Screen(generic.Screen):
 class Hardware(generic.Hardware):
     def __init__(self):
         super().__init__()
+        self.has_frontlight = False
+        self.has_wifi = True
+    
+    def wifi_up(self):
+        print("wifiUp - Not supported on the emulator")
+        return True
+    
+    def wifi_down(self):
+        print("wifiDown - Not supported on the emulator")
+        return True
+    
+    def get_ip(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(('10.255.255.255', 1))
+            IP = s.getsockname()[0]
+        except:
+            print("Error gettin IP")
+        finally:
+            s.close()
+        return IP
+    
+    def get_battery(self):
+        """
+        Returns a (status, percentage) tuple
+        """
+        print("get_battery - Not supported on the emulator, returning arbitrary values")
+        return ("Discharging", 100)
+    
+    def set_frontlight(self, level):
+        print("setFrontlightLevel -  Not supported on the emulator")
+        return True
 
 
-if __name__ == "__main__":
-    device = Screen()
     

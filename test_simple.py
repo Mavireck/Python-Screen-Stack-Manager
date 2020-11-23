@@ -12,7 +12,7 @@ def say_hello(*args):
     #stack.screen.invert()
 
 
-stack = Stack(style=DEMO_STYLE)
+stack = Stack(style=DEFAULT_STYLE)
 
 # Create the Demo
 demoElt = Demo()        # Demo is a orange rectangle on the top left corner

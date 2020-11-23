@@ -25,7 +25,7 @@ DEFAULT = {
         'sides' : 'tblr',
         'background_color': (255,255,255,255),
         'sides_color' : (0,0,0,255),
-        'sides_width' : 2,
+        'sides_width' : 1,
         **common
     },
     'Row' : {
@@ -33,7 +33,8 @@ DEFAULT = {
         **common
     },
     'Margin' : {**common},
-    'Demo'   : {**common}
+    'Demo'   : {**common},
+    'Static' : {**common}
 }
 
 

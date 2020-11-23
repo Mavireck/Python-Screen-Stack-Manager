@@ -6,11 +6,7 @@ from PSSM.utils import coords_in_area
 class Collection(Element):
     """
     A collection is basically a list of Elements.
-    It can be sorted or not.
-    
-    It should not be used alone (anyway I don't see any reason why someone
-    would want to). It is meant to group the common code between Row elements
-    and Layout elements (which are very similar)
+    It can be either a row (axis="x", default option) or a column (axis="y")
     """
     def __init__(self, coll=[], area=None, axis="x", **kwargs):
         super().__init__()
@@ -81,6 +77,9 @@ class Collection(Element):
         return self.list_img
 
     def _make_list_area(self):
+        """
+        Builds the list of areas.
+        """
         # STATUS:  TODO
         [(x, y), (w,h)] = self.area
         x0, y0 = x, y
@@ -90,10 +89,10 @@ class Collection(Element):
             for elt in self.coll:
                 # TODO: handle when the users wants an element to be less high than the row's
                 # for now it has the row's height
-                elt_height = h 
+                elt_height = h
                 # Retrieve the width
-                elt_width = self._get_elt_dim(elt.width, remaining_dim, total_qm)
-                elt.area = [(x0, y0), (elt_width, elt_height)]
+                elt_width = self._get_elt_dim(elt.width, remaining_dim, total_qm) 
+                elt.area = [(x0, y0), (elt_width-1, elt_height-1)]
                 x0 += elt_width
                 self.list_area.append(elt.area)
         else:
@@ -104,7 +103,7 @@ class Collection(Element):
                 elt_width = w
                 # Retrieve the height
                 elt_height = self._get_elt_dim(elt.height, remaining_dim, total_qm)
-                elt.area = [(x0, y0), (elt_width, elt_height)]
+                elt.area = [(x0, y0), (elt_width-1, elt_height-1)]
                 y0 += elt_height
                 self.list_area.append(elt.area)
     

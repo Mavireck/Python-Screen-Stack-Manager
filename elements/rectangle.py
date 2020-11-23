@@ -49,16 +49,16 @@ class Rectangle(Element):
             off_r = max(w_r // 2 - 1, 0)
             off_b = max(w_b // 2 - 1, 0)
         if "t" in self.sides:
-            side = [(0, off_t), (w, off_t)]
+            side = [(0, off_t+1), (w, off_t+1)]
             draw.line(side, fill=c_t, width=w_t)
         if "l" in self.sides:
-            side = [(off_l, 0), (off_l, h)]
+            side = [(off_l+1, 0), (off_l+1, h)]
             draw.line(side, fill=c_l, width=w_l)
         if "r" in self.sides:
-            side = [(w-off_r-1, 0), (w-off_r-1, h)]
+            side = [(w-off_r-2, 0), (w-off_r-2, h)]
             draw.line(side, fill=c_r, width=w_r)
         if "b" in self.sides:
-            side = [(0, h-off_b-1), (w, h-off_b-1)]
+            side = [(0, h-off_b-2), (w, h-off_b-2)]
             draw.line(side, fill=c_b, width=w_b)
         self.image = img
         return self.image
