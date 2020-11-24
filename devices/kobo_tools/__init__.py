@@ -1,1 +1,1 @@
-import .KIP
+from .KIP import InputObject

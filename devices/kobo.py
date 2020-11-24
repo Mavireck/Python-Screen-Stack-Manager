@@ -8,7 +8,7 @@ from _fbink import ffi, lib as FBInk
 # Load Pillow
 from PIL import Image, ImageDraw, ImageFont
 # Load Kobo-Input-Python
-from PSSM.devices.kobo_tools import KIP
+from PSSM.devices.kobo_tools import InputObject
 
 
 PATH_TO_THIS_FILE       = os.path.dirname(os.path.abspath(__file__))
@@ -43,24 +43,23 @@ class Screen:
         self.area = [(0, 0), (view_width, view_height)]
         self.image = None   
         self.isInverted = False
-        self.interaction_handler = KIP.inputObject(touchPath, screen_width,
+        self.interaction_handler = InputObject(TOUCH_PATH, screen_width,
                                                   screen_height, 
                                                   grabInput=grab_input)
         pass
 
     def _start(self):
-        # TODO : use a thread
+        # TODO : use a thread ?
         while True:
             try:
                 deviceInput = self.interaction_handler.getInput()
                 (x, y, err) = deviceInput
-                print(deviceInput)
             except:
                 # oops error, continnue anyway
                 continue
             if self.interaction_handler.debounceAllow(x,y):
                 # we got a click !
-                sel.onclick_handler(x, y)
+                self.onclick_handler(x, y)
 
     def _stop(self):
         self.interaction_handler.close()
@@ -76,9 +75,9 @@ class Screen:
             inverted bool: whether to print the image inverted compared to the
                 screen's inversion status
         """
-        w = pil_image.width
-        h = pil_image.height
-        raw_data = pil_image.tobytes("raw")
+        w = img.width
+        h = img.height
+        raw_data = img.tobytes("raw")
         length = len(raw_data)
         # FBInk.fbink_print_image(fbfd, str(path).encode('ascii'), x, y, fbink_cfg)
         FBInk.fbink_print_raw_data(fbfd, raw_data, w, h, length, x, y, fbink_cfg)
@@ -169,8 +168,12 @@ class Screen:
         """
         Execute the callback function with args after a few milliseconds
         """
-        sleep(milliseconds/1000)
-        callback(*args)
+        def call_callback():
+            sleep(milliseconds/1000)
+            callback(*args)
+        x = threading.Thread(target=call_callback)
+        x.start()
+        
 
 
 class Hardware:
@@ -207,7 +210,7 @@ class Hardware:
             print("Error gettin IP")
         finally:
             s.close()
-	    return IP
+        return IP
     
     def get_battery(self):
         """

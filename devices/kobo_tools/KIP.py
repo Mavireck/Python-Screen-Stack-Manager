@@ -25,10 +25,7 @@ import os,sys
 import struct
 from time import time
 from fcntl import ioctl
-try:
-	import devices.kobo.grabInput as grabber
-except:
-	print("[PSSM_KIP] Grabber import failed. Continuing nonetheless, however expect errors when trying to grab Input")
+import PSSM.devices.kobo_tools.grabInput as grabber
 
 evAbs = 3
 evKey = 1
@@ -52,7 +49,7 @@ FORMAT = 'llHHI'
 EVENT_SIZE = struct.calcsize(FORMAT)
 
 
-class inputObject:
+class InputObject:
 	"""
 	Input object
 	"""
