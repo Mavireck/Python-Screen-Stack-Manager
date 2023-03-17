@@ -40,7 +40,7 @@ DEFAULT = {
         'background_color': (255,255,255,255),
         'sides_color' : (0,0,0,255),
         'sides_width' : 1,
-        'text_size':"H*0.02"
+        'text_size':"H*0.02",
         **common
     },
     'OSK':{
