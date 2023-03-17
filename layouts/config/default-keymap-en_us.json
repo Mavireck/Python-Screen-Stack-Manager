@@ -1,0 +1,345 @@
+{
+  "lang": "en_us",
+  "spacing": 5,
+  "rows":[[
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "1"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "2"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "3"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "4"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "5"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "6"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "7"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "8"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "9"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "0"
+      },
+      {
+        "isPadding": false,
+        "keyType": 2,
+        "keyWidth": 80,
+        "char": ""
+      }
+    ],
+    [
+      {
+        "isPadding": true,
+        "keyType": 0,
+        "keyWidth": "?*0.3",
+        "char": ""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "q"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "w"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "e"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "r"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "t"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "y"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "u"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "i"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "o"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "p"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "!"
+      }
+    ],
+    [
+      {
+        "isPadding": false,
+        "keyType": 4,
+        "keyWidth": "?",
+        "char": ""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "a"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "s"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "d"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "f"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "g"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "h"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "j"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "k"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "l"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": ":"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "'"
+      }
+    ],
+    [
+      {
+        "isPadding": false,
+        "keyType": 6,
+        "keyWidth": "?",
+        "char": ""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "/"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "z"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "x"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "c"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "v"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "b"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "n"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "m"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": ","
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "."
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "?"
+      }
+    ],
+    [
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "+"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "-"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "<"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": ">"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": 300,
+        "char": " "
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "&"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "*"
+      },
+      {
+        "isPadding": false,
+        "keyType": 1,
+        "keyWidth": 80,
+        "char": ""
+      }
+    ]
+  ]
+}

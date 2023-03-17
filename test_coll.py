@@ -30,9 +30,9 @@ text.onclick = say_hello
 
 ## Example of a Layout  (axis="x" being the default axis, no need to tell it)
 demo = Collection(axis="y", area=stack.screen.area, coll=[
-    Collection(["?", rectangle, "?*2", rectangle, "?"]),
-    Collection([], height=100),
-    Collection(["?",    text,   "?*2",    text,   "?"])
+    Collection([], height=200),
+    Collection(["?", rectangle, "?*2", text, "?"]),
+    Collection([], height=100)
 ])
 
 stack.add(demo)

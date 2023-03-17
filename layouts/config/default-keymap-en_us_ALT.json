@@ -1,0 +1,375 @@
+{
+  "lang": "en_us",
+  "spacing": 5,
+  "rows":[[
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "1"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "2"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "3"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "4"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "5"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "6"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "7"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "8"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "9"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "0"
+      },
+      {
+        "isPadding": false,
+        "keyType": 2,
+        "keyWidth": 80,
+        "char": ""
+      }
+    ],
+    [
+      {
+        "isPadding": true,
+        "keyType": 0,
+        "keyWidth": "?*0.3",
+        "char": ""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "@"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "#"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u20ac"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "&"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "_"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "-"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "("
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": ")"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "="
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "%"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "$"
+      }
+    ],
+    [
+      {
+        "isPadding": false,
+        "keyType": 4,
+        "keyWidth": "?",
+        "char": ""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "*"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "'"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": ":"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": ";"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "/"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\\"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "!"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "?"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "+"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "^"
+      }
+    ],
+    [
+      {
+        "isPadding": false,
+        "keyType": 6,
+        "keyWidth": "?",
+        "char": ""
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "~"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "{"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "}"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "`"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "|"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00B0"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00A3"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00A7"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u005B"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u005D"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00BF"
+      }
+    ],
+    [
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E0"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E1"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E2"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E8"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E9"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00EA"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00EB"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E6"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00E7"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F1"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F2"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F3"
+      },
+      {
+        "isPadding": false,
+        "keyType": 0,
+        "keyWidth": "?",
+        "char": "\u00F6"
+      }
+    ]
+  ]
+}

@@ -5,7 +5,7 @@
 
 
 class Screen:
-    def __init__(self, width, height):
+    def __init__(self, width, height, **args):
         self.width = width
         self.height = height
         self.area = [(0, 0), (width, height)]
@@ -52,7 +52,7 @@ class Screen:
 
 
 class Hardware:
-    def __init__(self):
+    def __init__(self, **args):
         self.has_frontlight = False
         self.has_wifi = False
     
