@@ -82,9 +82,8 @@ class Stack():
         def invert_back():
             # Let's avoid printing something which may have been removed
             # from the stack in the meantime
-            if elt in self.stack:
-                inv = elt.is_inverted
-                self.screen.print(elt.image, x, y, inverted=inv, fast_invertion=False)
+            inv = elt.is_inverted
+            self.screen.print(elt.image, x, y, inverted=inv, fast_invertion=False)
         
         if elt.onclick_invert:
             x, y = elt.area[0] 
