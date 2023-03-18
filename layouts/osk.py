@@ -1,8 +1,7 @@
 import os
 import json
 from PSSM.layouts import Collection
-from PSSM.element import Element
-from PSSM.elements import Rectangle
+from PSSM.elements import Element, Rectangle
 
 ########### Constants
 
@@ -34,16 +33,19 @@ KTalt = 6
 
 ################### CODE
 
-## OSK_Button class
-class OSKButton(Element):
+## OSKButton class
+class OSKButton(Rectangle):
     """
     A button for the OSK
     """
-    def __init__(self, key_type, key_char="", key_is_padding=False, **kwargs):
+    def __init__(self, key_type, key_char="", key_is_padding=False, on_key_press=None, **kwargs):
         super().__init__()
         self.key_type = key_type
         self.key_is_padding= key_is_padding
         self.key_char = key_char
+        self.on_key_press = on_key_press
+        if self.on_key_press:
+            self.onclick = lambda click_x, click_y : on_key_press(self.key_type, self.key_char)
         # Style
         is_standard_char = self.key_type == KTstandardChar
         self.background_color = (255,255,255,255) if is_standard_char else (220,220,220,255)
@@ -53,7 +55,7 @@ class OSKButton(Element):
         # Get label
         self.get_key_label()
         # Add text
-        self.add_text(self.key_label)
+        self.add_text(self.key_label, x="center", y="center")
         # Set param
         for param in kwargs:
             setattr(self, param, kwargs[param])
@@ -90,6 +92,12 @@ class OSK(Element):
     def __init__(self, keymap_path=DEFAULT_KEYMAP_PATH, on_key_press=None,
                  area=None, **kwargs):
         super().__init__()
+        if area is None:
+            x = 0
+            y = "H*2/3"
+            w = "W"
+            h = "H/3"
+            self.area = [(x, y), (w, h)]
         self.keymap = {'standard': None, 'caps': None, 'alt': None}
         self.keymap_coll = {'standard': None, 'caps': None, 'alt': None}
         self.keymap_imgs = {'standard': None, 'caps': None, 'alt': None}
@@ -106,12 +114,15 @@ class OSK(Element):
         self.on_key_press = on_key_press
         # Default view
         self.view = 'standard'
+        # Create the Collections
         self.keymap_coll['standard'] = self.build_layout(
                                                self.keymap['standard'])
         self.keymap_coll['caps'] = self.build_layout(self.keymap['caps'])
         self.keymap_coll['alt'] = self.build_layout(self.keymap['alt'])
+        # the keyboard images are going to be created on generator_img call
         # Initialize layout with standard view
-        self.coll = self.keymap_coll['standard']
+        self.coll = self.keymap_coll[self.view]
+        self.onclick = self.coll.onclick
         for param in kwargs:
             setattr(self, param, kwargs[param])
 
@@ -122,8 +133,12 @@ class OSK(Element):
         at once the first time. Then, unless asked to, we will only return the
         appropriate image.
         """
-        # TODO: todo
-        pass
+        if not self.keymap_imgs[self.view]: 
+            self.keymap_coll[self.view].area = self.area
+            self.keymap_coll[self.view].parent_stack = self.parent_stack
+            self.keymap_imgs[self.view] = self.keymap_coll[self.view].generator_img()
+        self.image = self.keymap_imgs[self.view]
+        return  self.image
 
     def build_layout(self, keymap):
         # TODO : To be checked
@@ -136,23 +151,11 @@ class OSK(Element):
                     key_type        = key["keyType"],
                     key_char        = key["char"],
                     key_is_padding  = key["isPadding"],
-                    width           = key["keyWidth"]
+                    width           = key["keyWidth"],
+                    on_key_press    = self.on_key_press
                 )
                 cols.append(key_elt)
                 cols.append(spacing)
             rows.append(Collection(coll=cols, axis="x", height="?"))
-            rows.append(Collection(coll=[], height="spacing"))
+            rows.append(Collection(coll=[], height=spacing))
         return Collection(rows, axis="y")
-
-    def handleKeyPress(self, elt, coords):
-        # TODO: To be adapted (??)
-        keyType = elt.user_data["keyType"]
-        keyChar = elt.user_data["char"]
-        if keyType == KTcapsLock:
-            print("pressed caps lock")
-            pass
-        elif keyType == KTalt:
-            print("pressed ktalt")
-            pass
-        if self.on_key_press:
-            self.on_key_press(keyType, keyChar)

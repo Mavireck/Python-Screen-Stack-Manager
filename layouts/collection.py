@@ -49,17 +49,18 @@ class Collection(Element):
         # Then we can go
         for i in range(len(self.coll)):
             elt = self.coll[i]
-            if isinstance(elt, str) or isinstance(self, int):
+            if isinstance(elt, str) or isinstance(elt, int):
+                # This is an empty element, which serves as margin.
                 param = "width" if self.axis == "x" else "height"
                 value = elt
-                elt = Margin()
-                setattr(elt, param, value)
-                self.coll[i] = elt
+                element = Margin()
+                setattr(element, param, value)
+                self.coll[i] = element
             # Let's add parse a few elt-variables
-            elt.parent_layouts += self.parent_layouts
-            elt.parent_layouts += [self]
-            elt.parent_stack = self.parent_stack
-            elt._parse_styles()
+            self.coll[i].parent_layouts += self.parent_layouts
+            self.coll[i].parent_layouts += [self]
+            self.coll[i].parent_stack = self.parent_stack
+            self.coll[i]._parse_styles()
 
     def _make_list_img(self, layout_only=False):
         if not self.list_area:

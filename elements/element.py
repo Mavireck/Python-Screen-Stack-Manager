@@ -49,6 +49,7 @@ class Element():
         """
         if area:
             self.area = area
+        self._convert_area()
         if not skip_styles:
             self._parse_styles()
         self.generator_img()
@@ -59,13 +60,13 @@ class Element():
     
     def generator_img(self):
         """
-        Creates the image
+        Creates the image. Each subclass will have to implement this function.
         """
         return NotImplemented
     
     def generator_text(self):
         """
-        Add the text (if any) to the image
+        Add the text (if any) to the element.
         """
         x, y = self.text_x, self.text_y
         area_w, area_h = self.area[1]
@@ -115,7 +116,7 @@ class Element():
             attr dict: the dictionnary of attributes to set
             skip_gen bool: whether to skip the generation of this element
             skip_print bool: whether to skip printing
-            on_top boo: whether to force print it on top (can be much faster)
+            on_top bool: whether to force print it on top (can be much faster)
         """
         # First, we set the attributes
         for param in attr:
@@ -125,7 +126,7 @@ class Element():
             self.generator()
         if (not skip_print) and (not skip_gen):  # No need to update if no regen
             if on_top:
-                self.parent_stack.simplePrintElt(self)
+                self.parent_stack._print_elt(self)
             else:
                 hasParent = len(self.parent_layouts) > 0
                 # We don't want unncesseray generation when printing batch
@@ -136,6 +137,15 @@ class Element():
                     oldest_parent.generator(skipNonLayoutGen=True)
                 # Then, let's reprint the stack
                 self.parent_stack.printStack(area=self.area)
+        return True
+    
+    def _convert_area(self):
+        [(x,y), (w,h)] = self.area
+        x = self._convert_dimension(x)
+        y = self._convert_dimension(y)
+        w = self._convert_dimension(w)
+        h = self._convert_dimension(h)
+        self.area = [(x,y), (w,h)]
         return True
 
     def _convert_dimension(self, dimension):
@@ -180,7 +190,7 @@ class Element():
             }
             # We replace every 'w' or 'h' with their corresponding value
             for key in replace_dict.keys():
-                dimension.replace(key, replace_dict[key])
+                dimension = dimension.replace(key, replace_dict[key])
             if "?" in dimension:
                 return dimension
             else:
@@ -193,7 +203,10 @@ class Element():
                  size=LOAD_STYLE, x=LOAD_STYLE, y=LOAD_STYLE):
         """
         Adds text on the element. Note that the text is not actually printed on
-        the image, but it will be when the generator is called
+        the image, but it will be when the generator is called.
+
+        Valid inputs for x are ["left", "l", "center", "c", "centered", "right", "r"]
+        Valid inputs for y are ["top", "t", "center", "c", "centered", "bottom", "b"]
         """
         self.text  = text
         self.text_font  = font
