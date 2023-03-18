@@ -98,15 +98,18 @@ class Screen(generic.Screen):
         """
         Refreshes the screen (useful for ereader)
         """
+        print("Refreshing the screen is not possible in the simulator")
+        """
         # Let's do a simple animation
         image_before = self.capture()
         color = (0, 0, 0, 255)
         blank = make_blank(self.width, self.height, color)
         self._update_image(blank)
+        sleep(REFRESH_SIMULATION_TIME/1000)
         self._tkwindow.after(
             REFRESH_SIMULATION_TIME, 
             lambda: self._update_image(image_before)
-        )
+        )"""
     
     def invert(self):
         """
@@ -127,7 +130,7 @@ class Screen(generic.Screen):
         # TODO: implement the "full" argument
         return copy(self.image)
 
-    def after(self, milliseconds, callback, args=[]):
+    def after(self, milliseconds, callback, *args):
         """
         Execute the callback function with args after a few milliseconds
         """
