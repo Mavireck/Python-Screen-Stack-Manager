@@ -28,6 +28,7 @@ state = ffi.new("FBInkState *")
 FBInk.fbink_get_state(fbink_cfg, state)
 screen_width=state.screen_width
 screen_height=state.screen_height
+default_area = ((0, 0), (screen_width, screen_height))
 view_width=state.view_width
 view_height=state.view_height
 h_offset = screen_height - view_height
@@ -103,7 +104,7 @@ class Screen:
         """
         FBInk.fbink_cls(fbfd, fbink_cfg)
     
-    def refresh(self):
+    def refresh(self, area=None):
         """
         Refreshes the screen (useful for ereader)
         """
@@ -111,6 +112,8 @@ class Screen:
         initial_is_flashing = bool(fbink_cfg.is_flashing)
         # Prepare for the refresh
         fbink_cfg.is_flashing = True
+        if area is None:
+            area = default_area
         [(x,y),(w,h)] = area
         # Note : FBInk expects coordinates in a weird order : top(y), left(x), width, height
         # If given an empty area, it will perform a full screen refresh
