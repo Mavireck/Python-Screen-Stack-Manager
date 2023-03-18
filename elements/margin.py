@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw
-from PSSM.element import Element
+from .element import Element
 
 
 

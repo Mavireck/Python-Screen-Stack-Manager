@@ -1,6 +1,5 @@
 from PIL import Image
-from PSSM.element import Element
-from PSSM.elements import Margin
+from PSSM.elements import Element, Margin
 from PSSM.utils import coords_in_area
 
 class Collection(Element):

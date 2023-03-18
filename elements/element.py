@@ -1,5 +1,5 @@
 from PIL import ImageDraw, ImageFont
-from .styles import DEFAULT as DEFAULT_STYLE
+from ..styles import DEFAULT as DEFAULT_STYLE
 
 last_used_id = 0
 LOAD_STYLE = "Load style from stack"

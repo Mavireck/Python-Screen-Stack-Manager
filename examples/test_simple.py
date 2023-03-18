@@ -20,7 +20,7 @@ demoElt.onclick = say_hello
 demoElt.onclick_invert = True
 
 # Show the image
-imgElt = Static("./demo.jpg", centered=True, resize=True, rotation=0, 
+imgElt = Static("./examples/demo.jpg", centered=True, resize=True, rotation=0, 
                 area=[(150, 0), (300, 300)])
 
 # Show the rectangle
