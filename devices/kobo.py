@@ -12,6 +12,8 @@ from PSSM.devices.kobo_tools import InputObject
 
 
 PATH_TO_THIS_FILE       = os.path.dirname(os.path.abspath(__file__))
+
+# TODO: Implement a device database for the following parameters:
 TOUCH_PATH 			    = "/dev/input/event1"
 BATTERY_CAPACITY_PATH   = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/capacity"
 BATERY_STATUS_PATH      = "/sys/devices/platform/pmic_battery.1/power_supply/mc13892_bat/status"
@@ -126,11 +128,14 @@ class Screen:
         # Then reset to previous value
         fbink_cfg.is_flashing = initial_is_flashing
     
-    def invert(self):
+    def invert(self, area=None):
         """
         Inverts the whole screen. 
         Then all the images will have to be displayed inverted
         """
+        if area is None:
+            area = default_area
+        [(x,y),(w,h)] = area
         initial_is_flashing = bool(fbink_cfg.is_flashing)
         # Set config
         fbink_cfg.is_flashing = True
@@ -181,6 +186,7 @@ class Screen:
 
 class Hardware:
     def __init__(self):
+        # TODO: Implement a device-per-device check of the following settings:
         self.has_frontlight = True
         self.has_wifi = True
         self.wifi = True
@@ -190,7 +196,7 @@ class Hardware:
             os.system("sh " + TOOLS_PATH + "/enable-wifi.sh")
             # os.system("sh ./files/obtain-ip.sh")
             # os.system(". ./files/nickel-usbms.sh && enable_wifi")
-            wait(1)
+            sleep(1)
             self.wifi = True
         except:
             print(str(sys.exc_info()[0]),str(sys.exc_info()[1]))
