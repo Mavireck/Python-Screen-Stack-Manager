@@ -25,12 +25,7 @@ class Element():
         self.parent_layouts = []
         self.parent_stack = None
         # Text data
-        self.text = None
-        self.text_font = None       # Path to font
-        self.text_color = None      # RGBA color
-        self.text_size = None       # Integer or str size, to be converted
-        self.text_x = None
-        self.text_y = None
+        self.add_text("")   # Initialize with default values
         # Anything else ?
         for param in kwargs:
             setattr(self, param, kwargs[param])
@@ -42,7 +37,7 @@ class Element():
         if isinstance(other, self.__class__):
             return self.id == other.id
 
-    def generator(self, area=None, skip_styles=False):
+    def generator(self, area=None, skip_styles=False, layout_only=False):
         """
         The generator is the function which is called when the container layout
         wants to build an image.
@@ -116,7 +111,8 @@ class Element():
             attr dict: the dictionnary of attributes to set
             skip_gen bool: whether to skip the generation of this element
             skip_print bool: whether to skip printing
-            on_top bool: whether to force print it on top (can be much faster)
+            on_top bool: whether to force print it on top of the stack, 
+                whatever the actual stack position (can be much faster).
         """
         # First, we set the attributes
         for param in attr:
@@ -134,9 +130,9 @@ class Element():
                     # We recreate the pillow image of the oldest parent
                     # And it is not needed to regenerate standard objects, since
                     oldest_parent = self.parent_layouts[0]
-                    oldest_parent.generator(skipNonLayoutGen=True)
+                    oldest_parent.generator(layout_only=True)
                 # Then, let's reprint the stack
-                self.parent_stack.printStack(area=self.area)
+                self.parent_stack.print_stack(area=self.area)
         return True
     
     def _convert_area(self):

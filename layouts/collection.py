@@ -18,6 +18,7 @@ class Collection(Element):
         self.axis = axis
         self.area = area
         self.onclick = self._dispatch_click
+        self.is_layout = True
         if self.axis not in ('x', 'y'):
             raise ValueError("Incompatible axis type : {}".format(axis))
 
@@ -27,7 +28,7 @@ class Collection(Element):
         """
         self._convert_coll()
         self._make_list_area()
-        self._make_list_img()
+        self._make_list_img(layout_only)
         [(x, y), (w, h)] = self.area
         self.image = Image.new("RGBA", (w, h), color=self.background_color)
         for i in range(len(self.list_area)):
@@ -140,14 +141,15 @@ class Collection(Element):
                 total_qm += qm_weight
         return (total_dim, total_qm)
 
-    def _dispatch_click(self, click_x, click_y):
+    def _dispatch_click(self, _, coords):
         """
         Dispatches the click.
         Linear search through the elements
         """
+        click_x, click_y = coords
         ## TODO : implement dichotomy search
         for elt in self.coll:
             if coords_in_area(elt.area, click_x, click_y):
-                self.parent_stack._click_handler_to_elt(elt, click_x, click_y)
+                self.parent_stack._click_handler_to_elt(elt, (click_x, click_y))
                 return True
         return False
