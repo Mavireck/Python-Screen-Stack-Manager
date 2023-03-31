@@ -71,5 +71,8 @@ class Hardware:
         """
         return NotImplementedError
     
-    def wait(self):
+    def sleep(self):
+        return NotImplementedError
+    
+    def after(self):
         return NotImplementedError

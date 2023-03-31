@@ -14,6 +14,8 @@ SCREEN_HEIGHT=800
 WINDOW_NAME = "PSSM Emulator"
 REFRESH_SIMULATION_TIME = 20
 
+TK_WINDOW = tk.Tk()
+
 ################### INIT FUNCTIONS   ##########################################
 def make_blank(width, height, color=(255, 255, 255, 255)):
     """
@@ -41,7 +43,7 @@ class Screen(generic.Screen):
         self.image = make_blank(self.width, self.height)
         self.onclick_handler = onclick_handler
         # Create window
-        self._tkwindow = tk.Tk()
+        self._tkwindow = TK_WINDOW
         # Create image
         image = ImageTk.PhotoImage(self.image)
         self._tklabel = ttk.Label(self._tkwindow, image=image)
@@ -173,5 +175,12 @@ class Hardware(generic.Hardware):
         print("setFrontlightLevel -  Not supported on the emulator")
         return True
 
-
+    def wait(self, timems):
+        sleep(timems/1000)
+    
+    def after(self, timems, callback, *args):
+        if args:
+            TK_WINDOW.after(timems, callback, args)
+        else:
+            TK_WINDOW.after(timems, callback)
     

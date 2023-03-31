@@ -245,3 +245,13 @@ class Hardware:
     def set_frontlight(self, level):
         os.system(TOOLS_PATH + "/frontlight " + str(level))
         return True
+    
+    def sleep(self, timems):
+        sleep(timems/1000)
+
+    def after(self, timems, callback, *args):
+        self.sleep(timems)
+        if args:
+            callback(args)
+        else:
+            callback()
